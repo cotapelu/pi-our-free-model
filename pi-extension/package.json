@@ -1,0 +1,16 @@
+{
+  "name": "pi-our-free-model",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "pi provider extension for the two keyless free-model lanes this repository documents: OpenCode's public free tier and Kilo AI's public gateway free pool. No login, no sign-up, no API key.",
+  "pi": {
+    "extensions": [
+      "./index.js"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*"
+  }
+}

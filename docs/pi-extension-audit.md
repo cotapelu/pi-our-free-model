@@ -1,0 +1,79 @@
+# Repo audit + pi-extension gap review
+
+Mục đích: (1) trả lời "repo dsh này làm gì mà nhiều code thế"; (2) đối chiếu từng hành vi
+của plugin dsh với `pi-extension/` để tìm những gì extension còn thiếu/sai.
+
+Phạm vi quét: toàn bộ `src/` (87 file, ~22.7k dòng), `index.js` + `client.js` (10.2k),
+`vendor/` (channel-pack 135 file TS ~64k dòng, dsh-std, magpie Go binary 68MB),
+`packages/` (standalone 67k dòng + desktop), `scripts/` (184 file, 131 test),
+`worker/`, `adapter/`, `catalog/`, `feed/`, `locale/`, `docs/`.
+
+## 1. Repo làm gì — 7 hệ thống trong một repo
+
+| Hệ thống | Thư mục/file | Làm gì |
+|---|---|---|
+| **1. Làn free lane** | `src/upstream.js`, `src/http.js`, `src/catalog.js`, `src/probe.js`, `src/effort.js`, `src/kilo.js` | Gọi model miễn phí qua 2 lane: OpenCode (`Bearer public` + fingerprint v2) và Kilo (không credential). Cả `http.js` quy định sniff body, idle-timeout, phân loại lỗi; `probe.js` dò khả dụng theo egress; `effort.js`/`catalog.js` quy định menu thinking + capacity đo thực tế |
+| **2. Làn co-pay (EAC)** | `src/eac.js`, `src/eac-login.js`, `src/eac-user.js`, `src/vault*.js`, `worker/` | Kênh trả tiền chung do maintainer vận hành; plugin chỉ giữ seal HMAC, gateway Cloudflare Worker giữ key thật; mở khóa bằng GitHub login + star repo (desktop only) |
+| **3. Mười kênh tài khoản** | `vendor/channel-pack/src/**` (~64k dòng TS), `src/subscriptions*.js`, `src/magpie-engine.js`, `src/magpie-models.js`, `src/magpie-policy.js`, `vendor/magpie/bin/magpie-win32-x64.exe` | Đăng nhập OAuth/QR vào 10 IDE (Cline, Gemini/Code Assist, LobsterAI, Loomy, MiniMax, OpenCode, Qoder, Raccoon, TRAE, ZCode), gom credential vào account pool, auto check-in lĩnh credit, rồi phục vụ qua **engine Go 68MB** (`yetone/magpie`) mở local OpenAI gateway `127.0.0.1:8326` |
+| **4. Local gateway** | `src/forward.js`, `src/anthropic.js`, `src/gemini.js`, `src/chan-relay.js`, `src/combos.js` | Biến plugin thành OpenAI/Anthropic/Gemini-compatible server cho tool khác trên máy (base URL + key), có relay LAN, có combo = chuỗi fallback |
+| **5. Egress** | `src/egress.js`, `src/bun-fetch.js` | Mọi request upstream đi qua 1 outlet: proxy do user chỉ định, hoặc **tự spawn mihomo (Clash)** từ subscription, health-check 5 phút/lần, relay loopback có key; lane OpenCode bắt buộc qua Bun worker để giữ TLS stack riêng |
+| **6. Vỏ sản phẩm** | `index.js` (host half), `client.js` (browser half 11 trang: 免费模型/EAC/白嫖/看板/日志/网关/聚合/省Token/路由/升级/推荐), `src/store.js`, `src/updater.js` (1275 dòng: ký Ed25519 + SHA-256 + backup/rollback), `src/reload.js`, `src/feed.js`, `src/push.js`, `src/trust.js`, `src/sponsor.js`, `src/picks.js`, `src/token-saver.js` (1268 dòng: nén tool result), `src/local-optimize.js` (5 câu trả lời local), `src/aggregate.js` (76 provider nhập key) | Settings UI, dashboard usage, upgrade/app reload, announcement feed, bảo mật route, tiết kiệm token |
+| **7. Phân phối & test** | `scripts/` (131 test), `packages/standalone` (bản không cần dsh, cùng tính năng), `packages/desktop` (Tauri), `catalog/*.json` (manifest ký + integrity), `docs/` | Standalone service port 18900; desktop; signed release manifest; bộ test offline rất lớn (đó là lý do `scripts/` có 43k dòng) |
+
+Vì sao nhiều code: 4 lane × 3 wire shape (chat/responses/messages) × (request conversion,
+stream projection, error classifier, recovery/continuation) cộng thêm 10 kênh OAuth mỗi kênh
+một bộ auth/credits/models, một gateway 3 protocol, một lớp egress tự quản proxy, và một bộ
+test tương ứng. Hai lane miễn phí mà `pi-extension/` tái sử dụng chỉ là **một mảnh** của nó.
+
+## 2. Đối chiếu pi-extension — thiết kế
+
+Extension tái dùng: `openAICompletionsApi().streamSimple` của pi-ai (conversion, tool-call,
+usage, abort) và chỉ chèn: (a) headers fingerprint qua `options.headers`, (b) biến đổi payload
+qua `options.onPayload`, (c) đổi tên tool trùng gate và khôi phục ở response (`lane.js`),
+(d) bỏ Authorization trên lane Kilo bằng `fetch` wrapper.
+
+## 3. Gap tìm được (trước khi sửa)
+
+| # | Hành vi dsh | File dsh | Mức | Đã xử lý |
+|---|---|---|---|---|
+| G1 | Free lane **bắt buộc** có block `<env>` (Working directory/Platform) trong system prompt; thiếu → 429 | `src/upstream.js` `ensureFreeLaneEnvironment` (control 2026-10-28) | **Chí mạng** — mọi request free lane sẽ 429 | ✅ thêm vào `fingerprint.js` |
+| G2 | Hai tên tool bị meter theo danh tính: `subagent_fork`→`conversation_delegate`, `working_directory`→`workspace_directory` (+ note map tên cho model); thiếu → 429 | `src/upstream.js` `FREE_LANE_TOOL_ALIASES` (control 2026-10-30) | **Chí mạng** khi transcript chứa các tên này | ✅ thêm |
+| G3 | `tool_choice` trỏ tới tool bị đổi tên phải được retarget sang alias | `src/upstream.js` `retargetToolChoice` | Cao | ✅ thêm |
+| G4 | Capacity/menu **đo thực tế** khác listing: deepseek 1M/384K (listing 200K/32K), glm 1M/131K, nemotron-vl 1M/131K, mimo 1M/131K | `src/catalog.js` `FREE_ID_OVERRIDES` + `CAPABILITIES` | Cao (context sai → lỗi/cắt cụt) | ✅ port override table |
+| G5 | Model **không có menu** thì gửi `reasoning_effort` sẽ bị 400 (upstream validate giá trị); dsh dùng budget ladder, không gửi effort | `src/catalog.js` chú thích + `src/effort.js` | Cao | ✅ set `reasoning:false` khi không có menu |
+| G6 | `max` là một level của pi (`--thinking max`) nhưng map thiếu key → gửi 'max' cho model không khai báo → 400 | `src/effort.js` `normalizeLevel` | Trung bình | ✅ effortMap có `max` |
+| G7 | Kilo: off = `reasoning:{enabled:false}` (không phải bỏ field); family stepfun/liquid/thinkingmachines và 2 auto-router **không** có rung off (400 nặng) | `src/catalog.js` `kiloEffortMenuFor`, `KILO_EASONING_MANDATORY`, `KILO_NO_DISABLE_IDS` | Cao | ✅ port |
+| G8 | Gateway từng trả 200 với `Content-Type` không phải SSE nhưng body là SSE, hoặc trả **một JSON document** cho request stream; openai SDK nuốt dòng JSON → stream rỗng → phiên fail | `src/http.js` sniff/fold (issue #6), `src/kilo.js` fold | Cao | ✅ `sseGuardFetch` |
+| G9 | Không có idle-timeout theo chunk: stream treo im lặng (chỉ comment keepalive) sẽ treo lượt mãi mãi; dsh có deadline không reset bởi comment | `src/http.js` `readSse` (issue #460) | Trung bình | ✅ watchdog theo chunk chứa `data:` |
+| G10 | DeepSeek v4 leak markup `<｜DSML｜…>` vào visible text | `src/stream.js` `createDsmlScrubber` | Trung bình | ✅ scrubber cho model deepseek |
+| G11 | Model free lane chỉ là **một phần** của lane: muse-spark/union-alpha trả trên `/responses`, `/messages`; một số id chỉ có base_url anthropic/google — gửi chat/completions sẽ sai | `src/upstream.js` `endpointFor`, listing `api.*` | Thấn (roster hiện tại toàn chat) | ✅ chỉ map row `chat-completions` |
+| G12 | Dịch lỗi: HTML page/WAF, `ModelError` "Model is unavailable", `INVALID_TOKEN` của Kilo | `src/http.js` `classifyFailure` | Trung bình | ✅ `friendlyMessage` |
+| G13 | Không có retry/fallback theo kiểu dsh (combo, continuation, recovery) | `src/adapter.js`, `src/combos.js`, `src/recovery.js` | Không cần — pi có retry/compaction riêng; ghi chú trong README | — |
+| G14 | Token-saver (nén tool result), local-optimize (5 câu local), aggregate (76 provider), EAC, 10 kênh tài khoản, settings UI, updater, feed | các module tương ứng | Ngoài phạm vi v1 (pi có cơ chế riêng; ghi ở README) | — |
+
+Không phát hiện vấn đề bảo mật trong extension: không hardcode credential (chỉ `Bearer public`
+và chuỗi sentinel cho Kilo bị wrapper fetch xóa trước khi ra wire), không ghi log secret,
+không mthể ghi log secret, listener loopback do pi quản.
+
+## 4) Còn hạn chế có chủ ý (ghi trong README)
+
+- Lane OpenCode cần egress không bị chặn vùng; region gate chỉ có thể đổi bằng proxy của user
+  (`NODE_USE_ENV_PROXY=1` + `HTTPS_PROXY`).
+- Bun transport của dsh (chống proxy plugin rewrite body) chưa port; extension dùng Node fetch,
+  đã được xác minh pass gate tại thời điểm test.
+- Không có auto-continue khi bị cắt giữa lượt (dsh có); pi tự xử lý tiếp.
+
+## 5) Trạng thái sau khi sửa (2026-11-01)
+
+- 38/38 check PASS: `npm run test:pi-extension`
+  (`fingerprint.test.mjs` 10 · `catalog.test.mjs` 12 · `fingerprint-integration.mjs` 15
+  · `kilo-integration.mjs` 18). Hai script integration lái `pi` thật qua stand-in
+  gateway trên loopback, nên khớp cả phần pi-ai xử lý SSE/tool-call.
+- Smoke thật: `pi --list-models` thấy 23 model; Kilo chạy với `--thinking off/high`
+  và tool-call; lane OpenCode tại IP này trả 429 quota thay vì 403 (fingerprint pass).
+- Bug tự phát hiện trong quá trình test (đã sửa): map đổi tên history/tool_choice bị
+  ngược chiều; bảng static nhầm trường `maxTokens`/`maxOutput`; fold JSON document
+  phải tái sinh delta-frames vì SDK chỉ đọc `choices[].delta` (shape non-stream bị
+  SDK nuốt thành stream rỗng).
+- Việc còn lại chỉ là bảo trì: khi upstream siết gate thì đo lại fingerprint theo
+  `docs/free-lane-wire.md` và cập nhật `pi-extension/fingerprint.js`.

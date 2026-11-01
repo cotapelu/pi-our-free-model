@@ -772,6 +772,26 @@ MIT，见 LICENSE。
 本项目为独立插件，与任何模型提供方无隶属、认可或赞助关系。使用该插件访问免费额度受各提供方
 自身条款约束；在超出个人机器的场景中部署前，请先确认这些条款。
 
+## pi coding agent 扩展（provider）
+
+本仓库同时提供一个 **pi coding agent 的 provider 扩展**：把上述两条免密车道
+（Kilo 免费池、OpenCode 免密车道）注册成 pi 的模型提供方，与 dsh 插件相互独立、
+可单独使用。装好后 `pi --list-models` 里出现两组模型：
+
+- `ofm-kilo/<model>`——Kilo AI 公共网关的 `isFree` 池，无需任何凭据；
+- `ofm-opencode/<model>`——OpenCode 免密车道，`Bearer public` + 客户端指纹。
+
+```bash
+pi install ./pi-extension      # 或 pi -e ./pi-extension 试一次
+pi --model ofm-kilo/kilo-auto-free
+```
+
+实现要点：清单每次加载时向上游实时拉取（离线快照兜底）；两条车道都复用 pi-ai 的
+OpenAI Completions 实现（工具调用、思考增量、用量与取消行为与内置 provider 一致）；
+OpenCode 车道的 v2 指纹（UA、四个会话头、铸造式 session id、逐字 `read`/`shell`
+工具声明）在请求侧注入、响应侧还原别名。测试：`npm run test:pi-extension`
+（离线，用回环 stand-in 网关断言指纹与线缆形状）。详见 [pi-extension/README.md](pi-extension/README.md)。
+
 ## Star 趋势
 
 图表由 Star History 自动更新，无需手动提交图片。受服务缓存（当前为 24 小时）和 GitHub 图片缓存影响，显示可能延迟，并非秒级实时；点击图表可查看在线趋势。

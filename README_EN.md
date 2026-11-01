@@ -860,6 +860,30 @@ On privacy and trust, plainly:
 - **The forward listener binds loopback by resolution, not by spelling** (v1.3.2): a hostname such as `localhost` is resolved with `dns.lookup` first and every answer must be loopback; the listener binds the resolved IP — so a hosts file or enterprise DNS pointing `localhost` at a routable interface can no longer pass the check while the listener hands the lane to the subnet.
 - Uninstalling removes the bundle entry; the plugin leaves no patches behind. Its data directory is plain JSON you can delete.
 
+## pi coding agent extension (provider)
+
+This repository also ships a **provider extension for the pi coding agent**: it registers the
+two keyless lanes above (the Kilo free pool and the OpenCode anonymous lane) as pi model
+providers, independent of the dsh plugin and usable on its own. After installing, two groups
+appear in `pi --list-models`:
+
+- `ofm-kilo/<model>` — the Kilo AI public gateway's `isFree` pool, no credential at all;
+- `ofm-opencode/<model>` — the OpenCode free lane, `Bearer public` plus a client fingerprint.
+
+```bash
+pi install ./pi-extension      # or pi -e ./pi-extension for one run
+pi --model ofm-kilo/kilo-auto-free
+```
+
+Implementation notes: each lane's roster is fetched live from the upstream listing on every
+load (an offline snapshot covers a machine with no route upstream); both lanes reuse pi-ai's
+OpenAI Completions implementation, so tool calls, thinking deltas, usage and cancellation
+behave like any built-in provider; the OpenCode v2 fingerprint (user agent, four session
+headers, minted session id, verbatim `read`/`shell` tool definitions) is injected on the
+request and its aliases are restored on the response. Tests: `npm run test:pi-extension`
+(offline, with a loopback stand-in gateway asserting the fingerprint and the wire shape).
+See [pi-extension/README.md](pi-extension/README.md).
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

@@ -1,0 +1,112 @@
+/**
+ * The Kilo AI public gateway's free pool, as a pi provider.
+ *
+ * Kilo publishes an OpenAI-compatible gateway whose `isFree` slice answers with
+ * no credential at all — no key, no login, no fingerprint gate. That makes this
+ * the simplest lane: the adaptations are that the request must carry NO
+ * Authorization header (a placeholder token is a 401 here), that the payload is
+ * normalised onto the gateway's own parameter vocabulary (`reasoning` rather than
+ * `reasoning_effort`, `max_tokens` rather than `max_completion_tokens`), and the
+ * same body-shape transport guard the other lane uses.
+ *
+ * The trade is the gateway's own, and it is stated on the model cards: free-pool
+ * prompts may be logged by the upstream provider and used to improve its
+ * services. That is a property of the free models, not of this provider.
+ *
+ * @module pi-extension/kilo.js
+ */
+import { openAICompletionsApi } from '@earendil-works/pi-ai/compat'
+import { KILO_BASE, fetchKiloListing, kiloModel, staticKiloModels, upstreamIdMap } from './catalog.js'
+import { composeFetches, fetchWithoutHeader, restoreAliases, sseGuard } from './lane.js'
+
+/** Provider id, also the pi model prefix: `ofm-kilo/<model>`. */
+export const PROVIDER_ID = 'ofm-kilo'
+
+/** `safeId -> wire id`, rebuilt on every refresh; the wire keeps `vendor/name:free`. */
+let upstreamIds = new Map()
+
+/** Remember the wire ids of the freshly mapped catalog. */
+function rememberUpstreamIds(listing) {
+  upstreamIds = upstreamIdMap(Array.isArray(listing?.data) ? listing.data : [], kiloModel)
+}
+
+/**
+ * Normalise one payload onto the gateway's parameter set.
+ *
+ * pi-ai sends OpenAI's `reasoning_effort`; this gateway's rows declare
+ * OpenRouter's `reasoning` object, where the off rung is `{enabled:false}` rather
+ * than an absent field — the `'off'` sentinel comes from the model's
+ * `thinkingLevelMap` (see catalog.kiloEffortMap). The gateway is listed as
+ * OpenAI-compatible but is not OpenAI-complete, so the rename happens here
+ * rather than through compat flags, which would apply to a provider pi shares
+ * with other lanes.
+ */
+function normalizeKiloPayload(params, model) {
+  const effort = params.reasoning_effort
+  delete params.reasoning_effort
+  const supported = model.reasoning === true
+  if (effort === 'off' && supported) {
+    params.reasoning = { enabled: false }
+    return params
+  }
+  if (supported && typeof effort === 'string' && effort !== '') {
+    params.reasoning = { effort }
+    params.include_reasoning = true
+  }
+  // The gateway ignores unknown OpenAI fields; drop the ones no row declares so
+  // a strict validation on its side can never 400 the turn.
+  delete params.store
+  delete params.stream_options
+  delete params.prompt_cache_key
+  delete params.prompt_cache_retention
+  return params
+}
+
+/** One turn on the free pool, with the Authorization header stripped on the wire. */
+export function streamKilo(model, context, options) {
+  const wireModel = {
+    ...model,
+    baseUrl: KILO_BASE,
+    id: upstreamIds.get(model.id) ?? model.id,
+    api: 'openai-completions',
+  }
+  const inner = openAICompletionsApi().streamSimple(wireModel, context, {
+    ...options,
+    // Satisfies pi's key check; the fetch wrapper below removes it from the wire,
+    // because Kilo's free pool answers only a genuinely credential-less request.
+    headers: { authorization: 'Bearer public' },
+    fetch: composeFetches(options?.fetch ?? fetch, fetchWithoutHeader('authorization'), sseGuard),
+    onPayload: async (params, current) => {
+      const replaced = await options?.onPayload?.(params, current)
+      return normalizeKiloPayload(replaced ?? params, model)
+    },
+  })
+  return restoreAliases(inner, null)
+}
+
+/** Free models the gateway currently serves, or the offline snapshot on failure. */
+export async function kiloModels({ signal } = {}) {
+  try {
+    const listing = await fetchKiloListing(signal)
+    const rows = Array.isArray(listing?.data) ? listing.data : []
+    const models = rows.map(kiloModel).filter(Boolean)
+    if (models.length === 0) return staticKiloModels()
+    rememberUpstreamIds(listing)
+    return models
+  } catch {
+    return staticKiloModels()
+  }
+}
+
+/** Registration payload for `pi.registerProvider`. */
+export function kiloProvider({ models }) {
+  return {
+    name: 'Our Free Model · Kilo',
+    baseUrl: KILO_BASE,
+    api: 'ofm-free-api',
+    apiKey: 'public',
+    models,
+    refreshModels: async (context) => kiloModels({ signal: context?.signal }),
+    streamSimple: streamKilo,
+  }
+}
