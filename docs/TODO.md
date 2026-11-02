@@ -28,7 +28,10 @@ Checklist phiên làm việc này. Trạng thái cập nhật sau mỗi bước.
 
 ## Còn lại
 
-- [ ] (còn lại duy nhất, điều kiện) Khi `npm run verify:pi-extension-upstream` báo FAIL —
-      403 FreeTierError hoặc drift roster → đo lại theo `docs/free-lane-wire.md`
-      (TLS MITM + replay từng byte) và cập nhật `fingerprint.js`/`catalog.js`.
-      Lần đo gần nhất (2026-11-01, sau khi bù big-pickle): cả hai lane PASS.
+- [x] Viết runbook phản ứng drift: `docs/pi-extension-drift-runbook.md` — bảng
+      triệu chứng→nghĩa, quy trình đo (tham chiếu `free-lane-wire.md`), bảng
+      file·symbol phải sửa cho từng yếu tố (đã đối chiếu 18 symbol đều tồn tại),
+      verify trước commit, và các bước sau khi sửa
+- [ ] (còn lại duy nhất, điều kiện — chờ trigger) Khi `npm run
+      verify:pi-extension-upstream` báo FAIL → làm theo runbook trên. Lần đo gần
+      nhất (2026-11-01, sau khi bù big-pickle): cả hai lane PASS.

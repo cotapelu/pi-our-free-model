@@ -187,6 +187,10 @@ rosters against the offline snapshot — a model that appears, disappears, moves
 to another wire, or changes its declared thinking menu is reported instead of
 silently changing what `pi --list-models` offers. It exits non-zero on drift.
 
+When it does fail, the response procedure — symptom → meaning, what to measure,
+which file and symbol to edit, and what must pass before a commit — is written
+down in [`../docs/pi-extension-drift-runbook.md`](../docs/pi-extension-drift-runbook.md).
+
 The two integration scripts stand up a loopback stand-in gateway (recording
 exactly what the provider sends) and drive a real `pi` run against it, so the
 fingerprint, the alias restore and the wire shape are asserted end to end
