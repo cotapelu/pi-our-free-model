@@ -77,3 +77,23 @@ không mthể ghi log secret, listener loopback do pi quản.
   SDK nuốt thành stream rỗng).
 - Việc còn lại chỉ là bảo trì: khi upstream siết gate thì đo lại fingerprint theo
   `docs/free-lane-wire.md` và cập nhật `pi-extension/fingerprint.js`.
+
+## 6) Đo lại upstream (bảo trì định kỳ) — 2026-11-01
+
+Đo trực tiếp `opencode.ai` với chính xác các byte extension gửi:
+
+- `GET /inference/v1/models` dưới header fingerprint → **200**, 8 id free
+  (`big-pickle`, `beam-free`, `flint-40b-free`, `mimo-v2.6-flash-free`,
+  `nemotron-3.5-super-vl-free`, `nemotron-3.5-lightning-free`,
+  `deepseek-v4.1-flash-free`, `glm-5.3-flash-free`), **tất cả chat-wired**
+  (`api.chat-completions`) — không xuất hiện row Responses/Messages mới, nên bộ
+  lọc `chat-completions` trong `catalog.js` vẫn đúng.
+- `POST /inference/v1/chat/completions` và `/inference/openai/v1/chat/completions`
+  với đủ UA v2, 4 session header, session id minted, tool `read`/`shell` verbatim,
+  block `<env>`, không `tool_choice` → **429 FreeUsageLimitError** (quota của IP,
+  gate ĐÃ PASS) chứ không phải 403 → fingerprint chưa bị siết.
+- Kilo `kilo-auto/free` không credential → **200**, SSE thật.
+
+Kết luận: không drift; `fingerprint.js` không cần sửa. Lần đo lại tiếp theo làm
+theo đúng quy trình trên (script tương đương `docs/free-lane-wire.md`: TLS MITM
++ replay từng byte nếu cần bắt chước client mới).

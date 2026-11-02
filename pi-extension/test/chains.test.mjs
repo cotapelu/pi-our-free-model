@@ -14,7 +14,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { readChains, writeChains } from '../chain-store.js'
-import { chainId, chainByName, decideLink, evaluateAdd, intersectCapabilities, isAdvanceable, normalizeChains, parseChainAdd, CHAIN_PREFIX } from '../chains.js'
+import { chainId, chainByName, decideLink, evaluateAdd, intersectCapabilities, isAdvanceable, normalizeChains, parseChainAdd, parseChainSetLinks, CHAIN_PREFIX } from '../chains.js'
 
 let failures = 0
 function check(label, fn) {
@@ -232,6 +232,20 @@ check('a context overflow does not advance the chain', () => {
   assert.equal(isAdvanceable({ stopReason: 'error', errorMessage: 'free quota for this egress is spent (429)' }), true)
   assert.equal(isAdvanceable({ stopReason: 'error', errorMessage: 'upstream blocks this model for this egress region (403)' }), true)
   assert.equal(isAdvanceable({ stopReason: 'error', errorMessage: 'HTTP 503' }), true)
+})
+
+check('parseChainSetLinks reads a replacement link list', () => {
+  const parsed = parseChainSetLinks('my-chain links ofm-kilo/a | ofm-opencode/b')
+  assert.equal(parsed.target, 'my-chain')
+  assert.deepEqual(parsed.models, ['ofm-kilo/a', 'ofm-opencode/b'])
+})
+
+check('parseChainSetLinks refuses a malformed edit', () => {
+  assert.ok(parseChainSetLinks('my-chain strategy fallback').error !== undefined, 'not a links edit')
+  assert.ok(parseChainSetLinks('my-chain links').error !== undefined, 'no links')
+  assert.ok(parseChainSetLinks('my-chain links not-a-link').error !== undefined, 'a link without a provider')
+  const deduped = parseChainSetLinks('my-chain links ofm-kilo/a | ofm-kilo/a')
+  assert.deepEqual(deduped.models, ['ofm-kilo/a'], 'duplicates collapse')
 })
 
 check('evaluateAdd refuses a chain whose links are all dead', () => {

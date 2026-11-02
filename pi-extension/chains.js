@@ -94,6 +94,30 @@ export function chainByName(chains, nameOrId) {
 }
 
 /**
+ * Parse one `/ofm chain set <id|name> links <a> | <b>` argument list.
+ *
+ * Replacing a chain's links is the edit the file was needed for; it uses the
+ * same spelling rules as `add`, because the same mistakes are possible.
+ *
+ * @param {string} input the text after `set`
+ * @returns {{target:string, models:string[]}|{error:string}}
+ */
+export function parseChainSetLinks(input) {
+  const text = String(input ?? '').trim()
+  // `<id|name> links <a> | <b>` — the id and the keyword share the first field,
+  // because only the link list is pipe-separated.
+  const match = /^(\S+)\s+links\s+(.+)$/i.exec(text)
+  if (match === null) {
+    return { error: 'usage: /ofm chain set <id|name> links <provider/model> | <provider/model>' }
+  }
+  const models = [...new Set(match[2].split('|').map((field) => field.trim()).filter((field) => field !== ''))]
+  const bad = models.find((link) => !LINK_FIELD.test(link))
+  if (bad !== undefined) return { error: `"${bad}" is not a provider/model link` }
+  if (models.length === 0) return { error: 'the chain needs at least one link' }
+  return { target: match[1], models }
+}
+
+/**
  * Check a parsed `add` against the live registry.
  *
  * A link that does not resolve right now is almost always a typo, and a chain

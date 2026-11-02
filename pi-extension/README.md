@@ -52,6 +52,7 @@ refusal, a 5xx.
 /ofm chain add My Chain | ofm-kilo/reflection-beam-free | ofm-opencode/beam-free
 /ofm chain add RR | ofm-kilo/a | ofm-kilo/b | round-robin:2
 /ofm chain                                  # list, ⚠ on links that do not resolve
+/ofm chain set <id|name> links <provider/model> | <provider/model>
 /ofm chain set <id|name> strategy fallback|round-robin[:sticky]
 /ofm chain set <id|name> sticky <1..16>
 /ofm chain enable|disable|remove <id>

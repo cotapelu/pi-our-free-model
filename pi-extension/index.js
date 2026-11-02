@@ -19,7 +19,7 @@
  *
  * @module pi-extension/index.js
  */
-import { CHAIN_PREFIX, CHAIN_PROVIDER, chainByName, chainId, decideLink, evaluateAdd, intersectCapabilities, normalizeChains, parseChainAdd } from './chains.js'
+import { CHAIN_PREFIX, CHAIN_PROVIDER, chainByName, chainId, decideLink, evaluateAdd, intersectCapabilities, normalizeChains, parseChainAdd, parseChainSetLinks } from './chains.js'
 import { readChains, writeChains } from './chain-store.js'
 import { kiloModels, kiloProvider, PROVIDER_ID as KILO_ID } from './kilo.js'
 import { opencodeModels, opencodeProvider, PROVIDER_ID as OPENECODE_ID } from './opencode.js'
@@ -142,13 +142,36 @@ export default async function (pi) {
       }
 
       if (head === 'chain' && (words[1] ?? '').toLowerCase() === 'set') {
+        const setInput = rest.replace(/^set\s+/i, '').trim()
+        // `/ofm chain set <id|name> links <a> | <b>` replaces the chain's links.
+        if (/^\S+\s+links\s+/i.test(setInput)) {
+          const parsed = parseChainSetLinks(setInput)
+          if (parsed.error === undefined) {
+            const named = chainByName(chains, parsed.target)
+            if (named !== undefined) {
+              const check = evaluateAdd(parsed, (address) => resolveLink(ctx, address) !== undefined)
+              if (check.ok) {
+                const stored = writeChains(chains.map((chain) => (chain.id === named.id ? { ...chain, models: parsed.models } : chain)))
+                chains.length = 0
+                chains.push(...stored)
+                const updated = stored.find((chain) => chain.id === named.id)
+                if (updated?.enabled !== false) registerChain(pi, updated, ctx)
+                const dead = check.dead.length > 0 ? ` — not resolving right now: ${check.dead.join(', ')}` : ''
+                notify(`chain ${named.id} now links ${check.live.length}/${parsed.models.length} live${dead}`)
+                return
+              }
+              notify(check.error)
+              return
+            }
+          }
+        }
         // `/ofm chain set <id|name> strategy fallback|round-robin[:sticky]` or
         // `/ofm chain set <id|name> sticky <n>` — the edit that spares the user
         // the chains file.
-        const match = /^([^\s]+)\s+(strategy|sticky)\s+(.+)$/i.exec(rest.replace(/^set\s+/i, '').trim())
+        const match = /^([^\s]+)\s+(strategy|sticky)\s+(.+)$/i.exec(setInput)
         const named = match !== null ? chainByName(chains, match[1]) : undefined
         if (match === null || named === undefined) {
-          notify('usage: /ofm chain set <id|name> strategy fallback|round-robin[:sticky]  |  sticky <n>')
+          notify('usage: /ofm chain set <id|name> links <a> | <b>\n       /ofm chain set <id|name> strategy fallback|round-robin[:sticky]\n       /ofm chain set <id|name> sticky <n>')
           return
         }
         let patch
