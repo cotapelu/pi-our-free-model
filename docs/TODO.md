@@ -5,32 +5,31 @@ Checklist phiên làm việc này. Trạng thái cập nhật sau mỗi bước.
 ## Đã xong
 
 - [x] Phân tích bản chất repo dsh: 7 hệ thống (xem `docs/pi-extension-audit.md` §1)
-- [x] Quét src/: upstream, http, kilo, catalog, effort, stream, adapter, messages, probe,
-      recovery, egress, store, trust, combos, aggregate, forward, anthropic, gemini, chan-relay…
-      (đủ để đối chiếu hành vi lane miễn phí)
-- [x] Quét cấu trúc vendor/channel-pack, vendor/magpie, packages/, scripts/, worker/, adapter/,
-      catalog/, feed/, locale/ (bản đồ + vai trò, audit §1)
+- [x] Quét repo dsh: src/ đủ phần lane miễn phí + cấu trúc toàn bộ thư mục con
 - [x] Viết `docs/pi-extension-audit.md`: repo làm gì + 14 gap (G1–G14) + mức độ + trạng thái
-- [x] Sửa extension theo gap:
-      G1 env block `<env>` · G2 alias `subagent_fork`/`working_directory` + note map tên ·
-      G3 retarget tool_choice · G4 capacity/menu đo thực tế (deepseek 1M/384K…) ·
-      G5 model không menu → không gửi reasoning_effort · G6 `max` trong effortMap ·
-      G7 Kilo off = `{enabled:false}` + family mandatory-thinking ·
-      G8 sseGuard (fold JSON→SSE + document→delta frames, HTML→lỗi) ·
-      G9 idle watchdog (không reset bởi keepalive) · G10 DSML scrubber ·
-      G11 chỉ map row `chat-completions` · G12 thông báo lỗi đầy đủ
-- [x] Sửa 3 bug tự phát hiện khi test: map đổi tên history/tool_choice sai chiều; bảng static
-      dùng nhầm `maxTokens`/`maxOutput`; fold JSON document phải tái sinh delta-frames
-      (SDK không đọc shape non-stream)
-- [x] Test: `fingerprint.test.mjs` (10), `catalog.test.mjs` (12), `fingerprint-integration.mjs`
-      (15, gồm assert `<env>`), `kilo-integration.mjs` (18, gồm off-rung + fold JSON) — **38/38 PASS**
-      (`npm run test:pi-extension`)
-- [x] Smoke thật: `pi --list-models` (23 model), Kilo `--thinking off` + `high` + tool `ls`,
-      lane OpenCode báo 429 thân thiện (fingerprint pass, quota theo IP)
-- [x] Cập nhật `pi-extension/README.md` (env block, menu, guards)
+- [x] Sửa extension theo gap G1–G12 (env block, alias tool, capacity đo thực tế,
+      effort không gửi ngoài menu, Kilo off `{enabled:false}`, sseGuard fold, idle
+      watchdog, DSML scrub, chỉ map row chat-completions, thông báo lỗi)
+- [x] **Port combo/fallback-chain** (`src/combos.js` → `pi-extension/chains.js` +
+      `chain-store.js` + virtual model `ofm-chain` + `/ofm chain add|remove|enable|disable`):
+      - normalize input không tin cậy, capacity = giao các link, round-robin sticky
+      - failover khớp kiến trúc pi: advance trên retry (lỗi tạm thời) và trên
+        **user turn kế tiếp** sau lỗi pi không retry (quota/region); không đổi
+        model khi context overflow; giữ model trên continuation để bảo toàn prompt cache
+      - 3 lỗi thật phát hiện bằng test: (1) thông báo 429 của extension làm pi-ai
+        coi quota wall là retryable → giữ lại token `FreeUsageLimitError`;
+        (2) `kilo.js` đổi `model.id` thành wire id làm transcript ghi nhận id lạ,
+        hỏng đối chiếu address → chỉ đổi id trong payload; (3) state chain không
+        reset `walks` vì `previous` không có trên mọi đường → suy ra từ transcript
+- [x] Test 47 check PASS: `npm run test:pi-extension`
+      (`catalog` 12 · `fingerprint` 10 · `chains` 18 · `fingerprint-integration` 15 ·
+      `kilo-integration` 11 · `chain-integration` 3) — script integration lái `pi` thật
+- [x] Smoke thật: `pi --list-models` (23 model lane + chain), Kilo `--thinking off/high`
+      + tool, lane OpenCode 429 thân thiện, chain xuất hiện trong picker
 
 ## Còn lại
 
-- [ ] (không còn) — nếu upstream siết gate: đo lại fingerprint theo `docs/free-lane-wire.md`
-      (TLS MITM + replay từng byte) rồi cập nhật `pi-extension/fingerprint.js`
-- [ ] Tùy chọn: port combo/fallback-chain qua `pi.registerVirtualModel` (xem `src/combos.js`)
+- [ ] Bảo trì định kỳ: upstream siết gate → đo lại fingerprint theo
+      `docs/free-lane-wire.md` (TLS MITM + replay từng byte), cập nhật `fingerprint.js`
+- [ ] Tùy chọn: `/ofm chain add` chưa nhận `strategy`/`stickyLimit` từ dòng lệnh
+      (hiến đã, sửa tay file `chains.json`); UI cho state machine nếu cần

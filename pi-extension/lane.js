@@ -129,7 +129,11 @@ export function friendlyMessage(message) {
     return 'upstream refused the free lane: the client fingerprint no longer matches (the gateway tightened its gate). Update this extension; the lane needs no key, so nothing on your side is wrong.'
   }
   if (/FreeUsageLimitError|429|usage limit|rate limit/i.test(message)) {
-    return 'free quota for this egress is spent (429). The lane meters per session/IP; wait for the reset, change egress, or fall back to another lane/model.'
+    // The upstream's own discriminator stays in the text on purpose: pi-ai reads
+    // `FreeUsageLimitError` as a non-retryable account limit, and rewriting it
+    // into a bare "429" would put quota walls into the retryable set — the same
+    // turn, paid three times, arriving later.
+    return 'free quota for this egress is spent (429 FreeUsageLimitError). The lane meters per session/IP; wait for the reset, change egress, or fall back to another lane/model.'
   }
   if (/RegionError|not available in your country/i.test(message) || (/region/i.test(message) && /403|forbidden/i.test(message))) {
     return 'upstream blocks this model for this egress region (403). Route the request through a proxy (NODE_USE_ENV_PROXY=1 with HTTPS_PROXY) and retry.'

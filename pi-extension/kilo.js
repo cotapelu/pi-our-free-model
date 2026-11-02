@@ -64,13 +64,10 @@ function normalizeKiloPayload(params, model) {
 
 /** One turn on the free pool, with the Authorization header stripped on the wire. */
 export function streamKilo(model, context, options) {
-  const wireModel = {
-    ...model,
-    baseUrl: KILO_BASE,
-    id: upstreamIds.get(model.id) ?? model.id,
-    api: 'openai-completions',
-  }
-  const inner = openAICompletionsApi().streamSimple(wireModel, context, {
+  // The registered id stays the identity pi records (usage, transcript, chains);
+  // the upstream's `vendor/name:free` spelling rides only the request payload.
+  const wireId = upstreamIds.get(model.id) ?? model.id
+  const inner = openAICompletionsApi().streamSimple({ ...model, baseUrl: KILO_BASE, api: 'openai-completions' }, context, {
     ...options,
     // Satisfies pi's key check; the fetch wrapper below removes it from the wire,
     // because Kilo's free pool answers only a genuinely credential-less request.
@@ -78,7 +75,9 @@ export function streamKilo(model, context, options) {
     fetch: composeFetches(options?.fetch ?? fetch, fetchWithoutHeader('authorization'), sseGuard),
     onPayload: async (params, current) => {
       const replaced = await options?.onPayload?.(params, current)
-      return normalizeKiloPayload(replaced ?? params, model)
+      const payload = replaced ?? params
+      payload.model = wireId
+      return normalizeKiloPayload(payload, model)
     },
   })
   return restoreAliases(inner, null)

@@ -36,9 +36,39 @@ then pick a model:
 pi --list-models | grep ofm
 pi --model ofm-kilo/reflection-beam-free
 pi --model ofm-opencode/deepseek-v4.1-flash-free --thinking high
+pi --model ofm-chain/my-chain            # a fallback chain (see below)
 ```
 
 `/ofm` reports the current rosters; `/ofm refresh` re-fetches both listings.
+
+## Fallback chains
+
+A chain is one selectable model name whose links are real models, tried in
+order — the first one that answers wins. It exists for the failures these lanes
+actually have: a quota wall on one link while the other lane is idle, a region
+refusal, a 5xx.
+
+```bash
+/ofm chain add My Chain | ofm-kilo/reflection-beam-free | ofm-opencode/beam-free
+/ofm chain                                  # list, ⚠ on links that do not resolve
+/ofm chain enable|disable|remove <id>
+```
+
+`fallback` (default) always starts at the head; `round-robin` rotates the start
+per `stickyLimit` turns. The capacities shown for a chain are the intersection
+of its links — the honest numbers, never the union: a chain whose head sees
+images hands a text-only fallback nothing it cannot read.
+
+How the failover works is a property of pi, not of this extension: pi routes
+once per request, retries only *transient* failures, and deliberately does not
+retry a quota wall (its own policy lists `FreeUsageLimitError` as an account
+limit — retrying it spends the quota three times). So a chain advances on the
+retry when pi retries, and on the **next user turn** after a failure pi refuses
+to retry, always to the link after the one that failed. A continuation stays on
+the model that answered, so prompt caches and thinking signatures survive, and a
+walk is capped at `links - 1` moves per streak, so a chain of dead links fails
+its turn instead of flapping forever. Chains persist in
+`~/.our-free-model/chains.json` (`OFM_DATA_DIR` overrides).
 
 ## Why these models are free — and what that costs
 
@@ -100,18 +130,26 @@ to an off request are not offered one.
 
 ```
 pi-extension/
-├── index.js                 factory: registers both providers and /ofm
+├── index.js                 factory: registers both providers, chains and /ofm
 ├── fingerprint.js           the OpenCode v2 client fingerprint (tools, session, headers)
 ├── catalog.js               live listing fetch, mapping to pi models, offline snapshots
 ├── lane.js                  shared stream plumbing: alias restore, error translation,
-│                            credential-free fetch, session rotation
+│                            credential-free fetch, transport guards, session rotation
 ├── opencode.js               ofm-opencode provider
 ├── kilo.js                  ofm-kilo provider
+├── chains.js                fallback chains: normalize, capacity intersection, routing
+├── chain-store.js           durable chain storage (~/.our-free-model/chains.json)
 └── test/                    offline integration + unit checks (node, no network)
-    ├── fingerprint-integration.mjs   stand-in gateway asserts the gate's checks,
+    ├── fingerprint.test.mjs         payload fingerprint unit checks
+    ├── catalog.test.mjs             mapping and effort-menu unit checks
+    ├── chains.test.mjs              chain routing state machine unit checks
+    ├── fingerprint-integration.mjs  stand-in gateway asserts the gate's checks;
     │                                pi must execute the aliased tool call
-    ├── kilo-integration.mjs          stand-in gateway asserts the Kilo wire shape
-    └── catalog.test.mjs              mapping and effort-menu unit checks
+    ├── kilo-integration.mjs         stand-in gateway asserts the Kilo wire shape,
+    │                                the off rung and the non-SSE fold
+    └── chain-integration.mjs        stand-in gateway drives a real pi run: a retryable
+                                     failure fails over within the turn, a quota wall
+                                     fails over on the next user turn
 ```
 
 ## Tests
