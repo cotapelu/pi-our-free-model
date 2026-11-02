@@ -97,3 +97,14 @@ không mthể ghi log secret, listener loopback do pi quản.
 Kết luận: không drift; `fingerprint.js` không cần sửa. Lần đo lại tiếp theo làm
 theo đúng quy trình trên (script tương đương `docs/free-lane-wire.md`: TLS MITM
 + replay từng byte nếu cần bắt chước client mới).
+
+### 6b) Đo lại có tự động hóa (2026-11-01)
+
+Quy trình đo lại giờ là lệnh: `npm run verify:pi-extension-upstream`
+(`pi-extension/scripts/reverify-upstream.mjs`). Nó không chỉ kiểm tra fingerprint
+mà còn **diff roster live với snapshot offline** — và lần chạy đầu đã phát hiện
+một drift thật: `big-pickle` (id free không hậu tố `-free`, vốn nằm trong
+`ALWAYS_FREE` của `catalog.js` nên đường live có map đúng) **thiếu trong
+`STATIC_OPENECODE_MODELS`**, nghĩa là máy không có mạng mất một model lane vẫn
+phục vụ. Đã bù vào snapshot kèm 2 unit test chống hồi quy; chạy lại: cả hai lane
+PASS, không drift khác.

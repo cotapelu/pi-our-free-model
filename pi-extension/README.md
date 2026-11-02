@@ -174,10 +174,18 @@ pi-extension/
 ## Tests
 
 ```bash
-node pi-extension/test/catalog.test.mjs
-node pi-extension/test/fingerprint-integration.mjs
-node pi-extension/test/kilo-integration.mjs
+npm run test:pi-extension        # offline: unit + integration, no network
+npm run verify:pi-extension-upstream   # live: re-measure both lanes (network)
 ```
+
+The live verifier is the executable form of the periodic maintenance item: it
+wears the fingerprint against `opencode.ai` (a `403 FreeTierError` means the
+gate moved and `fingerprint.js` must be re-measured per the plugin's
+`docs/free-lane-wire.md`; a `429` means the gate *passed* and this egress spent
+its quota), asks Kilo's free pool with no credential, and diffs both live
+rosters against the offline snapshot — a model that appears, disappears, moves
+to another wire, or changes its declared thinking menu is reported instead of
+silently changing what `pi --list-models` offers. It exits non-zero on drift.
 
 The two integration scripts stand up a loopback stand-in gateway (recording
 exactly what the provider sends) and drive a real `pi` run against it, so the

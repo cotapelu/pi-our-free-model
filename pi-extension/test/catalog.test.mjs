@@ -129,6 +129,24 @@ check('non-free Kilo rows are dropped', () => {
   assert.equal(kiloModel({ id: 'anthropic/claude-opus', isFree: false }), null)
 })
 
+check('the offline snapshot covers the id the lane serves without a -free suffix', () => {
+  const ids = staticOpencodeModels().map((model) => model.id)
+  assert.ok(ids.includes('big-pickle'), 'the lane\'s anonymous id is on the snapshot')
+  const pickle = staticOpencodeModels().find((model) => model.id === 'big-pickle')
+  assert.equal(pickle.contextWindow, 262144)
+  assert.equal(pickle.maxTokens, 131072)
+  assert.deepEqual(pickle.input, ['text', 'image'])
+  assert.equal(pickle.reasoning, false, 'it declares no thinking menu')
+})
+
+check('every snapshot id is a live-mappable free id', () => {
+  // A snapshot id the live mapping would drop is a model that disappears the
+  // moment the network answers — the reverify script reports that as drift.
+  for (const model of staticOpencodeModels()) {
+    assert.equal(isOpencodeFreeId(model.id), true, `${model.id} must read as free`)
+  }
+})
+
 check('offline snapshots are non-empty and carry measured numbers', () => {
   assert.ok(staticOpencodeModels().length >= 5)
   assert.ok(staticKiloModels().length >= 10)

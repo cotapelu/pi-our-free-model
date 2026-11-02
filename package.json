@@ -32,6 +32,7 @@
     "test:standalone-channels": "node scripts/standalone-channels-test.mjs",
     "test": "node scripts/test-all.mjs",
     "test:pi-extension": "node pi-extension/test/catalog.test.mjs && node pi-extension/test/fingerprint.test.mjs && node pi-extension/test/chains.test.mjs && node pi-extension/test/fingerprint-integration.mjs && node pi-extension/test/kilo-integration.mjs && node pi-extension/test/chain-integration.mjs",
+    "verify:pi-extension-upstream": "node pi-extension/scripts/reverify-upstream.mjs",
     "test:contributor": "node scripts/test-all.mjs --mode contributor",
     "test:release": "node scripts/test-all.mjs --mode release",
     "manifest": "node scripts/build-manifest.mjs",

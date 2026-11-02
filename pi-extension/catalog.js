@@ -235,6 +235,10 @@ export function kiloModel(row) {
 
 /** The offline fallback, so both lanes exist before the first listing answers. */
 export const STATIC_OPENECODE_MODELS = [
+  // The lane's own long-standing anonymous id: no `-free` suffix, no declared
+  // thinking menu, and it is on the live listing today — the snapshot has to
+  // carry it or a machine with no route upstream loses a model the lane serves.
+  { id: 'big-pickle', name: 'Big Pickle', contextWindow: 262144, maxOutput: 131072, vision: true },
   { id: 'beam-free', name: 'Beam Free', contextWindow: 1048576, maxOutput: 131072, efforts: ['low', 'medium', 'high', 'xhigh', 'max'] },
   { id: 'flint-40b-free', name: 'Flint 40B Free', contextWindow: 262144, maxOutput: 65536, efforts: ['low', 'medium', 'high', 'xhigh', 'max'] },
   { id: 'mimo-v2.6-flash-free', name: 'MiMo-V2.6-Flash Free', contextWindow: 1048576, maxOutput: 131072, vision: true },
