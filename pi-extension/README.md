@@ -70,9 +70,10 @@ refusal, a 5xx.
 ```
 
 `chain edit` is the wizard for the same edits, in an interactive session: it
-asks for the name, the links (one per line, prefilled with the current ones), the
-strategy and — for `round-robin` — the sticky window, then validates exactly like
-`add` does before writing. Cancelling any step writes nothing; in a non-interactive
+asks for the name (the current name shows as a placeholder — leaving it blank
+keeps the current name), the links (one per line, prefilled with the current
+ones), the strategy and — for `round-robin` — the sticky window, then validates
+exactly like `add` does before writing. Cancelling any step writes nothing; in a non-interactive
 session it says so and points at the `set` forms and the file.
 
 The trailing field of `add` is the strategy when it spells one — everything

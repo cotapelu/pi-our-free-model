@@ -107,6 +107,10 @@ Checklist phiên làm việc này. Trạng thái cập nhật sau mỗi bước.
       `pi install ./pi-extension -l` bị pi **gate tin cậy** → không nạp tới khi `--approve`
       (23 model khi `--approve`, 0 khi không) → ghi vào README §Install. Đã dọn sạch install
       sau khi kiểm (`.pi/` nguyên trạng, git sạch).
+- [x] **Sửa claim sai trong README (2026-11-02)**: mô tả wizard `/ofm chain edit` ghi
+      "name … prefilled with the current" nhưng code chỉ **prefill thật ở links**
+      (`ctx.ui.editor`); **name là placeholder** (`ctx.ui.input`) và để trống thì giữ nguyên
+      (`buildChainEdit`, đã test `chains.test.mjs`). Sửa README §chains cho khớp code.
 - [ ] (còn lại duy nhất, điều kiện — chờ trigger) Khi `npm run
       verify:pi-extension-upstream` báo FAIL → làm theo runbook trên. Lần đo gần
       nhất (2026-11-02 ~14:18, chu kỳ #3 cùng ngày, sau fix wire-id): test offline **124/124
