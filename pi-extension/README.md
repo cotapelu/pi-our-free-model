@@ -179,9 +179,12 @@ pi-extension/
     │                                no-menu model must carry no effort at all
     ├── kilo-integration.mjs         stand-in gateway asserts the Kilo wire shape,
     │                                the off rung and the non-SSE fold
-    └── chain-integration.mjs        stand-in gateway drives a real pi run: a retryable
-                                     failure fails over within the turn, a quota wall
-                                     fails over on the next user turn
+    ├── chain-integration.mjs        stand-in gateway drives a real pi run: a retryable
+    │                                failure fails over within the turn, a quota wall
+    │                                fails over on the next user turn
+    └── acceptance-live.mjs          the runbook §5 acceptance, as a test: pi loads the
+                                     extension and lists both live rosters, then answers
+                                     one real turn per lane — end to end, no egress
 ```
 
 ## Tests

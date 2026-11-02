@@ -163,3 +163,21 @@ wire-id không chỉ gỡ được vụ flake một lần mà còn giữ đượ
 
 Kết luận: trạng thái "sạch" của §6c được giữ; mục điều kiện trong TODO vẫn chờ
 trigger (một lần verify FAIL thật) chứ không tự tắt.
+
+### 6e) Acceptance end-to-end thành script CI (2026-11-02)
+
+Runbook §5 có nửa "chấp nhận" chỉ từng chạy tay (smoke #5: `pi -e ./pi-extension
+--list-models` + một lượt thật). Biến nó thành `pi-extension/test/acceptance-live.mjs`
+để CI có cổng end-to-end **không tốn quota egress** (cả 2 lane trỏ loopback qua
+`OFM_*` override):
+
+- `--list-models` phải hiện roster **live** của cả 2 provider (`ofm-opencode`,
+  `ofm-kilo`) — tức roster từ listing, không phải snapshot;
+- một lượt thật trên **mỗi** lane phải được stand-in trả lời qua đúng provider
+  (marker `answered-by-kilo` / `answered-by-opencode`) — nửa mà smoke tay không
+  với tới được ở egress bị quota (OpenCode 429) nay được đậy qua loopback.
+
+Nối vào `test:pi-extension` (tự SKIP khi thiếu `pi` qua `preflight.mjs`; timeout
+90s để một lần treo thành FAIL chứ không đơ test). Teeth-check: đổi id listing
+OpenCode trong bản sao → assert roster đúng **FAIL**, còn Kilo PASS. Sau khi thêm:
+**124 check / 9 script PASS** (không SKIP trên máy có `pi`).
