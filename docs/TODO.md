@@ -28,6 +28,12 @@ Checklist phiên làm việc này. Trạng thái cập nhật sau mỗi bước.
 
 ## Còn lại
 
+- [x] Nối test extension vào CI (`.github/workflows/test.yml`, job `test / pi-extension`):
+      cài `@earendil-works/pi-coding-agent@^1.4.0` rồi chạy `npm run test:pi-extension`;
+      thêm `test/preflight.mjs` để 3 script integration **SKIP có lý do + exit 0** khi
+      thiếu `pi` (đã mô phỏng: 4 unit PASS, 3 integration SKIP), nên contributor
+      không có pi vẫn chạy được toàn bộ phần offline; verifier live cố ý để ngoài CI
+      vì nó tiêu quota free của egress
 - [x] Disclaimer một lần cho người dùng lane miễn phí (G14): `disclaimer.js` +
       `session_start` — nói rõ Kilo log prompt, OpenCode meter theo session/IP,\      đừng gửi dữ liệu nhạy cảm; hiện đúng một lần ở session tương tác
       (version-gate như dsh, ghi `notice-ack.json`). Smoke RPC: phiên 1 hiện 1

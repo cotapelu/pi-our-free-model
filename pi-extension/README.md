@@ -181,9 +181,16 @@ pi-extension/
 ## Tests
 
 ```bash
-npm run test:pi-extension        # offline: unit + integration, no network
+npm run test:pi-extension              # unit + integration; integration needs `pi`
 npm run verify:pi-extension-upstream   # live: re-measure both lanes (network)
 ```
+
+The integration scripts drive a real `pi` process. Where the binary is absent
+they print `SKIP <script> — the `pi` binary is not on PATH` and exit 0, so a
+contributor machine without pi still gets the whole offline suite, and CI runs
+the same command in both shapes (`npm i -g
+@earendil-works/pi-coding-agent@^1.4.0` turns the skips into real runs). The live
+verifier is deliberately not in CI: it spends this egress's free quota.
 
 The live verifier is the executable form of the periodic maintenance item: it
 wears the fingerprint against `opencode.ai` (a `403 FreeTierError` means the

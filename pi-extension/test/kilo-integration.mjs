@@ -21,9 +21,11 @@ import { createServer } from 'node:http'
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { requirePi } from './preflight.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const EXTENSION = path.join(HERE, '..')
+requirePi('kilo-integration')
 
 /** Every non-listing request, in arrival order: `{ headers, body }`. */
 const requests = []

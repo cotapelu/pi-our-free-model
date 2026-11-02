@@ -23,9 +23,11 @@ import { mkdtempSync, writeFileSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { requirePi } from './preflight.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const EXTENSION = path.join(HERE, '..')
+requirePi('chain-integration')
 
 const failures = []
 /** `alpha`'s answer per phase: `503`, `429`, or `ok`. */

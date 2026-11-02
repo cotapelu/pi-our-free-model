@@ -43,6 +43,23 @@ jobs:
           node-version: 22
       - run: npm run test:release
 
+  # The pi provider extension drives a real `pi` process for its integration
+  # checks (fingerprint, Kilo wire shape, chain failover), so this job installs it.
+  # Its scripts skip cleanly where the binary is absent, so the same command is
+  # also the offline gate for contributors. The live lane verifier deliberately
+  # stays out of CI: it spends the egress's free quota (see pi-extension/README).
+  pi-extension:
+    name: test / pi-extension (pull_request)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - run: npm install --ignore-scripts
+      - run: npm install --global @earendil-works/pi-coding-agent@^1.4.0
+      - run: npm run test:pi-extension
+
   # The adapter seam (and only it) is kept under strict TypeScript checking. This
   # job installs development dependencies without running lifecycle scripts.
   typecheck:

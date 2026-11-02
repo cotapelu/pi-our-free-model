@@ -15,10 +15,12 @@ import { createServer } from 'node:http'
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { requirePi } from './preflight.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const REPO = path.resolve(HERE, '../..')
 const EXTENSION = path.join(HERE, '..')
+requirePi('fingerprint-integration')
 
 const SESSION_RE = /^ses_[0-9a-f]{12}[0-9A-Za-z]{14}$/
 const DESCENDING_RE = /^[0-9a-f]{9}f[c-f][0-9a-f]$/
