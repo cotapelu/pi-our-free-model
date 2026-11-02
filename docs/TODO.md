@@ -100,6 +100,13 @@ Checklist phiên làm việc này. Trạng thái cập nhật sau mỗi bước.
       `route→{model,thinkingLevel,state}`, `registerCommand`, `ctx.hasUI/ui/modelRegistry`, và
       cơ chế refresh-abort-theo-generation (nền của `createKiloRoster`). Bảng bằng chứng:
       audit §7. **Không cần sửa code** — extension đã đúng.
+- [x] **Kiểm chứng đường dùng thật của pi-extension (2026-11-02)**: `pi install
+      ./pi-extension` (global) → `pi --list-models` **23 model** (không cần approve) + một
+      lượt thật qua đường đã-cài `pi -p "…" --model ofm-kilo/kilo-auto-free` → **`pong`**,
+      exit 0; `pi -e ./pi-extension` cùng hoạt động. **Phát hiện**: biến thể project-local
+      `pi install ./pi-extension -l` bị pi **gate tin cậy** → không nạp tới khi `--approve`
+      (23 model khi `--approve`, 0 khi không) → ghi vào README §Install. Đã dọn sạch install
+      sau khi kiểm (`.pi/` nguyên trạng, git sạch).
 - [ ] (còn lại duy nhất, điều kiện — chờ trigger) Khi `npm run
       verify:pi-extension-upstream` báo FAIL → làm theo runbook trên. Lần đo gần
       nhất (2026-11-02 ~11:50, sau fix wire-id): test offline **124/124 PASS (9 script)**,

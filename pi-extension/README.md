@@ -24,7 +24,7 @@ The folder is a pi package (a `pi.extensions` manifest, host packages in
 `peerDependencies` only):
 
 ```bash
-pi install ./pi-extension     # from this repository root
+pi install ./pi-extension     # from this repository root — loads on every `pi`, no approval
 ```
 
 or try it for one invocation:
@@ -32,6 +32,13 @@ or try it for one invocation:
 ```bash
 pi -e ./pi-extension
 ```
+
+The project-local form, `pi install ./pi-extension -l`, records the package in
+`.pi/settings.json` so it activates only inside this repository — but pi gates
+project-local resources behind a trust check, so it is **not loaded** until you
+approve: pass `--approve` when you run `pi` in the repo. Measured on pi 1.4.0:
+the `-l` form lists nothing until `--approve`; the global form above lists the
+models and answers a turn with no extra flag.
 
 then pick a model:
 
