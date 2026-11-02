@@ -21,6 +21,7 @@
  */
 import { CHAIN_PREFIX, CHAIN_PROVIDER, buildChainEdit, chainByName, chainId, decideLink, evaluateAdd, intersectCapabilities, normalizeChains, parseChainAdd, parseChainSetLinks, parseLinkList } from './chains.js'
 import { readChains, writeChains } from './chain-store.js'
+import { noticeText, shouldNotice, writeAck } from './disclaimer.js'
 import { kiloModels, kiloProvider, PROVIDER_ID as KILO_ID } from './kilo.js'
 import { opencodeModels, opencodeProvider, PROVIDER_ID as OPENECODE_ID } from './opencode.js'
 
@@ -108,6 +109,16 @@ export default async function (pi) {
   pi.registerProvider(KILO_ID, kiloProvider({ models: kilo }))
   pi.registerProvider(OPENECODE_ID, opencodeProvider({ models: opencode }))
   registerChains(pi, chains)
+
+  // The first time these lanes appear on this machine, say what they cost. A
+  // session_start handler rather than the factory: the factory cannot show UI,
+  // and marking the notice seen without showing it would swallow it in print
+  // mode — the next interactive session would stay silent about it.
+  pi.on('session_start', (_event, ctx) => {
+    if (ctx?.hasUI !== true || !shouldNotice()) return
+    writeAck()
+    ctx.ui.notify(noticeText(), 'warning')
+  })
 
   pi.registerCommand('ofm', {
     description: 'Our Free Model: status | refresh | chain [add|set|remove|enable|disable]',

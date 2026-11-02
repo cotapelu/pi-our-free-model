@@ -134,6 +134,12 @@ Nothing in this extension holds a private credential, an account or a token
 store. Both lanes' requests carry only what the upstreams' public documentation
 describes; usage and rosters stay in-process.
 
+The first time the lanes appear on a machine, the extension says what they cost:
+Kilo's free pool may log prompts upstream, OpenCode's free tier is metered per
+session/IP, and nothing sensitive belongs on either. It shows once, in an
+interactive session, and records that it was shown (`notice-ack.json`, next to
+the chains); bumping `NOTICE_VERSION` in `disclaimer.js` makes it come back.
+
 Both lanes also carry the transport guards these gateways require (ported from
 the plugin's own issue trail): the body is read by **shape**, not
 `Content-Type` — these gateways are observed answering 200 with a JSON

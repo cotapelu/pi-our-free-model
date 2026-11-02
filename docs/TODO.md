@@ -28,7 +28,12 @@ Checklist phiên làm việc này. Trạng thái cập nhật sau mỗi bước.
 
 ## Còn lại
 
-- [x] Lấp lỗ hễng test do chính fix `big-pickle` tạo ra: model KHÔNG có menu effort giờ
+- [x] Disclaimer một lần cho người dùng lane miễn phí (G14): `disclaimer.js` +
+      `session_start` — nói rõ Kilo log prompt, OpenCode meter theo session/IP,\      đừng gửi dữ liệu nhạy cảm; hiện đúng một lần ở session tương tác
+      (version-gate như dsh, ghi `notice-ack.json`). Smoke RPC: phiên 1 hiện 1
+      lần, phiên 2 im. Smoke cũng phát hiện + sửa bug thật: `writeAck()` bỏ qua
+      `OFM_DATA_DIR` nên ghi nhượng quyền vào home thật (đã dọn + test chống hồi quy)
+- [x] Lấp lỗ hỏng test do chính fix `big-pickle` tạo ra: model KHÔNG có menu effort giờ
       có integration test qua `pi` thật — `--thinking high` trên `ofm-opencode/big-pickle`
       → không có `reasoning_effort` nào ra wire (upstream trả 400 nếu ngoài menu), block
       `<env>` + tool verbatim vẫn đủ, lượt hoàn thành. Đã kiểm chứng test có "răng":
