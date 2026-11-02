@@ -28,6 +28,14 @@ Checklist phiên làm việc này. Trạng thái cập nhật sau mỗi bước.
 
 ## Còn lại
 
+- [x] Sửa lỗ hỏng thật do chính bài kiểm tra degenerate phát hiện: listing Kilo fail
+      (5xx/timeout) trong khi chat vẫn chạy → snapshot offline phục vụ roster nhưng map
+      wire-id KHÔNG được dựng lại → lượt gọi mang `reflection-beam-free` (safeId của pi)
+      thay vì `reflection/beam-free` (id Kilo định tuyến) → "model not found" trên lane
+      đang sống. Sửa: lưu `wire` trong mỗi row `STATIC_KILO_MODELS` + `staticUpstreamIds()`,
+      `kiloModels()` dựng lại map trên mọi đường fallback. Unit test (15 id, round-trip
+      safeId) + integration test (stand-in 500 cho /models, chat trả lời; payload phải
+      mang wire id). Đã kiểm chứng test bắt lỗi: bỏ fix → FAIL `"reflection-beam-free"`
 - [x] Nối test extension vào CI (`.github/workflows/test.yml`, job `test / pi-extension`):
       cài `@earendil-works/pi-coding-agent@^1.4.0` rồi chạy `npm run test:pi-extension`;
       thêm `test/preflight.mjs` để 3 script integration **SKIP có lý do + exit 0** khi

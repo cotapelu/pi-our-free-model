@@ -16,7 +16,7 @@
  * @module pi-extension/kilo.js
  */
 import { openAICompletionsApi } from '@earendil-works/pi-ai/compat'
-import { KILO_BASE, fetchKiloListing, kiloModel, staticKiloModels, upstreamIdMap } from './catalog.js'
+import { KILO_BASE, fetchKiloListing, kiloModel, staticKiloModels, staticUpstreamIds, upstreamIdMap } from './catalog.js'
 import { composeFetches, fetchWithoutHeader, restoreAliases, sseGuard } from './lane.js'
 
 /** Provider id, also the pi model prefix: `ofm-kilo/<model>`. */
@@ -25,7 +25,7 @@ export const PROVIDER_ID = 'ofm-kilo'
 /** `safeId -> wire id`, rebuilt on every refresh; the wire keeps `vendor/name:free`. */
 let upstreamIds = new Map()
 
-/** Remember the wire ids of the freshly mapped catalog. */
+/** Remember the wire ids of a freshly mapped live catalog. */
 function rememberUpstreamIds(listing) {
   upstreamIds = upstreamIdMap(Array.isArray(listing?.data) ? listing.data : [], kiloModel)
 }
@@ -89,12 +89,25 @@ export async function kiloModels({ signal } = {}) {
     const listing = await fetchKiloListing(signal)
     const rows = Array.isArray(listing?.data) ? listing.data : []
     const models = rows.map(kiloModel).filter(Boolean)
-    if (models.length === 0) return staticKiloModels()
+    if (models.length === 0) return staticSnapshot()
     rememberUpstreamIds(listing)
     return models
   } catch {
-    return staticKiloModels()
+    return staticSnapshot()
   }
+}
+
+/**
+ * The offline roster, with the wire-id map rebuilt to match it.
+ *
+ * The listing can fail (rate-limited, 5xx) while chat still works; without this
+ * the turn would carry pi's safe id (`reflection-beam-free`) where Kilo routes
+ * `reflection/beam-free`, and the user would read "model not found" on a lane
+ * that is up.
+ */
+function staticSnapshot() {
+  upstreamIds = staticUpstreamIds()
+  return staticKiloModels()
 }
 
 /** Registration payload for `pi.registerProvider`. */

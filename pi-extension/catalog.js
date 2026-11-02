@@ -249,22 +249,37 @@ export const STATIC_OPENECODE_MODELS = [
 ]
 
 export const STATIC_KILO_MODELS = [
-  { id: 'kilo-auto-free', name: 'Kilo Auto Free (router)', contextWindow: 256000, maxTokens: 32768, canDisable: false },
-  { id: 'nvidia-nemotron-3.5-super-vl-free', name: 'Nemotron 3.5 Super VL', contextWindow: 1000000, maxTokens: 131072, vision: true },
-  { id: 'reflection-beam-free', name: 'Beam Free', contextWindow: 1048576, maxTokens: 131072 },
-  { id: 'stealth-glyph-cluster', name: 'Glyph Cluster', contextWindow: 256000, maxTokens: 256000 },
-  { id: 'recursive-flint-v1.0-free', name: 'Flint v1.0', contextWindow: 262144, maxTokens: 235929 },
-  { id: 'xingchen-agi-xing4.0-29b-a4b-free', name: 'Xing 4.0 29B A4B', contextWindow: 262144, maxTokens: 235929 },
-  { id: 'dots-studio-dots-3-note-preview-free', name: 'Dots 3 Note Preview', contextWindow: 512000, maxTokens: 460800, vision: true },
-  { id: 'liquid-lfm-2.5-2.6b-free', name: 'LFM 2.5 2.6B', contextWindow: 65536, maxTokens: 8192, canDisable: false },
-  { id: 'nvidia-nemotron-3.5-lightning-free', name: 'Nemotron 3.5 Lightning', contextWindow: 1000000, maxTokens: 65536 },
-  { id: 'cohere-north-mini-code-free', name: 'North Mini Code', contextWindow: 256000, maxTokens: 64000 },
-  { id: 'nvidia-nemotron-3.5-content-safety-free', name: 'Nemotron 3.5 Content Safety', contextWindow: 128000, maxTokens: 8192, vision: true },
-  { id: 'nvidia-nemotron-3-ultra-550b-a55b-free', name: 'Nemotron 3 Ultra 550B', contextWindow: 1000000, maxTokens: 65536 },
-  { id: 'nvidia-nemotron-3-nano-omni-30b-a3b-reasoning-free', name: 'Nemotron 3 Nano Omni', contextWindow: 256000, maxTokens: 65536, vision: true },
-  { id: 'openrouter-free', name: 'OpenRouter Free (router)', contextWindow: 200000, maxTokens: 32000, vision: true, canDisable: false },
-  { id: 'inclusionai-ling-3.1-flash-1019-free', name: 'Ling 3.1 Flash 1019', contextWindow: 1000000, maxTokens: 262144 },
+  // `wire` is the upstream's own `vendor/name:free` spelling. The registered id
+  // is its safe form, and a turn must carry the wire one — so the fallback path
+  // (a listing that fails while chat still works) can rebuild the same map the
+  // live listing builds, instead of sending an id Kilo will not route.
+  { id: 'kilo-auto-free', wire: 'kilo-auto/free', name: 'Kilo Auto Free (router)', contextWindow: 256000, maxTokens: 32768, canDisable: false },
+  { id: 'nvidia-nemotron-3.5-super-vl-free', wire: 'nvidia/nemotron-3.5-super-vl:free', name: 'Nemotron 3.5 Super VL', contextWindow: 1000000, maxTokens: 131072, vision: true },
+  { id: 'reflection-beam-free', wire: 'reflection/beam-free', name: 'Beam Free', contextWindow: 1048576, maxTokens: 131072 },
+  { id: 'stealth-glyph-cluster', wire: 'stealth/glyph-cluster', name: 'Glyph Cluster', contextWindow: 256000, maxTokens: 256000 },
+  { id: 'recursive-flint-v1.0-free', wire: 'recursive/flint-v1.0:free', name: 'Flint v1.0', contextWindow: 262144, maxTokens: 235929 },
+  { id: 'xingchen-agi-xing4.0-29b-a4b-free', wire: 'xingchen-agi/xing4.0-29b-a4b:free', name: 'Xing 4.0 29B A4B', contextWindow: 262144, maxTokens: 235929 },
+  { id: 'dots-studio-dots-3-note-preview-free', wire: 'dots-studio/dots-3-note-preview:free', name: 'Dots 3 Note Preview', contextWindow: 512000, maxTokens: 460800, vision: true },
+  { id: 'liquid-lfm-2.5-2.6b-free', wire: 'liquid/lfm-2.5-2.6b:free', name: 'LFM 2.5 2.6B', contextWindow: 65536, maxTokens: 8192, canDisable: false },
+  { id: 'nvidia-nemotron-3.5-lightning-free', wire: 'nvidia/nemotron-3.5-lightning:free', name: 'Nemotron 3.5 Lightning', contextWindow: 1000000, maxTokens: 65536 },
+  { id: 'cohere-north-mini-code-free', wire: 'cohere/north-mini-code:free', name: 'North Mini Code', contextWindow: 256000, maxTokens: 64000 },
+  { id: 'nvidia-nemotron-3.5-content-safety-free', wire: 'nvidia/nemotron-3.5-content-safety:free', name: 'Nemotron 3.5 Content Safety', contextWindow: 128000, maxTokens: 8192, vision: true },
+  { id: 'nvidia-nemotron-3-ultra-550b-a55b-free', wire: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 3 Ultra 550B', contextWindow: 1000000, maxTokens: 65536 },
+  { id: 'nvidia-nemotron-3-nano-omni-30b-a3b-reasoning-free', wire: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', name: 'Nemotron 3 Nano Omni', contextWindow: 256000, maxTokens: 65536, vision: true },
+  { id: 'openrouter-free', wire: 'openrouter/free', name: 'OpenRouter Free (router)', contextWindow: 200000, maxTokens: 32000, vision: true, canDisable: false },
+  { id: 'inclusionai-ling-3.1-flash-1019-free', wire: 'inclusionai/ling-3.1-flash-1019-free', name: 'Ling 3.1 Flash 1019', contextWindow: 1000000, maxTokens: 262144 },
 ]
+
+/**
+ * `safeId -> wire id` for the offline snapshot, so a turn routed to a snapshot
+ * model still carries the upstream's own spelling on the wire. The live listing
+ * path builds the same map from `upstreamIdMap`.
+ */
+export function staticUpstreamIds() {
+  const map = new Map()
+  for (const row of STATIC_KILO_MODELS) map.set(row.id, row.wire)
+  return map
+}
 
 function baseCost() {
   return { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }

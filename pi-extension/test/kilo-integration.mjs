@@ -45,6 +45,13 @@ const server = createServer((req, res) => {
   let body = ''
   req.on('data', (chunk) => { body += chunk })
   req.on('end', () => {
+    if (mode === 'listing-fails' && req.url?.endsWith('/models')) {
+      // Only the listing fails; the chat lane stays up. This is the shape that
+      // used to send pi's safe id where Kilo routes its own.
+      res.writeHead(500, { 'content-type': 'application/json' })
+      res.end(JSON.stringify({ error: { message: 'the listing is temporarily unavailable' } }))
+      return
+    }
     if (req.url?.endsWith('/models')) {
       res.writeHead(200, { 'content-type': 'application/json' })
       res.end(JSON.stringify({
@@ -99,6 +106,9 @@ async function main() {
   const high = await run('high')
   const off = await run('off')
   const folded = await run('high', 'json-body')
+  // The listing fails while the chat lane is up: the offline snapshot serves the
+  // roster, and the turn must still carry the upstream's own model spelling.
+  const degraded = await run('high', 'listing-fails')
   server.close()
 
   const highRequest = requests[0]
@@ -120,6 +130,10 @@ async function main() {
 
   assert(/pong/.test(high.out), 'the high turn completed', JSON.stringify(high.out.slice(0, 200)))
   assert(/folded/.test(folded.out), 'a 200 JSON document answering a stream request is folded and answered', JSON.stringify(folded.out.slice(0, 300)))
+  const degradedRequest = requests[3]
+  assert(/pong/.test(degraded.out), 'a listing failure does not take the chat lane down', `out=${JSON.stringify(degraded.out.slice(0, 200))} err=${JSON.stringify(degraded.err.slice(0, 300))}`)
+  assert(degradedRequest?.body?.model === 'reflection/beam-free', 'the degraded turn carries the upstream wire id, not pi\'s safe id', JSON.stringify(degradedRequest?.body?.model))
+  assert(degradedRequest?.headers?.authorization === undefined, 'the degraded turn still carries no credential')
   if (folded.err.trim()) console.log('--- stderr ---\n' + folded.err.slice(0, 600))
 
   console.log(failures.length === 0 ? '\nALL CHECKS PASSED' : `\n${failures.length} CHECK(S) FAILED`)

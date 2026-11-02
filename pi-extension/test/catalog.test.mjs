@@ -18,6 +18,8 @@ import {
   safeId,
   staticKiloModels,
   staticOpencodeModels,
+  staticUpstreamIds,
+  STATIC_KILO_MODELS,
 } from '../catalog.js'
 
 let failures = 0
@@ -145,6 +147,16 @@ check('every snapshot id is a live-mappable free id', () => {
   for (const model of staticOpencodeModels()) {
     assert.equal(isOpencodeFreeId(model.id), true, `${model.id} must read as free`)
   }
+})
+
+check('every snapshot id carries the wire id it must be sent as', () => {
+  const map = staticUpstreamIds()
+  assert.equal(map.size, STATIC_KILO_MODELS.length, 'one wire id per snapshot row')
+  for (const [safe, wire] of map) {
+    assert.equal(safeId(wire), safe, `${wire} must sanitize to ${safe}`)
+    assert.ok(wire.includes('/') || wire.includes(':'), `${wire} must be the upstream's own spelling`)
+  }
+  assert.equal(map.get('reflection-beam-free'), 'reflection/beam-free')
 })
 
 check('offline snapshots are non-empty and carry measured numbers', () => {
