@@ -33,6 +33,11 @@ export function restoreAliases(inner, aliases, { onEvent, scrubDsml = false } = 
   const outer = createAssistantMessageEventStream()
   const scrubber = scrubDsml ? createDsmlScrubber() : null
   let lastText = null
+  // The provider appends every delta to the message's text block as it goes,
+  // and it can be ahead of this wrapper (the SDK pushes without waiting for us),
+  // so the block is written from this accumulator rather than by editing out a
+  // suffix: `block.text = cleanSoFar` is right however much the SDK has appended.
+  let cleanSoFar = ''
   ;(async () => {
     try {
       for await (const event of inner) {
@@ -43,17 +48,12 @@ export function restoreAliases(inner, aliases, { onEvent, scrubDsml = false } = 
         }
         if (scrubber !== null && event?.type === 'text_delta' && typeof event.delta === 'string') {
           lastText = event
-          // The provider appended the raw delta to the message's text block
-          // before this wrapper saw the event, so the block is rewritten too —
-          // pi renders and persists that block, not the event's delta.
           const raw = event.delta
           const scrubbed = scrubber.push(raw)
+          cleanSoFar += scrubbed
           event.delta = scrubbed
           const block = event.partial?.content?.[event.contentIndex]
-          console.error('[dbg2] idx=' + event.contentIndex + ' partial=' + JSON.stringify(event.partial?.content?.map(c=>({t:c.type,x:c.text}))) + ' raw=' + JSON.stringify(raw))
-          if (block?.type === 'text' && block.text.endsWith(raw)) {
-            block.text = block.text.slice(0, block.text.length - raw.length) + scrubbed
-          }
+          if (block?.type === 'text') block.text = cleanSoFar
         }
         outer.push(translateError(event))
         onEvent?.(event)
@@ -63,9 +63,10 @@ export function restoreAliases(inner, aliases, { onEvent, scrubDsml = false } = 
       if (scrubber !== null && lastText !== null) {
         const tail = scrubber.flush()
         if (tail !== '') {
+          cleanSoFar += tail
           lastText.delta = `${lastText.delta ?? ''}${tail}`
           const block = lastText.partial?.content?.[lastText.contentIndex]
-          if (block?.type === 'text') block.text += tail
+          if (block?.type === 'text') block.text = cleanSoFar
         }
       }
       outer.end()
