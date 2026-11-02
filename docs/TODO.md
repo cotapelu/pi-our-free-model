@@ -133,11 +133,12 @@ Checklist phiên làm việc này. Trạng thái cập nhật sau mỗi bước.
       (đã gỡ cho repo sạch). Chi tiết: audit §8.
 - [ ] (còn lại duy nhất, điều kiện — chờ trigger) Khi `npm run
       verify:pi-extension-upstream` báo FAIL → làm theo runbook trên. Lần đo gần
-      nhất (2026-11-02 ~14:18, chu kỳ #3 cùng ngày, sau fix wire-id): test offline **124/124
-      PASS (9 script)**, ổn định không còn flake; verify **ĐO LẠI cả hai lane PASS** — listing
-      OpenCode 200, 8 id toàn chat-wired, không lệch snapshot; chat 429 (gate PASS); Kilo
-      200 không credential. **Không drift** → không phải sửa gì. (Đã 3 chu kỳ PASS trong ngày;
-      chỉ chạy lại khi qua ngày hoặc nghi drift — không lặp theo từng tin nhắn.)
+      nhất (2026-11-02 ~18:54, **post-migration TS** — vì vừa sửa `fingerprint.ts` nên phải đo
+      lại gate): test offline **125/125 PASS (9 script)**; verify **ĐO LẠI cả hai lane PASS**
+      (chạy từ `reverify-upstream.ts`) — listing OpenCode 200, 8 id toàn chat-wired, không lệch
+      snapshot; chat 429 (gate PASS); Kilo 200 không credential. **Không drift** → sửa
+      TS/fingerprint không hồi quy gate. (Cadence: chỉ chạy lại khi qua ngày, nghi drift, hoặc
+      sau khi sửa `fingerprint.js`/roster — không lặp theo từng tin nhắn.)
   - ✅ Đã phân loại (2026-11-02): `1552888 "fix"` (chủ repo) **xoá cố ý cả 4 workflow**
     (test / build-macos / prepare-release / release-sign) khi sang pi-only → chọn phương án
     **(b) KHÔNG khôi phục**, mà **gỡ claim CI** khỏi README/TODO cho khớp thực tế. Nếu sau này
