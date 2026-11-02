@@ -70,6 +70,12 @@ Checklist phiên làm việc này. Trạng thái cập nhật sau mỗi bước.
       đã kiểm chứng test có "răng" (khôi phục hành vi cũ → đúng 2 FAIL). Sau fix:
       `chain-integration.mjs` 15/15 PASS (trước đó ~25% fail). Lane OpenCode không
       có lỗ hổng tương đương (id không chứa `/` hay `:` nên safeId == wire id).
+- [x] **Acceptance smoke qua `pi` thật với `-e ./pi-extension`** (runbook §5 —
+      bước chưa từng chạy độc lập, 2026-11-02): `--list-models` thấy đủ **23 model**
+      (15 Kilo + 8 OpenCode, khớp audit); một lượt thật `-nt -p "…pong" --model
+      ofm-kilo/kilo-auto-free` → trả lời `pong`, exit 0. Chứng minh extension
+      nạp/routing/turn hoạt động đầu-cuối trên lane miễn phí. OpenCode lane hết quota
+      ở IP này nên lượt thật dùng Kilo; verifier đã xác nhận gate OpenCode vẫn PASS.
 - [ ] (còn lại duy nhất, điều kiện — chờ trigger) Khi `npm run
       verify:pi-extension-upstream` báo FAIL → làm theo runbook trên. Lần đo gần
       nhất (2026-11-02 ~11:50, sau fix wire-id): test offline **120/120 PASS**, ổn
