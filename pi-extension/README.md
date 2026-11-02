@@ -59,8 +59,11 @@ refusal, a 5xx.
 
 The trailing field of `add` is the strategy when it spells one — everything
 between the name and that field is a link, and a link that is not
-`provider/model` is refused rather than silently dropped. `set` edits an existing
-chain without touching the file.
+`provider/model` is refused rather than silently dropped. Links are also checked
+against the live registry: an add whose links are all unresolvable is refused
+with their spellings named (a typo, not a roster change), while an add with some
+dead links is accepted and reports `1/2 links live … not resolving right now`.
+`set` edits an existing chain without touching the file.
 
 `fallback` (default) always starts at the head; `round-robin` rotates the start
 per `stickyLimit` turns. The capacities shown for a chain are the intersection

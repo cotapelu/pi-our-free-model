@@ -14,7 +14,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { readChains, writeChains } from '../chain-store.js'
-import { chainId, chainByName, decideLink, intersectCapabilities, isAdvanceable, normalizeChains, parseChainAdd, CHAIN_PREFIX } from '../chains.js'
+import { chainId, chainByName, decideLink, evaluateAdd, intersectCapabilities, isAdvanceable, normalizeChains, parseChainAdd, CHAIN_PREFIX } from '../chains.js'
 
 let failures = 0
 function check(label, fn) {
@@ -232,6 +232,26 @@ check('a context overflow does not advance the chain', () => {
   assert.equal(isAdvanceable({ stopReason: 'error', errorMessage: 'free quota for this egress is spent (429)' }), true)
   assert.equal(isAdvanceable({ stopReason: 'error', errorMessage: 'upstream blocks this model for this egress region (403)' }), true)
   assert.equal(isAdvanceable({ stopReason: 'error', errorMessage: 'HTTP 503' }), true)
+})
+
+check('evaluateAdd refuses a chain whose links are all dead', () => {
+  const result = evaluateAdd({ models: ['typo/a', 'typo/b'] }, () => false)
+  assert.equal(result.ok, false)
+  assert.deepEqual(result.dead, ['typo/a', 'typo/b'])
+  assert.match(result.error, /check the provider\/model spelling/)
+})
+
+check('evaluateAdd accepts a partly-dead chain and names the dead links', () => {
+  const result = evaluateAdd({ models: ['ofm-kilo/a', 'typo/b'] }, (address) => address === 'ofm-kilo/a')
+  assert.equal(result.ok, true)
+  assert.deepEqual(result.live, ['ofm-kilo/a'])
+  assert.deepEqual(result.dead, ['typo/b'])
+})
+
+check('evaluateAdd survives a registry lookup that throws', () => {
+  const result = evaluateAdd({ models: ['x/y'] }, () => { throw new Error('registry unavailable') })
+  assert.equal(result.ok, false)
+  assert.deepEqual(result.dead, ['x/y'])
 })
 
 check('a parsed add survives the store round-trip', () => {

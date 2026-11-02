@@ -19,7 +19,7 @@
  *
  * @module pi-extension/index.js
  */
-import { CHAIN_PREFIX, CHAIN_PROVIDER, chainByName, chainId, decideLink, intersectCapabilities, normalizeChains, parseChainAdd } from './chains.js'
+import { CHAIN_PREFIX, CHAIN_PROVIDER, chainByName, chainId, decideLink, evaluateAdd, intersectCapabilities, normalizeChains, parseChainAdd } from './chains.js'
 import { readChains, writeChains } from './chain-store.js'
 import { kiloModels, kiloProvider, PROVIDER_ID as KILO_ID } from './kilo.js'
 import { opencodeModels, opencodeProvider, PROVIDER_ID as OPENECODE_ID } from './opencode.js'
@@ -86,10 +86,12 @@ function describeChains(ctx, chains) {
   if (chains.length === 0) return 'no chains yet — add one with /ofm chain add'
   return chains
     .map((chain) => {
+      const live = chain.models.filter((address) => resolveLink(ctx, address) !== undefined)
       const links = chain.models
         .map((address) => `${resolveLink(ctx, address) ? '' : '⚠ '}${address}`)
         .join(' → ')
-      return `${chain.enabled === false ? '⏸ ' : '▶ '}${chain.id}  ${chain.name}  [${chain.strategy}]  ${links}`
+      const strategy = chain.strategy + (chain.stickyLimit > 1 ? `:${chain.stickyLimit}` : '')
+      return `${chain.enabled === false ? '⏸ ' : '▶ '}${chain.id}  ${chain.name}  [${strategy}]  ${live.length}/${chain.models.length} live  ${links}`
     })
     .join('\n')
 }
@@ -123,11 +125,19 @@ export default async function (pi) {
           notify(`${parsed.error}\ne.g. /ofm chain add My Chain | ofm-kilo/reflection-beam-free | ofm-opencode/beam-free | round-robin:2`)
           return
         }
+        // Check the links against the live registry before storing: a dead one is
+        // usually a typo, and the alternative is discovering it mid-turn.
+        const check = evaluateAdd(parsed, (address) => resolveLink(ctx, address) !== undefined)
+        if (!check.ok) {
+          notify(check.error)
+          return
+        }
         const stored = writeChains([...chains, { id: chainId(parsed.name), name: parsed.name, models: parsed.models, strategy: parsed.strategy, stickyLimit: parsed.stickyLimit }])
         chains.length = 0
         chains.push(...stored)
         registerChains(pi, stored, ctx)
-        notify(`chain ${chainId(parsed.name)} added with ${parsed.models.length} links (${parsed.strategy}${parsed.stickyLimit > 1 ? `:${parsed.stickyLimit}` : ''})`)
+        const dead = check.dead.length > 0 ? ` — not resolving right now: ${check.dead.join(', ')}` : ''
+        notify(`chain ${chainId(parsed.name)} added with ${check.live.length}/${parsed.models.length} links live (${parsed.strategy}${parsed.stickyLimit > 1 ? `:${parsed.stickyLimit}` : ''})${dead}`)
         return
       }
 

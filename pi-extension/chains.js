@@ -93,6 +93,39 @@ export function chainByName(chains, nameOrId) {
   return chains.find((chain) => chain.id === wanted || chain.id === chainId(wanted) || chain.name === wanted)
 }
 
+/**
+ * Check a parsed `add` against the live registry.
+ *
+ * A link that does not resolve right now is almost always a typo, and a chain
+ * that silently carried it would spend its first failure on a model that never
+ * existed — the exact case dsh refuses by dropping dead links from the catalog.
+ * An add whose links all fail is therefore refused; an add with some dead links
+ * is accepted but names them, because a lane's roster legitimately moves between
+ * refreshes.
+ *
+ * @param {{models:string[]}} parsed from `parseChainAdd`
+ * @param {(address:string) => boolean} resolves
+ * @returns {{ok:boolean, live:string[], dead:string[], error?:string}}
+ */
+export function evaluateAdd(parsed, resolves) {
+  const models = Array.isArray(parsed?.models) ? parsed.models : []
+  const live = []
+  const dead = []
+  for (const address of models) {
+    let ok = false
+    try {
+      ok = resolves(address) === true
+    } catch {
+      ok = false
+    }
+    ;(ok ? live : dead).push(address)
+  }
+  if (live.length === 0) {
+    return { ok: false, live, dead, error: `no link resolves right now: ${dead.join(', ')} — check the provider/model spelling (this extension registers ofm-kilo and ofm-opencode)` }
+  }
+  return { ok: true, live, dead }
+}
+
 /** A trailing `fallback`, `round-robin`, or `round-robin:3` field. */
 const STRATEGY_FIELD = /^(fallback|round-robin)(?::([1-9][0-9]{0,3}))?$/i
 /** One link: `provider/model` with the characters either side may carry. */
