@@ -67,6 +67,21 @@ const server = createServer((req, res) => {
     }
 
     turns += 1
+    // DeepSeek v4 leaks DSML control markup into visible text at the
+    // reasoning→action boundary. The lane wires the scrubber to that family, so
+    // this turn proves the wiring: the markup must not reach the user, split
+    // across chunks so the held-tail path is exercised too.
+    if (seen.body?.model === 'deepseek-v4.1-flash-free') {
+      seen.deepseekBody = seen.body
+      res.writeHead(200, { 'content-type': 'text/event-stream' })
+      const chunk = (content, finish) => `data: ${JSON.stringify({ id: 't', object: 'chat.completion.chunk', choices: [{ index: 0, delta: content === null ? {} : { content }, finish_reason: finish ?? null }] })}\n\n`
+      res.write(chunk('Answer: 2<｜DSML'))
+      res.write(chunk('｜ calls>\n. Done'))
+      res.write(chunk(null, 'stop'))
+      res.write('data: [DONE]\n\n')
+      res.end()
+      return
+    }
     // The no-menu model: pi must not put an effort on the wire for it, and the
     // fingerprint still has to be complete. One plain answer, one turn.
     if (seen.body?.model === 'big-pickle') {
@@ -164,6 +179,11 @@ assert(/TURN2 carried=true/.test(out), 'pi executed the aliased tool call (alias
 //    outside it, so a no-menu model must never carry one — even when the user
 //    asks for `high`. `big-pickle` is exactly that model, and it rides the
 //    offline snapshot (the stand-in answers no listing).
+const deepseek = await run('Give the answer, briefly.', 'ofm-opencode/deepseek-v4.1-flash-free')
+assert(seen.deepseekBody !== undefined, 'the deepseek turn reached the upstream', JSON.stringify(deepseek.err.slice(0, 200)))
+assert(!/DSML/.test(deepseek.out), 'the DSML control markup never reaches the user', JSON.stringify(deepseek.out.slice(0, 300)))
+assert(/Answer: 2/.test(deepseek.out) && /Done/.test(deepseek.out), 'the real text around the markup survives', JSON.stringify(deepseek.out.slice(0, 300)))
+
 const noMenu = await run('Say ok.', 'ofm-opencode/big-pickle', 'high')
 assert(seen.bigPickleBody !== undefined, 'the no-menu model reached the upstream', JSON.stringify(noMenu.err.slice(0, 200)))
 assert(seen.bigPickleSawReasoningEffort === false, 'no reasoning_effort on the wire for a model that declares no menu', JSON.stringify(seen.bigPickleBody?.reasoning_effort))

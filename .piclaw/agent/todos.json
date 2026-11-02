@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "phases": [
+    {
+      "id": "phase-1",
+      "name": "Quét toàn bộ repo dsh",
+      "tasks": [
+        {
+          "id": "task-1",
+          "content": "src core wire: adapter.js, stream.js, messages.js, deferred-response.js, failure.js, recovery.js, model-test.js",
+          "status": "in_progress"
+        },
+        {
+          "id": "task-2",
+          "content": "src free lane: catalog.js (đủ), probe.js, effort.js (đủ), kilo/upstream (đã xong)",
+          "status": "pending"
+        },
+        {
+          "id": "task-3",
+          "content": "src integration shell: index.js, client.js, store.js, trust.js, reload.js, updater.js, feed.js, push.js, sponsor.js, picks.js, disclaimer.js, vault*.js, image-pricing.js, open-external.js, loopback-fetch.js, bun-fetch.js (đủ)",
+          "status": "pending"
+        },
+        {
+          "id": "task-4",
+          "content": "src local gateway: forward.js, anthropic.js, gemini.js, aggregate.js, chan-relay.js, combos.js",
+          "status": "pending"
+        },
+        {
+          "id": "task-5",
+          "content": "src token-saver + local-optimize + subscriptions*, magpie*: tiết kiệm token, trả lời local, 10 kênh tài khoản",
+          "status": "pending"
+        },
+        {
+          "id": "task-6",
+          "content": "vendor/: channel-pack (10 kênh), dsh-std, magpie engine",
+          "status": "pending"
+        },
+        {
+          "id": "task-7",
+          "content": "packages/: standalone service, desktop",
+          "status": "pending"
+        },
+        {
+          "id": "task-8",
+          "content": "scripts/ (184 file): test + build infra",
+          "status": "pending"
+        },
+        {
+          "id": "task-9",
+          "content": "adapter/, worker/, catalog/, feed/, locale/, docs/",
+          "status": "pending"
+        },
+        {
+          "id": "task-10",
+          "content": "Viết docs/pi-extension-audit.md: repo làm gì + gap của pi-extension",
+          "status": "pending"
+        },
+        {
+          "id": "task-11",
+          "content": "Sửa pi-extension theo gap tìm được + test lại",
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "nextTaskId": 12,
+  "nextPhaseId": 2,
+  "updatedAt": "2026-11-01T04:38:14.878Z"
+}

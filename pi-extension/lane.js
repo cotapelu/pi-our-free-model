@@ -43,7 +43,17 @@ export function restoreAliases(inner, aliases, { onEvent, scrubDsml = false } = 
         }
         if (scrubber !== null && event?.type === 'text_delta' && typeof event.delta === 'string') {
           lastText = event
-          event.delta = scrubber.push(event.delta)
+          // The provider appended the raw delta to the message's text block
+          // before this wrapper saw the event, so the block is rewritten too —
+          // pi renders and persists that block, not the event's delta.
+          const raw = event.delta
+          const scrubbed = scrubber.push(raw)
+          event.delta = scrubbed
+          const block = event.partial?.content?.[event.contentIndex]
+          console.error('[dbg2] idx=' + event.contentIndex + ' partial=' + JSON.stringify(event.partial?.content?.map(c=>({t:c.type,x:c.text}))) + ' raw=' + JSON.stringify(raw))
+          if (block?.type === 'text' && block.text.endsWith(raw)) {
+            block.text = block.text.slice(0, block.text.length - raw.length) + scrubbed
+          }
         }
         outer.push(translateError(event))
         onEvent?.(event)
