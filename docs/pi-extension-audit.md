@@ -147,3 +147,19 @@ không bị đổi tên model.
 
 Lần bảo trì tiếp: chạy `npm run verify:pi-extension-upstream`; nếu FAIL thì
 theo `docs/pi-extension-drift-runbook.md`.
+
+### 6d) Đo lại xác nhận fix wire-id ổn định (2026-11-02 ~11:50)
+
+Chạy lại đúng quy trình bảo trì ngay sau đợt §6c (cùng ngày), để xác nhận fix
+wire-id không chỉ gỡ được vụ flake một lần mà còn giữ được lâu dài:
+
+- **Bộ test offline: 120/120 check PASS trên 8 script**, `chain-integration.mjs`
+  không còn flake (lần đo §6c trước fix còn ~25% fail; sau fix và lần xác nhận
+  này thì sạch). Suite chạy `pi` thật qua loopback nên không SKIP.
+- **Cả hai lane verified**: listing OpenCode 200, 8 id free toàn chat-wired,
+  không có id mới/mất so với snapshot; chat 2 base trả `429 FreeUsageLimitError`
+  (gate ĐÃ PASS, chỉ hết quota IP); Kilo không credential trả 200 SSE thật.
+  **Không drift**, `fingerprint.js` không cần sửa.
+
+Kết luận: trạng thái "sạch" của §6c được giữ; mục điều kiện trong TODO vẫn chờ
+trigger (một lần verify FAIL thật) chứ không tự tắt.

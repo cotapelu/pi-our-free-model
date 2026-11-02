@@ -72,4 +72,7 @@ Checklist phiên làm việc này. Trạng thái cập nhật sau mỗi bước.
       có lỗ hổng tương đương (id không chứa `/` hay `:` nên safeId == wire id).
 - [ ] (còn lại duy nhất, điều kiện — chờ trigger) Khi `npm run
       verify:pi-extension-upstream` báo FAIL → làm theo runbook trên. Lần đo gần
-      nhất (2026-11-02, sau fix wire-id): cả hai lane PASS.
+      nhất (2026-11-02 ~11:50, sau fix wire-id): test offline **120/120 PASS**, ổn
+      định không còn flake; verify **ĐO LẠI cả hai lane PASS** — listing OpenCode
+      200, 8 id toàn chat-wired, không lệch snapshot; chat 429 (gate PASS); Kilo
+      200 không credential. **Không drift** → không phải sửa gì.
