@@ -10,6 +10,7 @@
  */
 import assert from 'node:assert/strict'
 import {
+  createKiloRoster,
   effortMap,
   isOpencodeFreeId,
   kiloEffortMap,
@@ -175,6 +176,63 @@ check('offline snapshots are non-empty and carry measured numbers', () => {
   assert.equal(normal.thinkingLevelMap.off, 'off', 'a normal free row keeps the off rung')
   for (const model of staticKiloModels()) {
     assert.deepEqual(model.cost, { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 })
+  }
+})
+
+/** One row of a live Kilo listing, in the gateway's own spelling. */
+const KILO_ROW = (id) => ({
+  id,
+  name: id,
+  isFree: true,
+  context_length: 262144,
+  top_provider: { max_completion_tokens: 65536 },
+  architecture: { input_modalities: ['text'] },
+  supported_parameters: ['max_tokens', 'tools', 'reasoning', 'include_reasoning'],
+})
+
+check('a Kilo roster answers the offline snapshot before the first listing', () => {
+  const roster = createKiloRoster()
+  assert.equal(roster.models().length, STATIC_KILO_MODELS.length)
+  assert.equal(roster.wireId('reflection-beam-free'), 'reflection/beam-free', 'a snapshot id never waits for the network')
+  assert.equal(roster.wireId('kilo-auto-free'), 'kilo-auto/free')
+})
+
+check('a live Kilo listing teaches the roster its upstream spellings', () => {
+  const roster = createKiloRoster()
+  const models = roster.accept([KILO_ROW('vendor/alpha'), KILO_ROW('vendor/beta')])
+  assert.equal(models.length, 2, 'both free rows are servable')
+  assert.equal(roster.wireId('vendor-alpha'), 'vendor/alpha', 'an id only the listing knows still resolves')
+  assert.equal(roster.wireId('vendor-beta'), 'vendor/beta')
+  assert.equal(roster.models().length, 2, 'the live roster is what gets registered')
+})
+
+check('a refresh that learned nothing keeps the wire ids and the last roster', () => {
+  // pi aborts a refresh when the next one begins, and that abort can land after
+  // a successful fetch. Unlearning here sends pi's safe id to a live gateway.
+  const roster = createKiloRoster()
+  roster.accept([KILO_ROW('vendor/alpha')])
+  const after = roster.degrade()
+  assert.equal(after.length, 1, 'the last live roster survives a superseded refresh')
+  assert.equal(roster.wireId('vendor-alpha'), 'vendor/alpha', 'the wire id an aborted refresh already learned')
+  assert.equal(roster.wireId('reflection-beam-free'), 'reflection/beam-free', 'the snapshot seed is never dropped either')
+})
+
+check('an empty free slice is authoritative, not a stale roster resurrected', () => {
+  const roster = createKiloRoster()
+  roster.accept([KILO_ROW('vendor/alpha')])
+  const empty = roster.accept([])
+  assert.equal(empty.length, STATIC_KILO_MODELS.length, 'the gateway serving nothing free means the snapshot')
+  assert.equal(roster.degrade().length, STATIC_KILO_MODELS.length, 'a later failure does not bring the withdrawn roster back')
+  assert.equal(roster.wireId('vendor-alpha'), 'vendor/alpha', 'and the spelling stays known for the chain that still lists it')
+})
+
+check('every id a roster serves can be addressed upstream', () => {
+  const roster = createKiloRoster()
+  roster.accept([KILO_ROW('reflection/beam-free'), KILO_ROW('vendor/alpha')])
+  for (const model of roster.models()) {
+    const wire = roster.wireId(model.id)
+    assert.equal(safeId(wire), model.id, `${wire} must sanitize back to ${model.id}`)
+    assert.ok(wire.includes('/') || wire.includes(':'), `${wire} must be the upstream's own spelling`)
   }
 })
 

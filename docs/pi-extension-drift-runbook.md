@@ -21,6 +21,7 @@ upstream, cùng một gate, nên phương pháp đo giống nhau; tài liệu n�
 | `every free row is chat-wired` FAIL | Có model mới trên wire khác | Bổ sung wire trong `catalog.js` **hoặc** để ngoài roster (bước 4) |
 | Kilo `401 INVALID_TOKEN` | Request lỡ mang credential | Sửa `kilo.js` (fetch wrapper) — lane này không được mang Authorization |
 | Kilo `reasoning` bị 400 "mandatory" | Model mới thuộc family cấm tắt thinking | Thêm pattern vào `KILO_REASONING_MANDATORY` |
+| "model not found" trên lane Kilo **mà verify PASS** (đúng lỗi đã gặp 2026-11-02) | Lượt gọi mang safeId của pi (`reflection-beam-free`) thay vì wire id (`reflection/beam-free`) — map wire-id bị mất khi refresh bị **abort**, không phải khi drift | Đã sửa: `createKiloRoster()` (`catalog.js`) — map chỉ thêm, không thay; abort/timeout/5xx giữ roster live cuối. Nếu tái diễn: xem `kilo.js` `streamKilo` + `catalog.js` `createKiloRoster` |
 
 ## 1. Bắt chước một client thật
 
@@ -89,7 +90,7 @@ cách này trong `src/upstream.js`) — lần drift sau cần biết lần trư�
 ## 5. Verify trước khi commit
 
 ```bash
-npm run test:pi-extension                    # 86 check offline, không được FAIL
+npm run test:pi-extension                    # 120 check offline, không được FAIL
 npm run verify:pi-extension-upstream         # phải PASS; mọi mục trong bảng §0 xanh
 pi -e ./pi-extension --list-models | grep ofm-   # roster đúng như đo
 # một lượt thật trên lane vừa sửa (hoặc lane còn lại nếu lane này hết quota):

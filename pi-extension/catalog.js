@@ -332,3 +332,53 @@ export function upstreamIdMap(rows, mapper) {
   }
   return map
 }
+
+/**
+ * The Kilo roster and its wire-id map, as one piece of state a refresh may
+ * replace but must never *unlearn*.
+ *
+ * pi refreshes a provider behind a generation-scoped AbortController and aborts
+ * the previous refresh when a new one begins; measured on ordinary runs, that
+ * abort can land *after* a successful fetch. A refresh that delivers no roster
+ * is therefore routine, not a failure — and treating it as one is how a turn
+ * ends up carrying pi's safe id (`reflection-beam-free`) where the gateway
+ * routes `reflection/beam-free`, so a lane that is up answers
+ * "model not found".
+ *
+ * So: the map is seeded from the offline snapshot and only ever grows, every id
+ * the extension can dispatch has an upstream spelling even before the first
+ * listing answers, and a refresh that learned nothing keeps both the last live
+ * roster and everything already learned.
+ */
+export function createKiloRoster() {
+  /** The last roster a live listing actually served, if it ever did. */
+  let live = null
+  /** `safeId -> wire id`; the snapshot seeds it, a live listing tops it up. */
+  const wireIds = new Map(staticUpstreamIds())
+  return {
+    /** The models to register: the last live roster, else the snapshot. */
+    models: () => live ?? staticKiloModels(),
+    /** The upstream spelling for a registered id, safe on every path. */
+    wireId: (id) => wireIds.get(id) ?? id,
+    /**
+     * A listing answered. An empty free slice is authoritative — the gateway
+     * saying it serves nothing free right now — so it degrades like a failure
+     * instead of resurrecting a roster the upstream just withdrew.
+     */
+    accept: (rows) => {
+      const models = rows.map(kiloModel).filter(Boolean)
+      if (models.length === 0) {
+        live = null
+        return staticKiloModels()
+      }
+      live = models
+      for (const [id, wire] of upstreamIdMap(rows, kiloModel)) wireIds.set(id, wire)
+      return models
+    },
+    /**
+     * The refresh delivered no roster: aborted, timed out, or refused. Keep the
+     * last live roster and every wire id already learned.
+     */
+    degrade: () => live ?? staticKiloModels(),
+  }
+}

@@ -10,7 +10,10 @@ sign-up, no API key, nothing to configure.**
 | `ofm-opencode` | OpenCode public free tier, `https://opencode.ai` | one pooled public credential (`Bearer public`) plus a client fingerprint |
 
 Both rosters are fetched live from the upstream listing on every load; an offline
-snapshot keeps the models present when the machine has no route upstream.
+snapshot keeps the models present when the machine has no route upstream, and a
+refresh that cannot reach the listing keeps the roster it last served — with the
+upstream spellings it learned, so a turn never carries pi's own safe id to a
+lane that is up.
 Tool calls, thinking deltas, usage accounting and cancellation behave exactly
 like any other provider, because both lanes stream through pi-ai's
 OpenAI-Completions implementation.

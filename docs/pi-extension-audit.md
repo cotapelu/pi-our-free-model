@@ -108,3 +108,42 @@ một drift thật: `big-pickle` (id free không hậu tố `-free`, vốn nằm
 `STATIC_OPENECODE_MODELS`**, nghĩa là máy không có mạng mất một model lane vẫn
 phục vụ. Đã bù vào snapshot kèm 2 unit test chống hồi quy; chạy lại: cả hai lane
 PASS, không drift khác.
+
+### 6c) Bảo trì 2026-11-02 — drift không có, nhưng lộ ra một lỗi wire-id (2026-11-02)
+
+Chạy lại `npm run verify:pi-extension-upstream` và toàn bộ bộ test offline:
+
+- Cả hai lane **PASS**: listing OpenCode 200, 8 id free toàn chat-wired, không
+  có id lệch so với snapshot; chat hai base trả **429** (`FreeUsageLimitError`,
+  gate ĐÃ PASS); Kilo không credential trả **200** SSE thật. Không drift.
+- Bộ test offline: **120 check PASS** trên 8 script.
+- Nhưng `chain-integration.mjs` **flaky** (2/8 lần FAIL) — mà flaky ở đây là
+  tín hiệu, không ph nhiễu: nguyên nhân nằm trong extension, không phải test.
+
+**Cơ chế.** pi làm mới roster của một provider bằng `AbortController` theo
+*generation* (`pi-ai/dist/models.js`: `beginProviderRefresh` + `AbortSignal.any`),
+nên refresh cũ bị abort khi refresh mới bắt đầu; đo thực tế, abort đó **rơi sau
+khi fetch listing đã trả 200**. Nhánh `catch` của `kiloModels()` coi mọi
+exception là thất bại và gọi `staticSnapshot()`, hàm này **thay** map
+`safeId → wire id` bằng bản của snapshot offline — map 2 entry live (đang đúng)
+bị đè thành 15 entry static, không có model lane vừa phục vụ. Từ đó mọi lượt
+Kilo mang `reflection-beam-free` (safeId của pi) thay vì
+`reflection/beam-free` (id Kilo định tuyến) → "model not found" trên lane đang
+sống. Đúng lỗi đã sửa ở `f972eec`, nhưng lần trước chỉ lấp đường *listing fail*;
+đường *abort* thì lại phá hỏng.
+
+**Sửa.** `createKiloRoster()` (`pi-extension/catalog.js`): map wire-id được
+**seed** từ snapshot khi module load và chỉ **thêm** entry mới, không bao giờ
+thay cả map; refresh bị abort / timeout / 5xx **giữ nguyên** roster live cuối và
+mọi wire id đã học (`degrade()`); chỉ khi listing trả slice free thật sự **rỗng**
+mới degrade về snapshot (đó là upstream nói rõ "không còn gì free").
+`kilo.js` chỉ còn giữ một instance roster và dùng `roster.wireId()`.
+
+**Bằng chứng.** `chain-integration.mjs` sau fix: **15/15 PASS** (trước ~25%
+fail). 5 unit check mới trong `catalog.test.mjs`; tạm khôi phục hành vi cũ thì
+dúng **2 check FAIL** nên test có răng. Lane OpenCode không có lỗ hỏng tương
+tự: id của làn đó không chứa `/` hay `:`, nên `safeId` == wire id, và payload
+không bị đổi tên model.
+
+Lần bảo trì tiếp: chạy `npm run verify:pi-extension-upstream`; nếu FAIL thì
+theo `docs/pi-extension-drift-runbook.md`.

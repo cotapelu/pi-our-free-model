@@ -56,6 +56,20 @@ Checklist phiên làm việc này. Trạng thái cập nhật sau mỗi bước.
       triệu chứng→nghĩa, quy trình đo (tham chiếu `free-lane-wire.md`), bảng
       file·symbol phải sửa cho từng yếu tố (đã đối chiếu 18 symbol đều tồn tại),
       verify trước commit, và các bước sau khi sửa
+- [x] **Lỗi thật do chính việc bảo trì định kỳ lộ ra**: đợt reverify 2026-11-02
+      PASS cả hai lane, nhưng `chain-integration.mjs` flaky (2/8 lần FAIL). Không
+      phải lỗi test: pi abort refresh của provider bằng AbortController theo
+      *generation*, và abort đó rơi **sau** khi fetch đã thành công; nhánh `catch`
+      của `kiloModels()` coi đó như thất bại và gọi `staticSnapshot()` — **thay**
+      map `safeId → wire id` live bằng snapshot offline. Lượt Kilo kế tiếp mang
+      `reflection-beam-free` thay vì `reflection/beam-free` → "model not found"
+      trên lane đang sống. Sửa: `createKiloRoster()` trong `catalog.js` — map
+      được **seed** từ snapshot và chỉ **thêm** không bao giờ mất, refresh bị
+      abort/timeout/5xx giữ nguyên roster live cuối + mọi wire id đã học; chỉ có
+      listing trả slice free **rỗng** mới degrade về snapshot. 5 unit check mới;
+      đã kiểm chứng test có "răng" (khôi phục hành vi cũ → đúng 2 FAIL). Sau fix:
+      `chain-integration.mjs` 15/15 PASS (trước đó ~25% fail). Lane OpenCode không
+      có lỗ hổng tương đương (id không chứa `/` hay `:` nên safeId == wire id).
 - [ ] (còn lại duy nhất, điều kiện — chờ trigger) Khi `npm run
       verify:pi-extension-upstream` báo FAIL → làm theo runbook trên. Lần đo gần
-      nhất (2026-11-01, sau khi bù big-pickle): cả hai lane PASS.
+      nhất (2026-11-02, sau fix wire-id): cả hai lane PASS.

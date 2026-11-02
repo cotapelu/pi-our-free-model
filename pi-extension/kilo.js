@@ -16,19 +16,20 @@
  * @module pi-extension/kilo.js
  */
 import { openAICompletionsApi } from '@earendil-works/pi-ai/compat'
-import { KILO_BASE, fetchKiloListing, kiloModel, staticKiloModels, staticUpstreamIds, upstreamIdMap } from './catalog.js'
+import { KILO_BASE, createKiloRoster, fetchKiloListing } from './catalog.js'
 import { composeFetches, fetchWithoutHeader, restoreAliases, sseGuard } from './lane.js'
 
 /** Provider id, also the pi model prefix: `ofm-kilo/<model>`. */
 export const PROVIDER_ID = 'ofm-kilo'
 
-/** `safeId -> wire id`, rebuilt on every refresh; the wire keeps `vendor/name:free`. */
-let upstreamIds = new Map()
-
-/** Remember the wire ids of a freshly mapped live catalog. */
-function rememberUpstreamIds(listing) {
-  upstreamIds = upstreamIdMap(Array.isArray(listing?.data) ? listing.data : [], kiloModel)
-}
+/**
+ * The gateway's roster and its wire-id map.
+ *
+ * One instance per process, because pi aborts a refresh when the next one
+ * starts and the ids already learned must survive that (see
+ * `createKiloRoster`).
+ */
+const roster = createKiloRoster()
 
 /**
  * Normalise one payload onto the gateway's parameter set.
@@ -66,7 +67,7 @@ function normalizeKiloPayload(params, model) {
 export function streamKilo(model, context, options) {
   // The registered id stays the identity pi records (usage, transcript, chains);
   // the upstream's `vendor/name:free` spelling rides only the request payload.
-  const wireId = upstreamIds.get(model.id) ?? model.id
+  const wireId = roster.wireId(model.id)
   const inner = openAICompletionsApi().streamSimple({ ...model, baseUrl: KILO_BASE, api: 'openai-completions' }, context, {
     ...options,
     // Satisfies pi's key check; the fetch wrapper below removes it from the wire,
@@ -83,31 +84,23 @@ export function streamKilo(model, context, options) {
   return restoreAliases(inner, null)
 }
 
-/** Free models the gateway currently serves, or the offline snapshot on failure. */
+/**
+ * Free models the gateway currently serves.
+ *
+ * The listing can fail (rate-limited, 5xx, or pi aborting a superseded
+ * refresh) while chat still works; a turn dispatched from the last roster it
+ * served keeps its upstream spelling instead of carrying pi's safe id, so the
+ * gateway never answers "model not found" on a lane that is up. Only a listing
+ * that answers with an empty free slice falls back to the offline snapshot.
+ */
 export async function kiloModels({ signal } = {}) {
   try {
     const listing = await fetchKiloListing(signal)
     const rows = Array.isArray(listing?.data) ? listing.data : []
-    const models = rows.map(kiloModel).filter(Boolean)
-    if (models.length === 0) return staticSnapshot()
-    rememberUpstreamIds(listing)
-    return models
+    return roster.accept(rows)
   } catch {
-    return staticSnapshot()
+    return roster.degrade()
   }
-}
-
-/**
- * The offline roster, with the wire-id map rebuilt to match it.
- *
- * The listing can fail (rate-limited, 5xx) while chat still works; without this
- * the turn would carry pi's safe id (`reflection-beam-free`) where Kilo routes
- * `reflection/beam-free`, and the user would read "model not found" on a lane
- * that is up.
- */
-function staticSnapshot() {
-  upstreamIds = staticUpstreamIds()
-  return staticKiloModels()
 }
 
 /** Registration payload for `pi.registerProvider`. */
