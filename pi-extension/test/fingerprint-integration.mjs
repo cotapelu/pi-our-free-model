@@ -65,6 +65,17 @@ const server = createServer((req, res) => {
     }
 
     turns += 1
+    // The no-menu model: pi must not put an effort on the wire for it, and the
+    // fingerprint still has to be complete. One plain answer, one turn.
+    if (seen.body?.model === 'big-pickle') {
+      seen.bigPickleBody = seen.body
+      seen.bigPickleSawReasoningEffort = seen.body?.reasoning_effort !== undefined
+      res.writeHead(200, { 'content-type': 'text/event-stream' })
+      res.write(`data: ${JSON.stringify({ id: 't', object: 'chat.completion.chunk', choices: [{ index: 0, delta: { role: 'assistant', content: 'ok-from-big-pickle' }, finish_reason: 'stop' }] })}\n\n`)
+      res.write('data: [DONE]\n\n')
+      res.end()
+      return
+    }
     if (turns === 1) {
       // Answer with a call to the aliased copy of pi's `read` tool.
       res.writeHead(200, { 'content-type': 'text/event-stream' })
@@ -85,40 +96,41 @@ const server = createServer((req, res) => {
   })
 })
 
-async function run() {
-  return new Promise((resolve) => {
-    server.listen(0, '127.0.0.1', async () => {
-      const port = server.address().port
-      const base = `http://127.0.0.1:${port}`
-      const workdir = path.join(HERE, '.fixture')
-      const fs = await import('node:fs')
-      fs.mkdirSync(workdir, { recursive: true })
-      fs.writeFileSync(path.join(workdir, 'alpha.txt'), 'FAKE-FILE-CONTENT\n')
+/** The stand-in's base URL, once it is listening. */
+let base = ''
 
-      const child = spawn('pi', [
-        '-e', EXTENSION,
-        '-p', 'Read alpha.txt with your read tool, then summarise what it says.',
-        '--model', 'ofm-opencode/beam-free',
-      ], {
-        cwd: workdir,
-        env: {
-          ...process.env,
-          OFM_OPENECODE_BASE: base,
-          OFM_OPENECODE_CHAT_BASE: `${base}/inference/openai/v1`,
-        },
-        stdio: ['ignore', 'pipe', 'pipe'],
-      })
-      let out = ''
-      let err = ''
-      child.stdout.on('data', (d) => { out += d })
-      child.stderr.on('data', (d) => { err += d })
-      child.on('close', () => resolve({ out, err }))
+async function listen() {
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
+  base = `http://127.0.0.1:${server.address().port}`
+  const workdir = path.join(HERE, '.fixture')
+  const fs = await import('node:fs')
+  fs.mkdirSync(workdir, { recursive: true })
+  fs.writeFileSync(path.join(workdir, 'alpha.txt'), 'FAKE-FILE-CONTENT\n')
+}
+
+async function run(prompt, model, thinking) {
+  return new Promise((resolve) => {
+    const args = ['-e', EXTENSION, '-p', prompt, '--model', model]
+    if (thinking !== undefined) args.push('--thinking', thinking)
+    const child = spawn('pi', args, {
+      cwd: path.join(HERE, '.fixture'),
+      env: {
+        ...process.env,
+        OFM_OPENECODE_BASE: base,
+        OFM_OPENECODE_CHAT_BASE: `${base}/inference/openai/v1`,
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
     })
+    let out = ''
+    let err = ''
+    child.stdout.on('data', (d) => { out += d })
+    child.stderr.on('data', (d) => { err += d })
+    child.on('close', () => resolve({ out, err }))
   })
 }
 
-const { out, err } = await run()
-server.close()
+await listen()
+const { out, err } = await run('Read alpha.txt with your read tool, then summarise what it says.', 'ofm-opencode/beam-free')
 
 // 1. Client fingerprint.
 assert(seen.ua === 'opencode/latest/2.0.26/cli', 'User-Agent is the v2 client string', seen.ua)
@@ -144,6 +156,20 @@ assert(/Do not call the `read` or `shell` tools/.test(String(system?.content)), 
 
 // 3. Alias restored on the way back, so pi could execute its own tool.
 assert(/TURN2 carried=true/.test(out), 'pi executed the aliased tool call (alias restored, tool result carried)', JSON.stringify(out.slice(0, 200)))
+
+// 4. A model with no declared thinking menu: the gateway validates
+//    `reasoning_effort` against the model's own set and answers 400 to a value
+//    outside it, so a no-menu model must never carry one — even when the user
+//    asks for `high`. `big-pickle` is exactly that model, and it rides the
+//    offline snapshot (the stand-in answers no listing).
+const noMenu = await run('Say ok.', 'ofm-opencode/big-pickle', 'high')
+assert(seen.bigPickleBody !== undefined, 'the no-menu model reached the upstream', JSON.stringify(noMenu.err.slice(0, 200)))
+assert(seen.bigPickleSawReasoningEffort === false, 'no reasoning_effort on the wire for a model that declares no menu', JSON.stringify(seen.bigPickleBody?.reasoning_effort))
+assert(/ok-from-big-pickle/.test(noMenu.out), 'the no-menu model answered a turn', JSON.stringify(noMenu.out.slice(0, 200)))
+const noMenuSystem = (seen.bigPickleBody?.messages ?? []).find((m) => m.role === 'system')
+assert(/<env>[\s\S]*Working directory:/i.test(String(noMenuSystem?.content)), 'the no-menu model still carries the <env> block')
+assert((seen.bigPickleBody?.tools ?? []).some((t) => (t.function?.name ?? t.name) === 'read'), 'the no-menu model still carries the verbatim tools')
+server.close()
 
 if (err.trim()) console.log('--- stderr ---\n' + err.slice(0, 800))
 console.log(failures.length === 0 ? '\nALL CHECKS PASSED' : `\n${failures.length} CHECK(S) FAILED`)

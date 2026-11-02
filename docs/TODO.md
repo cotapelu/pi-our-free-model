@@ -28,6 +28,11 @@ Checklist phiên làm việc này. Trạng thái cập nhật sau mỗi bước.
 
 ## Còn lại
 
+- [x] Lấp lỗ hễng test do chính fix `big-pickle` tạo ra: model KHÔNG có menu effort giờ
+      có integration test qua `pi` thật — `--thinking high` trên `ofm-opencode/big-pickle`
+      → không có `reasoning_effort` nào ra wire (upstream trả 400 nếu ngoài menu), block
+      `<env>` + tool verbatim vẫn đủ, lượt hoàn thành. Đã kiểm chứng test có "răng":
+      tạm cho big-pickle menu thì đúng FAIL với `"high"` trên wire
 - [x] Viết runbook phản ứng drift: `docs/pi-extension-drift-runbook.md` — bảng
       triệu chứng→nghĩa, quy trình đo (tham chiếu `free-lane-wire.md`), bảng
       file·symbol phải sửa cho từng yếu tố (đã đối chiếu 18 symbol đều tồn tại),

@@ -163,7 +163,8 @@ pi-extension/
     ├── catalog.test.mjs             mapping and effort-menu unit checks
     ├── chains.test.mjs              chain routing state machine unit checks
     ├── fingerprint-integration.mjs  stand-in gateway asserts the gate's checks;
-    │                                pi must execute the aliased tool call
+    │                                pi must execute the aliased tool call, and a
+    │                                no-menu model must carry no effort at all
     ├── kilo-integration.mjs         stand-in gateway asserts the Kilo wire shape,
     │                                the off rung and the non-SSE fold
     └── chain-integration.mjs        stand-in gateway drives a real pi run: a retryable
