@@ -109,9 +109,9 @@ Checklist phiên làm việc này. Trạng thái cập nhật sau mỗi bước.
       sau khi kiểm (`.pi/` nguyên trạng, git sạch).
 - [ ] (còn lại duy nhất, điều kiện — chờ trigger) Khi `npm run
       verify:pi-extension-upstream` báo FAIL → làm theo runbook trên. Lần đo gần
-      nhất (2026-11-02 ~11:50, sau fix wire-id): test offline **124/124 PASS (9 script)**,
-      ổn định không còn flake; verify **ĐO LẠI cả hai lane PASS** — listing OpenCode
-      200, 8 id toàn chat-wired, không lệch snapshot; chat 429 (gate PASS); Kilo
+      nhất (2026-11-02 ~13:56, lần #2 trong ngày, sau fix wire-id): test offline **124/124
+      PASS (9 script)**, ổn định không còn flake; verify **ĐO LẠI cả hai lane PASS** — listing
+      OpenCode 200, 8 id toàn chat-wired, không lệch snapshot; chat 429 (gate PASS); Kilo
       200 không credential. **Không drift** → không phải sửa gì.
   - ✅ Đã phân loại (2026-11-02): `1552888 "fix"` (chủ repo) **xoá cố ý cả 4 workflow**
     (test / build-macos / prepare-release / release-sign) khi sang pi-only → chọn phương án

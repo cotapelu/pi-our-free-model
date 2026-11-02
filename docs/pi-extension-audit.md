@@ -184,6 +184,14 @@ Nối vào `test:pi-extension` (tự SKIP khi thiếu `pi` qua `preflight.mjs`; 
 OpenCode trong bản sao → assert roster đúng **FAIL**, còn Kilo PASS. Sau khi thêm:
 **124 check / 9 script PASS** (không SKIP trên máy có `pi`).
 
+### 6f) Đo lại lần #2 cùng ngày (2026-11-02 ~13:56)
+
+Chạy lại `npm run verify:pi-extension-upstream` lần thứ hai trong ngày (trước đó §6d
+~11:50). Kết quả y nguyên: cả hai lane **PASS** — listing OpenCode 200, 8 id free toàn
+chat-wired, không id mới/mất so với snapshot; chat 2 base trả `429 FreeUsageLimitError`
+(gate pass, hết quota IP); Kilo không credential trả 200 SSE. **Không drift**, `fingerprint.js`
+không cần sửa. Mục điều kiện trong TODO giữ nguyên, không tự tắt.
+
 ## 7. Đối chiếu API với gói `pi` thật (kiểm chứng, không đoán) — 2026-11-02
 
 Đối chiếu từng bề mặt API extension dùng với package **đang cài** mà binary `pi` 1.4.0
