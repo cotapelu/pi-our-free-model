@@ -196,10 +196,15 @@ npm run verify:pi-extension-upstream   # live: re-measure both lanes (network)
 
 The integration scripts drive a real `pi` process. Where the binary is absent
 they print `SKIP <script> — the `pi` binary is not on PATH` and exit 0, so a
-contributor machine without pi still gets the whole offline suite, and CI runs
-the same command in both shapes (`npm i -g
-@earendil-works/pi-coding-agent@^1.4.0` turns the skips into real runs). The live
-verifier is deliberately not in CI: it spends this egress's free quota.
+contributor machine without pi still gets the whole offline suite. This
+repository does **not** run them in CI anymore: the GitHub Actions workflows
+(including `.github/workflows/test.yml`, whose `test / pi-extension` job
+installed `@earendil-works/pi-coding-agent@^1.4.0` and then ran `npm run
+test:pi-extension`) were removed when the repo became pi-extension-only
+(commit `1552888`). To put CI back, restore that file from history — `git show
+f4709c1:.github/workflows/test.yml > .github/workflows/test.yml` — and keep it
+pointed at `npm run test:pi-extension`. The live verifier is deliberately not
+for CI either: it spends this egress's free quota.
 
 The live verifier is the executable form of the periodic maintenance item: it
 wears the fingerprint against `opencode.ai` (a `403 FreeTierError` means the
@@ -214,7 +219,7 @@ When it does fail, the response procedure — symptom → meaning, what to measu
 which file and symbol to edit, and what must pass before a commit — is written
 down in [`../docs/pi-extension-drift-runbook.md`](../docs/pi-extension-drift-runbook.md).
 
-The two integration scripts stand up a loopback stand-in gateway (recording
+The four integration scripts stand up a loopback stand-in gateway (recording
 exactly what the provider sends) and drive a real `pi` run against it, so the
 fingerprint, the alias restore and the wire shape are asserted end to end
 without touching either upstream. They need `pi` on `PATH`.

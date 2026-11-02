@@ -36,12 +36,13 @@ Checklist phiên làm việc này. Trạng thái cập nhật sau mỗi bước.
       `kiloModels()` dựng lại map trên mọi đường fallback. Unit test (15 id, round-trip
       safeId) + integration test (stand-in 500 cho /models, chat trả lời; payload phải
       mang wire id). Đã kiểm chứng test bắt lỗi: bỏ fix → FAIL `"reflection-beam-free"`
-- [x] Nối test extension vào CI (`.github/workflows/test.yml`, job `test / pi-extension`):
-      cài `@earendil-works/pi-coding-agent@^1.4.0` rồi chạy `npm run test:pi-extension`;
-      thêm `test/preflight.mjs` để 3 script integration **SKIP có lý do + exit 0** khi
-      thiếu `pi` (đã mô phỏng: 4 unit PASS, 3 integration SKIP), nên contributor
-      không có pi vẫn chạy được toàn bộ phần offline; verifier live cố ý để ngoài CI
-      vì nó tiêu quota free của egress
+- [x] **Nối test extension vào CI** — ⚠ đã xong lúc viết, nhưng `.github/workflows/test.yml`
+      (cùng 3 workflow macOS/release) **bị xoá ở `1552888`** (chủ repo) khi sang pi-extension-only
+      → **CI không còn chạy ở checkout này** (đã phân loại: KHÔNG khôi phục, gỡ claim cho khớp
+      thực tế). Còn giá trị & vẫn đúng: `test/preflight.mjs` cho 3 script integration **SKIP có
+      lý do + exit 0** khi thiếu `pi` (đã mô phỏng: 4 unit PASS, 3 integration SKIP) nên
+      contributor không có pi vẫn chạy hết phần offline; verifier live cố ý chạy tay (tiêu quota
+      free egress). Khôi phục CI 1 bước nếu cần: `git show f4709c1:.github/workflows/test.yml`
 - [x] Disclaimer một lần cho người dùng lane miễn phí (G14): `disclaimer.js` +
       `session_start` — nói rõ Kilo log prompt, OpenCode meter theo session/IP,\      đừng gửi dữ liệu nhạy cảm; hiện đúng một lần ở session tương tác
       (version-gate như dsh, ghi `notice-ack.json`). Smoke RPC: phiên 1 hiện 1
@@ -105,7 +106,8 @@ Checklist phiên làm việc này. Trạng thái cập nhật sau mỗi bước.
       ổn định không còn flake; verify **ĐO LẠI cả hai lane PASS** — listing OpenCode
       200, 8 id toàn chat-wired, không lệch snapshot; chat 429 (gate PASS); Kilo
       200 không credential. **Không drift** → không phải sửa gì.
-  - ⚠ Phát hiện liên quan: item "[x] Nối CI (`.github/workflows/test.yml`)" KHÔNG còn
-    đúng ở checkout này — `.github/` không còn trong cây HEAD; lần chạm cuối lên
-    `test.yml` trên nhánh HEAD là `1552888` (file có ở `f4709c1`, tổ tiên HEAD). Cần
-    quyết định: khôi phục file CI, hoặc gỡ claim CI khỏi audit/TODO.
+  - ✅ Đã phân loại (2026-11-02): `1552888 "fix"` (chủ repo) **xoá cố ý cả 4 workflow**
+    (test / build-macos / prepare-release / release-sign) khi sang pi-only → chọn phương án
+    **(b) KHÔNG khôi phục**, mà **gỡ claim CI** khỏi README/TODO cho khớp thực tế. Nếu sau này
+    cần CI lại: `git show f4709c1:.github/workflows/test.yml` rồi trỏ về `npm run
+    test:pi-extension`.

@@ -164,12 +164,14 @@ wire-id không chỉ gỡ được vụ flake một lần mà còn giữ đượ
 Kết luận: trạng thái "sạch" của §6c được giữ; mục điều kiện trong TODO vẫn chờ
 trigger (một lần verify FAIL thật) chứ không tự tắt.
 
-### 6e) Acceptance end-to-end thành script CI (2026-11-02)
+### 6e) Acceptance end-to-end thành script chạy-trong-CI được (2026-11-02)
 
 Runbook §5 có nửa "chấp nhận" chỉ từng chạy tay (smoke #5: `pi -e ./pi-extension
 --list-models` + một lượt thật). Biến nó thành `pi-extension/test/acceptance-live.mjs`
-để CI có cổng end-to-end **không tốn quota egress** (cả 2 lane trỏ loopback qua
-`OFM_*` override):
+nhằm làm cổng end-to-end **không tốn quota egress** (cả 2 lane trỏ loopback qua
+`OFM_*` override). Lưu ý: chính bản workflow CI (`.github/workflows/test.yml`) đã bị
+xoá ở `1552888` khi sang pi-only, nên hiện nó là gate **chạy ở local/contributor**;
+khôi phục CI = `git show f4709c1:.github/workflows/test.yml` (xem README §Tests):
 
 - `--list-models` phải hiện roster **live** của cả 2 provider (`ofm-opencode`,
   `ofm-kilo`) — tức roster từ listing, không phải snapshot;
