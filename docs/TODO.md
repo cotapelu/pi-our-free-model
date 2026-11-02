@@ -7,29 +7,25 @@ Checklist phiên làm việc này. Trạng thái cập nhật sau mỗi bước.
 - [x] Phân tích bản chất repo dsh: 7 hệ thống (xem `docs/pi-extension-audit.md` §1)
 - [x] Quét repo dsh: src/ đủ phần lane miễn phí + cấu trúc toàn bộ thư mục con
 - [x] Viết `docs/pi-extension-audit.md`: repo làm gì + 14 gap (G1–G14) + mức độ + trạng thái
-- [x] Sửa extension theo gap G1–G12 (env block, alias tool, capacity đo thực tế,
-      effort không gửi ngoài menu, Kilo off `{enabled:false}`, sseGuard fold, idle
-      watchdog, DSML scrub, chỉ map row chat-completions, thông báo lỗi)
-- [x] **Port combo/fallback-chain** (`src/combos.js` → `pi-extension/chains.js` +
-      `chain-store.js` + virtual model `ofm-chain` + `/ofm chain add|remove|enable|disable`):
-      - normalize input không tin cậy, capacity = giao các link, round-robin sticky
-      - failover khớp kiến trúc pi: advance trên retry (lỗi tạm thời) và trên
-        **user turn kế tiếp** sau lỗi pi không retry (quota/region); không đổi
-        model khi context overflow; giữ model trên continuation để bảo toàn prompt cache
-      - 3 lỗi thật phát hiện bằng test: (1) thông báo 429 của extension làm pi-ai
-        coi quota wall là retryable → giữ lại token `FreeUsageLimitError`;
-        (2) `kilo.js` đổi `model.id` thành wire id làm transcript ghi nhận id lạ,
-        hỏng đối chiếu address → chỉ đổi id trong payload; (3) state chain không
-        reset `walks` vì `previous` không có trên mọi đường → suy ra từ transcript
-- [x] Test 47 check PASS: `npm run test:pi-extension`
-      (`catalog` 12 · `fingerprint` 10 · `chains` 18 · `fingerprint-integration` 15 ·
-      `kilo-integration` 11 · `chain-integration` 3) — script integration lái `pi` thật
-- [x] Smoke thật: `pi --list-models` (23 model lane + chain), Kilo `--thinking off/high`
-      + tool, lane OpenCode 429 thân thiện, chain xuất hiện trong picker
+- [x] Sửa extension theo gap G1–G12
+- [x] Port combo/fallback-chain (G13) → `chains.js` + `chain-store.js` + virtual model
+      `ofm-chain` + `/ofm chain add|set|remove|enable|disable`; failover khớp kiến trúc pi
+      (advance trên retry và trên user-turn sau quota/region; không đổi model khi overflow)
+- [x] Sửa 3 lỗi thật phát hiện bằng test (429 mất token FreeUsageLimitError → pi retry quota;
+      kilo.js đổi model.id phá address; previous thiếu → suy từ transcript)
+- [x] `/ofm chain add` nhận `strategy` + `stickyLimit` (`round-robin:3`), `/ofm chain set` sửa
+      chain đã có — parser thuần `parseChainAdd` + unit test + round-trip store
+- [x] Smoke command qua RPC thật: add giữ đúng 2 link + `round-robin:2`; set đổi strategy,
+      giữ sticky (kiểm tra `chains.json` sau lệnh)
+- [x] Test PASS: `npm run test:pi-extension` — 6 file
+      (catalog 12 · fingerprint 10 · chains 23 · fingerprint-integration 15 ·
+      kilo-integration 11 · chain-integration 3)
+- [x] Smoke thật: `pi --list-models` 23 model, Kilo `--thinking off/high` + tool,
+      OpenCode 429 thân thiện, chain xuất hiện trong picker
 
 ## Còn lại
 
 - [ ] Bảo trì định kỳ: upstream siết gate → đo lại fingerprint theo
       `docs/free-lane-wire.md` (TLS MITM + replay từng byte), cập nhật `fingerprint.js`
-- [ ] Tùy chọn: `/ofm chain add` chưa nhận `strategy`/`stickyLimit` từ dòng lệnh
-      (hiến đã, sửa tay file `chains.json`); UI cho state machine nếu cần
+- [ ] Tùy chọn: `chain add` chưa kiểm tra link có resolve không tại thời điểm add
+      (chỉ ⚠ trong `/ofm chain` list); editor TUI cho chains nếu cần

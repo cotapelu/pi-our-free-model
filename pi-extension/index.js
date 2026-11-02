@@ -19,15 +19,10 @@
  *
  * @module pi-extension/index.js
  */
-import { CHAIN_PREFIX, CHAIN_PROVIDER, chainByName, chainId, decideLink, intersectCapabilities, normalizeChains } from './chains.js'
+import { CHAIN_PREFIX, CHAIN_PROVIDER, chainByName, chainId, decideLink, intersectCapabilities, normalizeChains, parseChainAdd } from './chains.js'
 import { readChains, writeChains } from './chain-store.js'
 import { kiloModels, kiloProvider, PROVIDER_ID as KILO_ID } from './kilo.js'
 import { opencodeModels, opencodeProvider, PROVIDER_ID as OPENECODE_ID } from './opencode.js'
-
-/** Split command input on `|`, trimming each field. */
-function fields(input) {
-  return String(input ?? '').split('|').map((field) => field.trim())
-}
 
 /** Resolve one `provider/model` address against the live registry. */
 function resolveLink(ctx, address) {
@@ -113,7 +108,7 @@ export default async function (pi) {
   registerChains(pi, chains)
 
   pi.registerCommand('ofm', {
-    description: 'Our Free Model: status | refresh | chain [add|remove|enable|disable]',
+    description: 'Our Free Model: status | refresh | chain [add|set|remove|enable|disable]',
     handler: async (arg, ctx) => {
       const words = String(arg ?? '').trim().split(/\s+/).filter(Boolean)
       const head = (words[0] ?? 'status').toLowerCase()
@@ -123,16 +118,56 @@ export default async function (pi) {
       }
 
       if (head === 'chain' && (words[1] ?? '').toLowerCase() === 'add') {
-        const [name, ...links] = fields(rest.replace(/^add\s+/i, ''))
-        if (name === '' || links.length === 0) {
-          notify('/ofm chain add <name> | <provider/model> | <provider/model> [| fallback|round-robin]')
+        const parsed = parseChainAdd(rest.replace(/^add\s+/i, ''))
+        if (parsed.error !== undefined) {
+          notify(`${parsed.error}\ne.g. /ofm chain add My Chain | ofm-kilo/reflection-beam-free | ofm-opencode/beam-free | round-robin:2`)
           return
         }
-        const stored = writeChains([...chains, { id: chainId(name), name, models: links }])
+        const stored = writeChains([...chains, { id: chainId(parsed.name), name: parsed.name, models: parsed.models, strategy: parsed.strategy, stickyLimit: parsed.stickyLimit }])
         chains.length = 0
         chains.push(...stored)
         registerChains(pi, stored, ctx)
-        notify(`chain ${chainId(name)} added with ${links.length} links`)
+        notify(`chain ${chainId(parsed.name)} added with ${parsed.models.length} links (${parsed.strategy}${parsed.stickyLimit > 1 ? `:${parsed.stickyLimit}` : ''})`)
+        return
+      }
+
+      if (head === 'chain' && (words[1] ?? '').toLowerCase() === 'set') {
+        // `/ofm chain set <id|name> strategy fallback|round-robin[:sticky]` or
+        // `/ofm chain set <id|name> sticky <n>` — the edit that spares the user
+        // the chains file.
+        const match = /^([^\s]+)\s+(strategy|sticky)\s+(.+)$/i.exec(rest.replace(/^set\s+/i, '').trim())
+        const named = match !== null ? chainByName(chains, match[1]) : undefined
+        if (match === null || named === undefined) {
+          notify('usage: /ofm chain set <id|name> strategy fallback|round-robin[:sticky]  |  sticky <n>')
+          return
+        }
+        let patch
+        if (match[2].toLowerCase() === 'strategy') {
+          const parsed = /^(fallback|round-robin)(?::([1-9][0-9]{0,3}))?$/i.exec(match[3].trim())
+          if (parsed === null) {
+            notify('strategy must be fallback or round-robin, optionally round-robin:<sticky>')
+            return
+          }
+          patch = {
+            strategy: parsed[1].toLowerCase(),
+            stickyLimit: parsed[2] === undefined ? named.stickyLimit : Math.min(16, Number(parsed[2])),
+          }
+        } else {
+          const sticky = Number(match[3].trim())
+          if (!Number.isInteger(sticky) || sticky < 1 || sticky > 16) {
+            notify('sticky must be 1..16')
+            return
+          }
+          patch = { stickyLimit: sticky }
+        }
+        const stored = writeChains(chains.map((chain) => (chain.id === named.id ? { ...chain, ...patch } : chain)))
+        chains.length = 0
+        chains.push(...stored)
+        const updated = stored.find((chain) => chain.id === named.id)
+        if (updated?.enabled !== false) registerChain(pi, updated, ctx)
+        const shown = patch.strategy ?? updated?.strategy ?? named.strategy
+        const sticky = patch.stickyLimit ?? updated?.stickyLimit ?? named.stickyLimit
+        notify(`chain ${named.id} updated (${shown}${sticky > 1 ? `:${sticky}` : ''})`)
         return
       }
 

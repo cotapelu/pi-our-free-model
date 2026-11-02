@@ -10,7 +10,11 @@
  * Usage: node pi-extension/test/chains.test.mjs
  */
 import assert from 'node:assert/strict'
-import { chainId, chainByName, decideLink, intersectCapabilities, isAdvanceable, normalizeChains, CHAIN_PREFIX } from '../chains.js'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { readChains, writeChains } from '../chain-store.js'
+import { chainId, chainByName, decideLink, intersectCapabilities, isAdvanceable, normalizeChains, parseChainAdd, CHAIN_PREFIX } from '../chains.js'
 
 let failures = 0
 function check(label, fn) {
@@ -47,6 +51,36 @@ check('normalizeChains drops everything it cannot trust', () => {
   assert.deepEqual(chains[0].models, ['ofm-kilo/a', 'ofm-kilo/b'], 'duplicates and self-links dropped')
   assert.equal(chains[2].strategy, 'fallback', 'an unknown strategy falls back, not honoured')
   assert.equal(chains[3].stickyLimit, 16, 'stickyLimit is clamped')
+})
+
+check('parseChainAdd reads the trailing strategy without eating a link', () => {
+  const parsed = parseChainAdd('My Chain | ofm-kilo/a | ofm-opencode/b | round-robin:3')
+  assert.equal(parsed.name, 'My Chain')
+  assert.deepEqual(parsed.models, ['ofm-kilo/a', 'ofm-opencode/b'], 'the strategy field is not a link')
+  assert.equal(parsed.strategy, 'round-robin')
+  assert.equal(parsed.stickyLimit, 3)
+})
+
+check('parseChainAdd keeps a bare two-link add on fallback', () => {
+  const parsed = parseChainAdd('Fast | ofm-kilo/a | ofm-kilo/b')
+  assert.equal(parsed.strategy, 'fallback')
+  assert.equal(parsed.stickyLimit, 1)
+  assert.deepEqual(parsed.models, ['ofm-kilo/a', 'ofm-kilo/b'])
+})
+
+check('parseChainAdd refuses what cannot be a chain', () => {
+  assert.ok(parseChainAdd('Only Name').error !== undefined, 'a name without links')
+  assert.ok(parseChainAdd('').error !== undefined)
+  assert.ok(parseChainAdd('Chain | not-a-link').error !== undefined, 'a link without a provider')
+  assert.ok(parseChainAdd('Chain | ofm-kilo/a | round-robin:x').error !== undefined, 'a sticky window that is not a number')
+  const clamped = parseChainAdd('Chain | ofm-kilo/a | ofm-kilo/b | round-robin:99')
+  assert.equal(clamped.stickyLimit, 16, 'an oversized sticky window is clamped, not refused')
+})
+
+check('parseChainAdd does not mistake a model for a strategy', () => {
+  const parsed = parseChainAdd('Chain | ofm-kilo/fallback')
+  assert.equal(parsed.strategy, 'fallback')
+  assert.deepEqual(parsed.models, ['ofm-kilo/fallback'])
 })
 
 check('chain ids are stable and url-safe', () => {
@@ -198,6 +232,26 @@ check('a context overflow does not advance the chain', () => {
   assert.equal(isAdvanceable({ stopReason: 'error', errorMessage: 'free quota for this egress is spent (429)' }), true)
   assert.equal(isAdvanceable({ stopReason: 'error', errorMessage: 'upstream blocks this model for this egress region (403)' }), true)
   assert.equal(isAdvanceable({ stopReason: 'error', errorMessage: 'HTTP 503' }), true)
+})
+
+check('a parsed add survives the store round-trip', () => {
+  const previous = process.env.OFM_DATA_DIR
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ofm-store-'))
+  process.env.OFM_DATA_DIR = dir
+  try {
+    const parsed = parseChainAdd('Fallback Two | ofm-kilo/a | ofm-kilo/b | round-robin:3')
+    const stored = writeChains([{ id: chainId(parsed.name), name: parsed.name, models: parsed.models, strategy: parsed.strategy, stickyLimit: parsed.stickyLimit }])
+    assert.equal(stored[0].strategy, 'round-robin')
+    assert.equal(stored[0].stickyLimit, 3)
+    const back = readChains()
+    assert.equal(back.length, 1)
+    assert.equal(back[0].id, `${CHAIN_PREFIX}fallback-two`)
+    assert.deepEqual(back[0].models, ['ofm-kilo/a', 'ofm-kilo/b'])
+    assert.equal(back[0].strategy, 'round-robin')
+  } finally {
+    if (previous === undefined) delete process.env.OFM_DATA_DIR
+    else process.env.OFM_DATA_DIR = previous
+  }
 })
 
 console.log(failures === 0 ? '\nALL CHECKS PASSED' : `\n${failures} CHECK(S) FAILED`)

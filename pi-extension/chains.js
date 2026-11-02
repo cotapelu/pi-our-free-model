@@ -93,6 +93,47 @@ export function chainByName(chains, nameOrId) {
   return chains.find((chain) => chain.id === wanted || chain.id === chainId(wanted) || chain.name === wanted)
 }
 
+/** A trailing `fallback`, `round-robin`, or `round-robin:3` field. */
+const STRATEGY_FIELD = /^(fallback|round-robin)(?::([1-9][0-9]{0,3}))?$/i
+/** One link: `provider/model` with the characters either side may carry. */
+const LINK_FIELD = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.:-]+$/
+
+/**
+ * Parse one `/ofm chain add` argument list.
+ *
+ * `My Chain | ofm-kilo/a | ofm-kilo/b | round-robin:3` — the last field is the
+ * strategy when it spells one (`fallback` or `round-robin`, with an optional
+ * `:stickyLimit`); everything between the name and that field is a link. A link
+ * that is not `provider/model` is refused *here* rather than dropped silently by
+ * `normalizeChains`, because a chain quietly missing the link the user typed is
+ * worse than being told the spelling is wrong.
+ *
+ * @param {string} input the text after `chain add`
+ * @returns {{name:string, models:string[], strategy:string, stickyLimit:number}|{error:string}}
+ */
+export function parseChainAdd(input) {
+  const fields = String(input ?? '').split('|').map((field) => field.trim())
+  while (fields.length > 0 && fields[fields.length - 1] === '') fields.pop()
+  if (fields.length < 2) return { error: 'usage: /ofm chain add <name> | <provider/model> | <provider/model> [| fallback|round-robin[:sticky]]' }
+  const name = fields[0]
+  let strategy = 'fallback'
+  let stickyLimit = 1
+  let links = fields.slice(1)
+  const last = links[links.length - 1]
+  if (links.length >= 2 && STRATEGY_FIELD.test(last)) {
+    const matched = STRATEGY_FIELD.exec(last)
+    strategy = matched[1].toLowerCase()
+    if (matched[2] !== undefined) stickyLimit = Math.min(16, Number(matched[2]))
+    links = links.slice(0, -1)
+  }
+  if (name === '') return { error: 'the chain needs a name' }
+  if (links.length === 0) return { error: 'the chain needs at least one link' }
+  const bad = links.find((link) => !LINK_FIELD.test(link))
+  if (bad !== undefined) return { error: `"${bad}" is not a provider/model link` }
+  if (strategy === 'round-robin' && stickyLimit < 1) return { error: 'round-robin needs a sticky window of at least 1 turn' }
+  return { name, models: [...new Set(links)], strategy, stickyLimit }
+}
+
 /**
  * The honest capacities of a chain: the intersection, never the union.
  *

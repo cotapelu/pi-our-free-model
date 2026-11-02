@@ -50,9 +50,17 @@ refusal, a 5xx.
 
 ```bash
 /ofm chain add My Chain | ofm-kilo/reflection-beam-free | ofm-opencode/beam-free
+/ofm chain add RR | ofm-kilo/a | ofm-kilo/b | round-robin:2
 /ofm chain                                  # list, ⚠ on links that do not resolve
+/ofm chain set <id|name> strategy fallback|round-robin[:sticky]
+/ofm chain set <id|name> sticky <1..16>
 /ofm chain enable|disable|remove <id>
 ```
+
+The trailing field of `add` is the strategy when it spells one — everything
+between the name and that field is a link, and a link that is not
+`provider/model` is refused rather than silently dropped. `set` edits an existing
+chain without touching the file.
 
 `fallback` (default) always starts at the head; `round-robin` rotates the start
 per `stickyLimit` turns. The capacities shown for a chain are the intersection
