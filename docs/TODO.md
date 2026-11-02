@@ -84,9 +84,20 @@ Checklist phiên làm việc này. Trạng thái cập nhật sau mỗi bước.
       `test:pi-extension` (tự SKIP khi thiếu `pi` qua preflight; timeout 90s để treo
       thành FAIL). Teeth-check: đổi id listing OpenCode → assert roster đúng **FAIL**,
       Kilo vẫn PASS. Sau khi nối vào suite: **124 check / 9 script PASS**.
+- [x] **Dọn `package.json` về chỉ-phục-vụ-pi-extension** (2026-11-02): giữ đúng 3
+      script (`test` → `test:pi-extension`, `test:pi-extension` 9 script,
+      `verify:pi-extension-upstream`); bỏ toàn bộ của dsh plugin — `files[]` 40 mục,
+      `exports`, `main` host-half, `dsh.bundle/client`, peerDeps/devDeps `@deepseek-ai/*`
+      + esbuild/typescript/undici, `overrides`, và 15 script standalone/magpie/channel/
+      manifest/legacy. Suite vẫn **124/124 PASS** sau khi dọn. **Không cần `npm run
+      build`**: `pi-extension/` là ESM thuần, pi nạp trực tiếp.
 - [ ] (còn lại duy nhất, điều kiện — chờ trigger) Khi `npm run
       verify:pi-extension-upstream` báo FAIL → làm theo runbook trên. Lần đo gần
       nhất (2026-11-02 ~11:50, sau fix wire-id): test offline **124/124 PASS (9 script)**,
       ổn định không còn flake; verify **ĐO LẠI cả hai lane PASS** — listing OpenCode
       200, 8 id toàn chat-wired, không lệch snapshot; chat 429 (gate PASS); Kilo
       200 không credential. **Không drift** → không phải sửa gì.
+  - ⚠ Phát hiện liên quan: item "[x] Nối CI (`.github/workflows/test.yml`)" KHÔNG còn
+    đúng ở checkout này — `.github/` không còn trong cây HEAD; lần chạm cuối lên
+    `test.yml` trên nhánh HEAD là `1552888` (file có ở `f4709c1`, tổ tiên HEAD). Cần
+    quyết định: khôi phục file CI, hoặc gỡ claim CI khỏi audit/TODO.
