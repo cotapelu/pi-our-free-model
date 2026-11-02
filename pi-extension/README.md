@@ -159,7 +159,9 @@ pi-extension/
 ├── fingerprint.js           the OpenCode v2 client fingerprint (tools, session, headers)
 ├── catalog.js               live listing fetch, mapping to pi models, offline snapshots
 ├── lane.js                  shared stream plumbing: alias restore, error translation,
-│                            credential-free fetch, transport guards, session rotation
+│                            credential-free fetch, session rotation
+├── transport.js             the host-free half of those guards: body sniffing and
+│                            folding, the idle watchdog, the DSML scrubber, error copy
 ├── opencode.js               ofm-opencode provider
 ├── kilo.js                  ofm-kilo provider
 ├── chains.js                fallback chains: normalize, capacity intersection, routing
@@ -167,6 +169,7 @@ pi-extension/
 └── test/                    offline integration + unit checks (node, no network)
     ├── fingerprint.test.mjs         payload fingerprint unit checks
     ├── catalog.test.mjs             mapping and effort-menu unit checks
+    ├── transport.test.mjs          body-shape, fold, DSML scrub, idle watchdog, error copy
     ├── chains.test.mjs              chain routing state machine unit checks
     ├── fingerprint-integration.mjs  stand-in gateway asserts the gate's checks;
     │                                pi must execute the aliased tool call, and a
