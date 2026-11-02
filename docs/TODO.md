@@ -18,10 +18,12 @@ Checklist phiên làm việc này. Trạng thái cập nhật sau mỗi bước.
 - [x] **Đo lại upstream (2026-11-01)**: listing 200, 8 free id toàn chat-wired; chat 429
       (gate pass, không drift); Kilo 200 không credential — kết quả ghi ở audit §6
 - [x] Smoke command qua pi RPC thật cho mọi nhánh của `/ofm chain`
+- [x] Editor wizard `/ofm chain edit <id>` (name → links → strategy → sticky), dùng
+      `buildChainEdit`/`parseLinkList` thuần + cùng validate lúc add; headless chỉ đường
+      dùng `set`; RPC smoke: 4 bước, giữ id/enabled, ghi đúng chains.json
 
 ## Còn lại
 
 - [ ] Bảo trì định kỳ: khi upstream trả 403 FreeTierError → đo lại theo quy trình
       `docs/free-lane-wire.md` (TLS MITM + replay từng byte) và cập nhật `fingerprint.js`;
       quy trình + kết qu� lần đo gần nhất: audit §6
-- [ ] Tùy chọn: editor TUI cho chains nếu cần

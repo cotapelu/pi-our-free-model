@@ -51,12 +51,19 @@ refusal, a 5xx.
 ```bash
 /ofm chain add My Chain | ofm-kilo/reflection-beam-free | ofm-opencode/beam-free
 /ofm chain add RR | ofm-kilo/a | ofm-kilo/b | round-robin:2
-/ofm chain                                  # list, ⚠ on links that do not resolve
+/ofm chain                                  # list, live/total per chain
+/ofm chain edit <id|name>                  # wizard: name → links → strategy → sticky
 /ofm chain set <id|name> links <provider/model> | <provider/model>
 /ofm chain set <id|name> strategy fallback|round-robin[:sticky]
 /ofm chain set <id|name> sticky <1..16>
 /ofm chain enable|disable|remove <id>
 ```
+
+`chain edit` is the wizard for the same edits, in an interactive session: it
+asks for the name, the links (one per line, prefilled with the current ones), the
+strategy and — for `round-robin` — the sticky window, then validates exactly like
+`add` does before writing. Cancelling any step writes nothing; in a non-interactive
+session it says so and points at the `set` forms and the file.
 
 The trailing field of `add` is the strategy when it spells one — everything
 between the name and that field is a link, and a link that is not

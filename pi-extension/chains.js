@@ -94,6 +94,51 @@ export function chainByName(chains, nameOrId) {
 }
 
 /**
+ * Parse a free-form link list from the editor: one link per line, or the same
+ * `a | b` spelling the commands use, whichever the user typed.
+ *
+ * @param {string} text
+ * @returns {{links:string[], bad?:string}}
+ */
+export function parseLinkList(text) {
+  const raw = String(text ?? '')
+    .split(/[\n|]/)
+    .map((field) => field.trim())
+    .filter((field) => field !== '' && !field.startsWith('#'))
+  const bad = raw.find((link) => !LINK_FIELD.test(link))
+  const links = [...new Set(raw)]
+  return bad === undefined ? { links } : { links, bad }
+}
+
+/**
+ * Build the chain an editor turn produces, from the existing row and the
+ * wizard's answers. Pure, so the wizard's validation is testable without a UI:
+ * the id is preserved, the strategy falls back rather than honouring a typo,
+ * and the sticky window is clamped to what the rotation can use.
+ *
+ * @returns {{chain:object}|{error:string}}
+ */
+export function buildChainEdit({ current, name, links, strategy, stickyLimit }) {
+  if (current === undefined || current === null) return { error: 'no such chain' }
+  const parsedLinks = Array.isArray(links) ? links : parseLinkList(links).links
+  if (!Array.isArray(parsedLinks) || parsedLinks.length === 0) return { error: 'the chain needs at least one link' }
+  const wantedStrategy = String(strategy ?? current.strategy ?? 'fallback').toLowerCase()
+  const nextStrategy = CHAIN_STRATEGIES.includes(wantedStrategy) ? wantedStrategy : 'fallback'
+  const wantedSticky = Number(stickyLimit)
+  const nextSticky = Number.isInteger(wantedSticky) && wantedSticky > 0 ? Math.min(16, wantedSticky) : current.stickyLimit ?? 1
+  const nextName = typeof name === 'string' && name.trim() !== '' ? name.trim() : current.name
+  return {
+    chain: {
+      ...current,
+      name: nextName,
+      models: parsedLinks,
+      strategy: nextStrategy,
+      stickyLimit: nextSticky,
+    },
+  }
+}
+
+/**
  * Parse one `/ofm chain set <id|name> links <a> | <b>` argument list.
  *
  * Replacing a chain's links is the edit the file was needed for; it uses the

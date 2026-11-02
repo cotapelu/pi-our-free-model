@@ -19,7 +19,7 @@
  *
  * @module pi-extension/index.js
  */
-import { CHAIN_PREFIX, CHAIN_PROVIDER, chainByName, chainId, decideLink, evaluateAdd, intersectCapabilities, normalizeChains, parseChainAdd, parseChainSetLinks } from './chains.js'
+import { CHAIN_PREFIX, CHAIN_PROVIDER, buildChainEdit, chainByName, chainId, decideLink, evaluateAdd, intersectCapabilities, normalizeChains, parseChainAdd, parseChainSetLinks, parseLinkList } from './chains.js'
 import { readChains, writeChains } from './chain-store.js'
 import { kiloModels, kiloProvider, PROVIDER_ID as KILO_ID } from './kilo.js'
 import { opencodeModels, opencodeProvider, PROVIDER_ID as OPENECODE_ID } from './opencode.js'
@@ -138,6 +138,67 @@ export default async function (pi) {
         registerChains(pi, stored, ctx)
         const dead = check.dead.length > 0 ? ` — not resolving right now: ${check.dead.join(', ')}` : ''
         notify(`chain ${chainId(parsed.name)} added with ${check.live.length}/${parsed.models.length} links live (${parsed.strategy}${parsed.stickyLimit > 1 ? `:${parsed.stickyLimit}` : ''})${dead}`)
+        return
+      }
+
+      if (head === 'chain' && (words[1] ?? '').toLowerCase() === 'edit') {
+        // A wizard over one chain: name, links, strategy, sticky. Pure headless
+        // callers get the same edits through the `set` forms or the file.
+        const target = chainByName(chains, words.slice(2).join(' '))
+        if (target === undefined) {
+          notify(`no chain named "${words.slice(2).join(' ')}"`)
+          return
+        }
+        if (!ctx.hasUI) {
+          notify('the chain editor needs an interactive session; use /ofm chain set <id> links|strategy|sticky, or edit ~/.our-free-model/chains.json')
+          return
+        }
+        const name = await ctx.ui.input('Chain name', target.name)
+        if (name === undefined) {
+          notify('edit cancelled — nothing changed')
+          return
+        }
+        const linksText = await ctx.ui.editor('One link per line (provider/model)', target.models.join('\n'))
+        if (linksText === undefined) {
+          notify('edit cancelled — nothing changed')
+          return
+        }
+        const parsedLinks = parseLinkList(linksText)
+        if (parsedLinks.bad !== undefined) {
+          notify(`"${parsedLinks.bad}" is not a provider/model link — nothing changed`)
+          return
+        }
+        const strategy = await ctx.ui.select('Strategy for this chain', ['fallback', 'round-robin'])
+        if (strategy === undefined) {
+          notify('edit cancelled — nothing changed')
+          return
+        }
+        let sticky = target.stickyLimit
+        if (strategy === 'round-robin') {
+          const answer = await ctx.ui.input('Sticky turns per link (1-16)', String(sticky))
+          if (answer === undefined) {
+            notify('edit cancelled — nothing changed')
+            return
+          }
+          sticky = Number(answer.trim())
+        }
+        const built = buildChainEdit({ current: target, name, links: parsedLinks.links, strategy, stickyLimit: sticky })
+        if (built.error !== undefined) {
+          notify(built.error)
+          return
+        }
+        const check = evaluateAdd({ models: built.chain.models }, (address) => resolveLink(ctx, address) !== undefined)
+        if (!check.ok) {
+          notify(check.error)
+          return
+        }
+        const stored = writeChains(chains.map((chain) => (chain.id === target.id ? built.chain : chain)))
+        chains.length = 0
+        chains.push(...stored)
+        const updated = stored.find((chain) => chain.id === target.id)
+        if (updated?.enabled !== false) registerChain(pi, updated, ctx)
+        const dead = check.dead.length > 0 ? ` — not resolving right now: ${check.dead.join(', ')}` : ''
+        notify(`chain ${target.id} updated: ${check.live.length}/${built.chain.models.length} links live (${built.chain.strategy}${built.chain.stickyLimit > 1 ? `:${built.chain.stickyLimit}` : ''})${dead}`)
         return
       }
 

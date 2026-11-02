@@ -14,7 +14,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { readChains, writeChains } from '../chain-store.js'
-import { chainId, chainByName, decideLink, evaluateAdd, intersectCapabilities, isAdvanceable, normalizeChains, parseChainAdd, parseChainSetLinks, CHAIN_PREFIX } from '../chains.js'
+import { buildChainEdit, chainId, chainByName, decideLink, evaluateAdd, intersectCapabilities, isAdvanceable, normalizeChains, parseChainAdd, parseChainSetLinks, parseLinkList, CHAIN_PREFIX } from '../chains.js'
 
 let failures = 0
 function check(label, fn) {
@@ -232,6 +232,39 @@ check('a context overflow does not advance the chain', () => {
   assert.equal(isAdvanceable({ stopReason: 'error', errorMessage: 'free quota for this egress is spent (429)' }), true)
   assert.equal(isAdvanceable({ stopReason: 'error', errorMessage: 'upstream blocks this model for this egress region (403)' }), true)
   assert.equal(isAdvanceable({ stopReason: 'error', errorMessage: 'HTTP 503' }), true)
+})
+
+check('parseLinkList accepts both the editor and the command spelling', () => {
+  const lines = parseLinkList('# my links\nofm-kilo/a\nofm-opencode/b')
+  assert.deepEqual(lines.links, ['ofm-kilo/a', 'ofm-opencode/b'], 'comments and blank lines dropped')
+  const pipes = parseLinkList('ofm-kilo/a | ofm-opencode/b')
+  assert.deepEqual(pipes.links, ['ofm-kilo/a', 'ofm-opencode/b'])
+  const deduped = parseLinkList('ofm-kilo/a | ofm-kilo/a | ofm-kilo/b')
+  assert.deepEqual(deduped.links, ['ofm-kilo/a', 'ofm-kilo/b'])
+  const bad = parseLinkList('ofm-kilo/a\nnot-a-link')
+  assert.equal(bad.bad, 'not-a-link', 'the bad spelling is reported, not dropped')
+  assert.deepEqual(parseLinkList('   ').links, [""].filter(Boolean).concat([]), 'an empty editor yields no links')
+})
+
+check('buildChainEdit keeps the id and clamps what it must', () => {
+  const current = { id: 'chain:test', name: 'Old', models: ['ofm-kilo/a'], strategy: 'fallback', stickyLimit: 1, enabled: true }
+  const edited = buildChainEdit({ current, name: '  New Name  ', links: ['ofm-kilo/x', 'ofm-opencode/y'], strategy: 'ROUND-ROBIN', stickyLimit: 99 })
+  assert.equal(edited.chain.id, 'chain:test', 'the id survives an edit')
+  assert.equal(edited.chain.name, 'New Name', 'the name is trimmed')
+  assert.equal(edited.chain.strategy, 'round-robin', 'case-insensitive')
+  assert.equal(edited.chain.stickyLimit, 16, 'clamped')
+  assert.deepEqual(edited.chain.models, ['ofm-kilo/x', 'ofm-opencode/y'])
+  assert.equal(edited.chain.enabled, true)
+})
+
+check('buildChainEdit refuses an edit that empties the chain', () => {
+  const current = { id: 'chain:test', name: 'Old', models: ['ofm-kilo/a'], strategy: 'fallback', stickyLimit: 1 }
+  assert.ok(buildChainEdit({ current, name: 'X', links: [], strategy: 'fallback' }).error !== undefined)
+  assert.ok(buildChainEdit({ current: undefined }).error !== undefined)
+  const noName = buildChainEdit({ current, name: '   ', links: ['ofm-kilo/a'], strategy: 'typo', stickyLimit: 0 })
+  assert.equal(noName.chain.name, 'Old', 'a blank name keeps the current one')
+  assert.equal(noName.chain.strategy, 'fallback', 'an unknown strategy falls back rather than honouring a typo')
+  assert.equal(noName.chain.stickyLimit, 1, 'a non-positive sticky keeps the current one')
 })
 
 check('parseChainSetLinks reads a replacement link list', () => {
