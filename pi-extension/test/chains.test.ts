@@ -13,8 +13,8 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { readChains, writeChains } from '../chain-store.js'
-import { buildChainEdit, chainId, chainByName, decideLink, evaluateAdd, intersectCapabilities, isAdvanceable, normalizeChains, parseChainAdd, parseChainSetLinks, parseLinkList, CHAIN_PREFIX } from '../chains.js'
+import { readChains, writeChains } from '../dist/chain-store.js'
+import { buildChainEdit, chainId, chainByName, decideLink, evaluateAdd, intersectCapabilities, isAdvanceable, normalizeChains, parseChainAdd, parseChainSetLinks, parseLinkList, CHAIN_PREFIX } from '../dist/chains.js'
 
 let failures = 0
 function check(label, fn) {

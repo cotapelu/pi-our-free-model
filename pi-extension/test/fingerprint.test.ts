@@ -10,7 +10,7 @@
  * Usage: node pi-extension/test/fingerprint.test.mjs
  */
 import assert from 'node:assert/strict'
-import { applyFingerprint, gatewayHeaders, mintSessionId, sessionFor, FINGERPRINT_TOOL_DEFINITIONS, SESSION_RE, SESSION_DESCENDING_RE } from '../fingerprint.js'
+import { applyFingerprint, gatewayHeaders, mintSessionId, sessionFor, FINGERPRINT_TOOL_DEFINITIONS, SESSION_RE, SESSION_DESCENDING_RE } from '../dist/fingerprint.js'
 
 let failures = 0
 function check(label, fn) {
@@ -133,6 +133,28 @@ check('gateway headers carry the pooled credential and the four session headers'
   assert.equal(headers['x-opencode-session'], headers['x-session-affinity'])
   assert.equal(headers['x-opencode-request'], undefined, 'no v1-only header')
   assert.equal(headers.accept, 'text/event-stream')
+})
+
+check('a gate-slot collision moves the caller tool to a fresh alias instead of crashing', () => {
+  // Regression guard for a real latent bug the TS pass surfaced: the gate-slot
+  // rename picked `read_ofm1`, found it already taken, and reassigned the alias
+  // in the loop — which used to be a `const`, throwing at runtime on that path.
+  const params = {
+    model: 'demo',
+    messages: [{ role: 'user', content: 'hi' }],
+    tools: [
+      { type: 'function', function: { name: 'read_ofm1', parameters: { type: 'object', properties: {} } } },
+      { type: 'function', function: { name: 'read', parameters: { type: 'object', properties: { path: { type: 'string' } } } } },
+    ],
+  }
+  const aliases = new Map()
+  let out
+  assert.doesNotThrow(() => { out = applyFingerprint(params, { aliases }) }, 'the collision resolves instead of a const-reassignment crash')
+  const names = out.tools.map((tool) => tool.function?.name ?? tool.name)
+  assert.ok(names.includes('read_ofm2'), 'the caller read moved out of the slot to read_ofm2')
+  assert.ok(names.includes('read_ofm1'), 'the pre-existing read_ofm1 tool is left untouched')
+  assert.ok(names.includes('read'), 'a verbatim read declaration owns the gate slot')
+  assert.equal(aliases.get('read_ofm2'), 'read', 'the restore mapping points back at the caller tool')
 })
 
 console.log(failures === 0 ? '\nALL CHECKS PASSED' : `\n${failures} CHECK(S) FAILED`)

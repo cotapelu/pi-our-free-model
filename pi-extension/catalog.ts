@@ -94,7 +94,7 @@ const KILO_NO_DISABLE_IDS = new Set(['kilo-auto/free', 'openrouter/free'])
  */
 export function effortMap(declared) {
   const set = new Set(declared ?? [])
-  const map = {}
+  const map: Record<string, string | null> = {}
   for (const level of PI_LEVELS) {
     if (level === 'xhigh') map[level] = set.has('xhigh') ? 'xhigh' : set.has('max') ? 'max' : null
     else if (level === 'max') map[level] = set.has('max') ? 'max' : set.has('xhigh') ? 'xhigh' : null
@@ -131,7 +131,7 @@ export function safeId(id) {
   return String(id).replace(/[:/]/g, '-')
 }
 
-async function getJson(url, { headers = {}, signal } = {}) {
+async function getJson(url: string, { headers = {}, signal }: { headers?: Record<string, string>; signal?: AbortSignal } = {}) {
   const response = await fetch(url, {
     headers,
     redirect: 'error',
@@ -197,7 +197,7 @@ export function opencodeModel(row) {
   const limit = row.limit ?? {}
   const vision = caps.vision === true
     || (row.modalities?.input ?? []).some((m) => String(m).startsWith('image/'))
-  const model = {
+  const model: any = {
     id: safeId(row.id),
     name: typeof row.name === 'string' && row.name ? row.name : row.id,
     reasoning,
@@ -216,7 +216,7 @@ export function kiloModel(row) {
   if (!row || row.isFree !== true || typeof row.id !== 'string' || row.id.trim() === '') return null
   const map = kiloEffortMap(row)
   const vision = (row.architecture?.input_modalities ?? []).includes('image')
-  const model = {
+  const model: any = {
     id: safeId(row.id),
     name: typeof row.name === 'string' && row.name ? row.name : row.id,
     reasoning: map !== undefined,
@@ -288,7 +288,7 @@ function baseCost() {
 /** Offline model configs, in the same shape the live mapping emits. */
 export function staticOpencodeModels() {
   return STATIC_OPENECODE_MODELS.map((row) => {
-    const model = {
+    const model: any = {
       id: row.id,
       name: row.name,
       reasoning: Array.isArray(row.efforts) && row.efforts.length > 0,
@@ -307,7 +307,7 @@ const KILO_DEFAULT_MAP = { off: 'off', minimal: null, low: 'low', medium: 'mediu
 
 export function staticKiloModels() {
   return STATIC_KILO_MODELS.map((row) => {
-    const model = {
+    const model: any = {
       id: row.id,
       name: row.name,
       reasoning: true,

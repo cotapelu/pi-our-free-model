@@ -226,3 +226,68 @@ dồng giá trị + không có v1 `x-opencode-request` (`gatewayHeaders`), sessi
 verbatim (`FINGERPRINT_TOOL_DEFINITIONS`), 2 alias danh-tính (`FREE_LANE_TOOL_ALIASES`), block
 `<env>` (`ensureFreeLaneEnvironment`), cấm `tool_choice:'none'` (bước 5 `applyFingerprint`). UA còn
 qua gate ở verify 14:18 (429 `FreeUsageLimitError`, không 403) → chưa drift.
+
+### 7b) Bằng chứng RUNTIME (không chỉ type): vì sao `api:'ofm-free-api'` + `streamSimple` là BẮT BUỘC
+
+Đọc runtime `pi-coding-agent/dist/core/provider-composer.js` (1.4.0), khớp với census §7:
+
+- **L343–344**: `if (extension.streamSimple && !extension.api) throw "api is required when
+  registering streamSimple."` → `api` **bắt buộc** khi có `streamSimple`; bỏ trường này sẽ
+  THROW lúc register. Nên extension set `api` ở mức provider.
+- **L135** (`extensionModelFromDefinition`): model không khai báo `api` thì **kế thừa
+  `config.api`** (`definition.api ?? (type==='chat' ? config.api : undefined) ?? defaults.api`)
+  → mọi model của ext mang `api:'ofm-free-api'`.
+- **L376–392** (`streamWith`): `if (extension?.streamSimple && model.api === extension.api)
+  return extension.streamSimple(model, context, options);` → định tuyến chọn **đúng stream của
+  ext** vì `model.api === extension.api`; hai nhánh sau (`base.streamSimple`,
+  `getApiProvider(model.api)` → throw *"No API provider registered for api"*) **không** bị chạm
+  với model của ext.
+- **L162–167**: `baseUrl` bắt buộc khi định nghĩa model — ext set `baseUrl` (KILO_BASE /
+  OPENECODE_CHAT_BASE) nên pass. `composeApiKeyAuth` cần apiKey/oauth — ext set
+  `apiKey:'public'` nên pass (auth thật xử lý trong stream: Kilo xoá Authorization, OpenCode
+  thêm `Bearer public`). `compat`/`thinkingLevelMap`/model `baseUrl` được giữ qua
+  `{ ...definition, api, provider, baseUrl, headers: undefined }` (config.models của ext không
+  đặt `headers`, nên việc clear này không mất gì).
+- Stream của ext tự set lại `api:'openai-completions'` cho lời gọi pi-ai bên trong;
+  `getApiProvider('openai-completions')` có sẵn (compat builtin) nên resolve được.
+
+**Invariant bảo trì (đừng phá khi sửa sau):** KHÔNG bỏ `api:'ofm-free-api'` và KHÔNG đổi
+`model.api` khác nó — router stream khoá theo `model.api === extension.api`. Vẫn sẽ chạy nếu
+lỡ đổi sang `'openai-completions'`, nhưng sẽ mất tính "custom API", để lọt nhánh `base` hoặc
+bị nhầm với provider openai builtin; giữ `'ofm-free-api'` là đúng ngay cả khi phần lớn công
+việc thực chất là openai-completions.
+
+## 8. Migration sang TypeScript + build `dist` (2026-11-02)
+
+Toàn bộ `pi-extension/` đã chuyển từ `.js`/`.mjs` sang `.ts` và build ra `dist/` để kiểm tra
+tương thích thật với `pi-coding-agent`/`pi-ai` 1.4.0.
+
+- **Giữ nguyên char-for-char:** `git mv X.js X.ts` (nội dung, comment, chuỗi thường
+  giữ 100%), chỉ **thêm type annotation** ở chữ ký hàm. Import `./x.js` giữ nguyên (TS
+  NodeNext map→`x.ts`, emit `x.js`).
+- **Build:** `pi-extension/tsconfig.json` (`module/moduleResolution: NodeNext`, `rootDir: .`,
+  `outDir: dist`, `declaration: true`, `skipLibCheck: true`, `types: [node]`, `strict:false`/
+  `noImplicitAny:false` để giữ port cơ học gọn — các lời gọi API pi **vẫn** bị kiểm theo chữ
+  ký thật). `npm run build` → `tsc` **sạch 0 lỗi** → `dist/*.js` + `.d.ts`.
+- **`package.json` (0.2.0):** `main`/`types` → `dist/`, `pi.extensions: ["./dist/index.js"]`,
+  `files: ["dist","README.md"]`, script `build`/`test:pi-extension`(build+9 test `.ts`)/
+  `verify`; devDeps `typescript`/`@types/node` + `@earendil-works/pi-ai`/`-coding-agent@^1.4.0`
+  (để tsc typecheck đúng gói đang chạy). Tests + `scripts/reverify-upstream` cũng sang `.ts`,
+  import trỏ `../dist/*.js` (test đúng artifact đã build), chạy bằng Node 26 type-stripping.
+- **Root `package.json`:** `test:pi-extension`/`verify:pi-extension-upstream` điều phối
+  `npm --prefix pi-extension run …`.
+- **BUG THẬT do TS phát hiện & sửa:** `fingerprint.ts` nhánh gate-slot dùng
+  `const alias = \`${name}_ofm${serial}\`` rồi gán lại trong `for (…) alias = …` → ở JS sẽ
+  `TypeError: Assignment to constant` khi alias đầu đã bị chiếm (đường hiếm, test cũ không
+  chạm). Sửa → `let alias: string`. Thêm `fingerprint.test.ts` "a gate-slot collision moves the
+  caller tool to a fresh alias instead of crashing" — **có răng**: khôi phục `const` → build
+  báo lỗi VÀ test FAIL.
+- **Kiểm chứng cài local tại thư mục hiện tại:** `pi install ./pi-extension -l --approve` →
+  `.pi/settings.json` = `{"packages":["../pi-extension"]}`; `pi --list-models --approve` (không
+  `-e`, project-local cần trust) → **23 model**; lượt thật qua bản đã cài → **`installed-ok`**.
+  (Lưu ý: `-l` bị pi gate tin cậy → cần `--approve`; global `pi install ./pi-extension` không
+  cần. Đã gỡ sau khi kiểm để repo sạch.)
+- **Trạng thái:** `npm run test:pi-extension` → **125 check / 9 script PASS**; `dist` chạy
+  được trong `pi` (roster + stream).
+- **Bảo trì:** sau khi sửa file `.ts` phải `npm --prefix pi-extension run build` trước khi
+  `pi install`/chạy test; pi nạp `dist/index.js` (không phải nguồn `.ts`).

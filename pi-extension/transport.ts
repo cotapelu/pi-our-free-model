@@ -68,7 +68,7 @@ export function foldToSse(text) {
   const choices = Array.isArray(document?.choices) ? document.choices : []
   for (const [index, choice] of choices.entries()) {
     const message = choice?.message ?? choice?.delta ?? {}
-    const delta = {}
+    const delta: any = {}
     if (index === 0 && message.role !== undefined) delta.role = message.role
     if (typeof message.content === 'string' && message.content !== '') delta.content = message.content
     if (message.reasoning_content !== undefined && message.reasoning_content !== null && message.reasoning_content !== '') delta.reasoning_content = message.reasoning_content

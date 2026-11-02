@@ -40,12 +40,12 @@ export function readAck(dataDir) {
 }
 
 /** Whether this machine has not yet seen the current notice. */
-export function shouldNotice(dataDir) {
+export function shouldNotice(dataDir?: string) {
   return readAck(dataDir) < NOTICE_VERSION
 }
 
 /** Record that the notice was shown, so it does not come back every session. */
-export function writeAck(dataDir) {
+export function writeAck(dataDir?: string) {
   const file = ackPath(dataDir)
   const directory = path.dirname(file)
   const temp = `${file}.tmp`

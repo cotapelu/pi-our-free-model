@@ -115,6 +115,22 @@ Checklist phiên làm việc này. Trạng thái cập nhật sau mỗi bước.
       (UA v2, 4 session header, session-id descending counter 1–63, 2 tool verbatim, 2 alias
       danh-tính, block `<env>`, cấm `tool_choice:'none'`) **khớp 1:1**; UA còn qua gate (429
       không 403). Không mismatch → không sửa code. Ghi ở audit §7.
+- [x] **Chứng minh RUNTIME cơ chế provider (2026-11-02)**: đọc
+      `pi-coding-agent/dist/core/provider-composer.js` → (a) `api` **bắt buộc** khi có
+      `streamSimple` (L343–344 throw nếu thiếu); (b) model kế thừa `config.api` (L135); (c)
+      `streamWith` chọn đúng stream của ext vì `model.api === extension.api`, không rơi vào
+      nhánh "No API provider" (L378–392); (d) `baseUrl`/`apiKey` đáp ứng guard; (e) stream của
+      ext tự set `api:'openai-completions'` cho lời gọi pi-ai. Ghi **invariant bảo trì**: đừng bỏ/
+      đổi `api:'ofm-free-api'`. Không sửa code — extension đã đúng. Audit §7b.
+- [x] **Chuyển toàn bộ pi-extension sang TypeScript + build `dist` + cài local kiểm chứng**
+      (2026-11-02): `git mv` 10 file nguồn + 9 test + `reverify` sang `.ts` (giữ char-for-char,
+      chỉ thêm type); `tsconfig.json` (NodeNext → `dist`); `package.json` 0.2.0 trỏ
+      `pi.extensions → dist/index.js`; `tsc` **sạch 0 lỗi** với type `pi-ai`/`pi-coding-agent`
+      1.4.0. **Phát hiện + sửa 1 bug thật** (`fingerprint.ts` `const alias` bị gán lại trong `for`
+      → crash khi trụng slot gate) + test hồi quy có-răng. `npm run test:pi-extension` →
+      **125/125 PASS**. **Cài local tại thư mục hiện tại kiểm chứng:** `pi install
+      ./pi-extension -l --approve` → `--list-models` **23 model** + lượt thật **`installed-ok`**
+      (đã gỡ cho repo sạch). Chi tiết: audit §8.
 - [ ] (còn lại duy nhất, điều kiện — chờ trigger) Khi `npm run
       verify:pi-extension-upstream` báo FAIL → làm theo runbook trên. Lần đo gần
       nhất (2026-11-02 ~14:18, chu kỳ #3 cùng ngày, sau fix wire-id): test offline **124/124

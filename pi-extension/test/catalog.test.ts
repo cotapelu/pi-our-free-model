@@ -21,7 +21,7 @@ import {
   staticOpencodeModels,
   staticUpstreamIds,
   STATIC_KILO_MODELS,
-} from '../catalog.js'
+} from '../dist/catalog.js'
 
 let failures = 0
 function check(label, fn) {

@@ -29,7 +29,7 @@ const IDLE_MS = Number(process.env.OFM_STREAM_IDLE_MS ?? 300_000)
  * the user all speak the original name. The `partial` message is the object pi
  * finalises, so both the event and its block are rewritten.
  */
-export function restoreAliases(inner, aliases, { onEvent, scrubDsml = false } = {}) {
+export function restoreAliases(inner: any, aliases: any, { onEvent, scrubDsml = false }: { onEvent?: (event: any) => void; scrubDsml?: boolean } = {}) {
   const outer = createAssistantMessageEventStream()
   const scrubber = scrubDsml ? createDsmlScrubber() : null
   let lastText = null
@@ -79,7 +79,7 @@ export function restoreAliases(inner, aliases, { onEvent, scrubDsml = false } = 
 }
 
 
-function errorMessageOf(error) {
+function errorMessageOf(error: unknown): any {
   return {
     role: 'assistant',
     content: [],

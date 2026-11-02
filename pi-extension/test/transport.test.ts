@@ -10,7 +10,7 @@
  * Usage: node pi-extension/test/transport.test.mjs
  */
 import assert from 'node:assert/strict'
-import { createDsmlScrubber, foldToSse, friendlyMessage, sniffBody, withIdleTimeout } from '../transport.js'
+import { createDsmlScrubber, foldToSse, friendlyMessage, sniffBody, withIdleTimeout } from '../dist/transport.js'
 
 let failures = 0
 function check(label, fn) {

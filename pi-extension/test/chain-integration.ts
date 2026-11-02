@@ -23,7 +23,7 @@ import { mkdtempSync, writeFileSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { requirePi } from './preflight.mjs'
+import { requirePi } from './preflight.ts'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const EXTENSION = path.join(HERE, '..')

@@ -63,7 +63,7 @@ export function streamOpencode(model, context, options) {
 }
 
 /** Free models the gateway currently serves, or the offline snapshot on failure. */
-export async function opencodeModels({ signal } = {}) {
+export async function opencodeModels({ signal }: { signal?: AbortSignal } = {}) {
   try {
     const listing = await fetchOpencodeListing(signal)
     const rows = Array.isArray(listing?.data) ? listing.data : []

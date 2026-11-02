@@ -75,7 +75,7 @@ function clampLevel(level, model) {
 }
 
 /** Register every enabled chain, after the lanes exist to resolve links against. */
-function registerChains(pi, chains, ctx) {
+function registerChains(pi: any, chains: any[], ctx?: any) {
   for (const chain of chains) {
     if (chain.enabled === false) continue
     registerChain(pi, chain, ctx)

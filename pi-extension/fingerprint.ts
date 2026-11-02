@@ -155,7 +155,7 @@ export function rotateSession(seed) {
 }
 
 /** The headers the gateway fingerprints. `Bearer public` is the pooled free-tier credential. */
-export function gatewayHeaders({ session, stream, accept }) {
+export function gatewayHeaders({ session, stream, accept }: { session: string; stream?: boolean; accept?: string }) {
   return {
     'content-type': 'application/json',
     authorization: 'Bearer public',
@@ -244,7 +244,7 @@ export function applyFingerprint(params, collect) {
       const name = toolNameOf(tool)
       const compatibilityBase = Object.hasOwn(FREE_LANE_TOOL_ALIASES, name) ? FREE_LANE_TOOL_ALIASES[name] : undefined
       if (compatibilityBase !== undefined) {
-        let alias = compatibilityBase
+        let alias: string = compatibilityBase
         for (let i = 2; taken.has(alias); i += 1) alias = `${compatibilityBase}${i}`
         taken.add(alias)
         renameToolInPlace(tool, alias)
@@ -255,7 +255,7 @@ export function applyFingerprint(params, collect) {
       }
       if (!FINGERPRINT_TOOLS.includes(name)) continue
       serial += 1
-      const alias = `${name}_ofm${serial}`
+      let alias: string = `${name}_ofm${serial}`
       for (let i = 2; taken.has(alias); i += 1) alias = `${name}_ofm${i}`
       taken.add(alias)
       renameToolInPlace(tool, alias)
@@ -347,7 +347,7 @@ function appendSystemNote(params, note) {
  * before any model runs — it is part of the gate, not decoration. A caller that
  * already carries an `<env>` block keeps its own.
  */
-export function ensureFreeLaneEnvironment(params, environment = {}) {
+export function ensureFreeLaneEnvironment(params: any, environment: { directory?: string; platform?: string } = {}) {
   const messages = Array.isArray(params?.messages) ? params.messages : []
   const existing = messages
     .filter((message) => message?.role === 'system' || message?.role === 'developer')

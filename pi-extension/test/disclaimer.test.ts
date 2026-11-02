@@ -11,7 +11,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { NOTICE_VERSION, ackPath, noticeText, readAck, shouldNotice, writeAck } from '../disclaimer.js'
+import { NOTICE_VERSION, ackPath, noticeText, readAck, shouldNotice, writeAck } from '../dist/disclaimer.js'
 
 let failures = 0
 function check(label, fn) {

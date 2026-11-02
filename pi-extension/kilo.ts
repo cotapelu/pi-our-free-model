@@ -93,7 +93,7 @@ export function streamKilo(model, context, options) {
  * gateway never answers "model not found" on a lane that is up. Only a listing
  * that answers with an empty free slice falls back to the offline snapshot.
  */
-export async function kiloModels({ signal } = {}) {
+export async function kiloModels({ signal }: { signal?: AbortSignal } = {}) {
   try {
     const listing = await fetchKiloListing(signal)
     const rows = Array.isArray(listing?.data) ? listing.data : []

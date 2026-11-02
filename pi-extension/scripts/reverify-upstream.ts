@@ -17,7 +17,7 @@
  * Exits 0 when both lanes answer as expected, 1 on drift or a gate refusal.
  * It talks to the real upstream — it is not part of the offline test suite.
  */
-import { mintSessionId, sessionFor, gatewayHeaders } from '../fingerprint.js'
+import { mintSessionId, sessionFor, gatewayHeaders } from '../dist/fingerprint.js'
 import {
   KILO_BASE,
   OPENECODE_BASE,
@@ -26,7 +26,7 @@ import {
   isOpencodeFreeId,
   kiloEffortMap,
   safeId,
-} from '../catalog.js'
+} from '../dist/catalog.js'
 
 const failures = []
 const notes = []
