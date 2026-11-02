@@ -36,6 +36,9 @@ stats.json
 .codex/config.toml
 .codex/config.toml.backup.*
 
+# Vendored Magpie engine: pinned Windows binary rebuilt locally via `npm run build:magpie`.
+vendor/magpie/bin/
+
 # Desktop build artifacts
 packages/desktop/src-tauri/target/
 packages/desktop/src-tauri/resources/
