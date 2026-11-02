@@ -181,3 +181,30 @@ Nối vào `test:pi-extension` (tự SKIP khi thiếu `pi` qua `preflight.mjs`; 
 90s để một lần treo thành FAIL chứ không đơ test). Teeth-check: đổi id listing
 OpenCode trong bản sao → assert roster đúng **FAIL**, còn Kilo PASS. Sau khi thêm:
 **124 check / 9 script PASS** (không SKIP trên máy có `pi`).
+
+## 7. Đối chiếu API với gói `pi` thật (kiểm chứng, không đoán) — 2026-11-02
+
+Đối chiếu từng bề mặt API extension dùng với package **đang cài** mà binary `pi` 1.4.0
+thực sự nạp: `@earendil-works/pi-coding-agent@1.4.0` (`$PI/dist`) +
+`@earendil-works/pi-ai@1.4.0` (bản lồm trong `pi-coding-agent/node_modules`). Kết luận:
+**khớp toàn bộ — không có điểm nào lệch, không cần sửa code.** Bằng chứng:
+
+| Extension dùng | Bằng chứng trong gói | Verdict |
+|---|---|---|
+| `export default async (pi)=>{…}`; `pi` chờ factory async | `dist/docs/custom-provider.md` · `ExtensionAPI` (`dist/core/extensions/types.d.ts`) | ✓ |
+| `registerProvider(name, ProviderConfig)` + `registerProvider(Provider)` | `ExtensionAPI.registerProvider` (type, 2 overload) | ✓ |
+| Provider `{name,baseUrl,api,apiKey,models,refreshModels,streamSimple}` | `ProviderConfig` (`…/extensions/types.d.ts`): `streamSimple?`, `refreshModels?(context:RefreshModelsContext)`, `models:ProviderModelConfig[]` ("replaces all existing models") | ✓ |
+| `refreshModels` đọc `context.signal` | `pi-ai/dist/models.js` `runProviderRefreshPhase` gọi `provider.refreshModels({signal,publish})` | ✓ (signal + publish đều có) |
+| Custom stream tái dùng `openAICompletionsApi()` từ `@earendil-works/pi-ai/compat`; stream phải gọi `options.onPayload` và dùng replacement | `pi-ai/dist/compat.d.ts` re-export `openai-completions.lazy.ts` (`openAICompletionsApi:()=>ProviderStreams`); chú thích `ProviderConfig.streamSimple` (“must invoke options.onPayload … use any returned replacement”) — compose `onPayload` của ext đúng quy tắc | ✓ |
+| Provider `api:'ofm-free-api'` (không phải api builtin) | `pi-ai/dist/types.d.ts:21` `Api = KnownApi | (string & {})`; doc: “If streamSimple is provided: registers a custom API stream handler” → tự định nghĩa api, đảm bảo `pi` dùng đúng `streamSimple` của mình chứ không thay bằng builtin | ✓ (có chủ đích) |
+| Model có `thinkingLevelMap`, `compat{supportsStore,maxTokensField}`, `baseUrl`, `contextWindow`, `maxTokens`, `cost`, `input`, `reasoning` | `pi-ai/dist/types.d.ts` `Model` (655 `thinkingLevelMap`, 664 `compat`); `providers/compat-schema.d.ts` (`supportsStore:boolean`, `maxTokensField:"max_tokens"|…`); `custom-provider.md` (các field bắt buộc của chat model) | ✓ |
+| `registerVirtualModel(ExtensionVirtualModel)`; `route→{model,thinkingLevel,state}`; đọc `request.{state,previous,failed,reason,thinkingLevel,messages}` | `pi-ai`→pi `dist/core/virtual-models.d.ts`: `VirtualModelDefinition{provider,id,name,thinkingLevels?,contextWindow?,maxTokens?,input?,route}`; `ModelRoute{model,thinkingLevel,state}`; `ModelRouteRequest{model,thinkingLevel,reason,previous?,failed?,state?,messages,signal?}` | ✓ |
+| `unregisterVirtualModel(provider,id)`, `unregisterProvider(name)` | `ExtensionAPI` | ✓ |
+| `registerCommand('ofm',{description,handler})` | `RegisteredCommand{handler(args,ctx),description?}` | ✓ |
+| `on('session_start',(e,ctx)=>ctx.hasUI?ctx.ui.notify…)`; `ctx.modelRegistry.find(p,id)` / `getModelsOfType('chat',provider)`; `ctx.ui.input/editor/select/notify` | `ExtensionContext{hasUI,ui:ExtensionUIContext,modelRegistry}`; `ExtensionUIContext{input,editor,select,notify}`; `ModelRegistry{find,getModelsOfType}` (`dist/core/model-registry.d.ts`) | ✓ |
+| Cơ sở `createKiloRoster`: refresh bị **abort sau khi fetch thành công** thì giữ roster live + wire-id đã học | `pi-ai/dist/models.js`: `supersedeProviderRefresh`→`previous.abort()` (128–135), `beginProviderRefresh` (137), `signal=AbortSignal.any([callerSignal,controller.signal])` (190), `publishProviderModels` chặn khi `signal.aborted‖generation đổi` (147/155) | ✓ (thiết kế phòng thủ là thật, không phải giả thuyết) |
+
+Ghi chú nhỏ (không phải lỗi): wizard `/ofm chain edit` hỏi tên qua `ctx.ui.input(title,
+placeholder?)` (chỉ có placeholder, không prefill). Không hỏng vì `buildChainEdit` tự giữ
+`current.name` khi người dùng để trống (`chains.js`). Lần sau nếu muốn prefill thật thì dùng
+`ctx.ui.editor(title, prefill)`.

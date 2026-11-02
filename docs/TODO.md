@@ -91,6 +91,14 @@ Checklist phiên làm việc này. Trạng thái cập nhật sau mỗi bước.
       + esbuild/typescript/undici, `overrides`, và 15 script standalone/magpie/channel/
       manifest/legacy. Suite vẫn **124/124 PASS** sau khi dọn. **Không cần `npm run
       build`**: `pi-extension/` là ESM thuần, pi nạp trực tiếp.
+- [x] **Đối chiếu API extension/provider với gói `pi` 1.4.0 thật** (2026-11-02): đọc
+      `@earendil-works/pi-coding-agent@1.4.0` + `pi-ai@1.4.0` (docs + `.d.ts` + `models.js`) và
+      xác minh **khớp toàn bộ** — factory async, `registerProvider`+custom `streamSimple`,
+      `refreshModels(context.signal)`, `ProviderConfig.api`/`models`, field `Model`
+      (`thinkingLevelMap`/`compat`/`baseUrl`), `registerVirtualModel`+
+      `route→{model,thinkingLevel,state}`, `registerCommand`, `ctx.hasUI/ui/modelRegistry`, và
+      cơ chế refresh-abort-theo-generation (nền của `createKiloRoster`). Bảng bằng chứng:
+      audit §7. **Không cần sửa code** — extension đã đúng.
 - [ ] (còn lại duy nhất, điều kiện — chờ trigger) Khi `npm run
       verify:pi-extension-upstream` báo FAIL → làm theo runbook trên. Lần đo gần
       nhất (2026-11-02 ~11:50, sau fix wire-id): test offline **124/124 PASS (9 script)**,
