@@ -218,3 +218,11 @@ Ghi chú nhỏ (không phải lỗi): wizard `/ofm chain edit` hỏi tên qua `c
 placeholder?)` (chỉ có placeholder, không prefill). Không hỏng vì `buildChainEdit` tự giữ
 `current.name` khi người dùng để trống (`chains.js`). Lần sau nếu muốn prefill thật thì dùng
 `ctx.ui.editor(title, prefill)`.
+
+Bổ sung (cùng ngày): các khẳng định fingerprint trong README đã đối chiếu 1:1 với
+`fingerprint.js` và **khớp** — UA v2 `opencode/latest/2.0.26/cli` (`CLIENT_UA`), 4 session header
+dồng giá trị + không có v1 `x-opencode-request` (`gatewayHeaders`), session-id descending
+`~(ts_ms<<12 \| counter)` counter 1–63 (`mintSessionId`/`SESSION_DESCENDING_RE`), 2 tool `read`/`shell`
+verbatim (`FINGERPRINT_TOOL_DEFINITIONS`), 2 alias danh-tính (`FREE_LANE_TOOL_ALIASES`), block
+`<env>` (`ensureFreeLaneEnvironment`), cấm `tool_choice:'none'` (bước 5 `applyFingerprint`). UA còn
+qua gate ở verify 14:18 (429 `FreeUsageLimitError`, không 403) → chưa drift.

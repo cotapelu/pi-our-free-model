@@ -111,6 +111,10 @@ Checklist phiên làm việc này. Trạng thái cập nhật sau mỗi bước.
       "name … prefilled with the current" nhưng code chỉ **prefill thật ở links**
       (`ctx.ui.editor`); **name là placeholder** (`ctx.ui.input`) và để trống thì giữ nguyên
       (`buildChainEdit`, đã test `chains.test.mjs`). Sửa README §chains cho khớp code.
+- [x] **Rà soát chính xác README ↔ `fingerprint.js` (2026-11-02)**: mọi khẳng định fingerprint
+      (UA v2, 4 session header, session-id descending counter 1–63, 2 tool verbatim, 2 alias
+      danh-tính, block `<env>`, cấm `tool_choice:'none'`) **khớp 1:1**; UA còn qua gate (429
+      không 403). Không mismatch → không sửa code. Ghi ở audit §7.
 - [ ] (còn lại duy nhất, điều kiện — chờ trigger) Khi `npm run
       verify:pi-extension-upstream` báo FAIL → làm theo runbook trên. Lần đo gần
       nhất (2026-11-02 ~14:18, chu kỳ #3 cùng ngày, sau fix wire-id): test offline **124/124
