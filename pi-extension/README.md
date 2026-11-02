@@ -21,7 +21,16 @@ OpenAI-Completions implementation.
 ## Install
 
 The folder is a pi package (a `pi.extensions` manifest, host packages in
-`peerDependencies` only):
+`peerDependencies` only). It is **TypeScript**: `pi` loads the compiled
+`dist/index.js`, so build once before installing — and again after editing the
+source:
+
+```bash
+npm --prefix pi-extension install     # dev deps: typescript + the pi type packages
+npm --prefix pi-extension run build   # tsc → pi-extension/dist
+```
+
+then install and it activates:
 
 ```bash
 pi install ./pi-extension     # from this repository root — loads on every `pi`, no approval
@@ -128,7 +137,7 @@ its turn instead of flapping forever. Chains persist in
     model — those two names answer 429 otherwise;
   - two tool declarations (`read`, `shell`) verbatim from OpenCode v2.0.26, which
     means the caller's own `read` tool is renamed out of the gate slot on the
-    request and restored on the response (see `fingerprint.js`, `lane.js`);
+    request and restored on the response (see `fingerprint.ts`, `lane.ts`);
   - never `tool_choice: 'none'`.
 
   Thinking strength on this lane is the model's declared `reasoning_effort` menu:
@@ -149,7 +158,7 @@ The first time the lanes appear on a machine, the extension says what they cost:
 Kilo's free pool may log prompts upstream, OpenCode's free tier is metered per
 session/IP, and nothing sensitive belongs on either. It shows once, in an
 interactive session, and records that it was shown (`notice-ack.json`, next to
-the chains); bumping `NOTICE_VERSION` in `disclaimer.js` makes it come back.
+the chains); bumping `NOTICE_VERSION` in `disclaimer.ts` makes it come back.
 
 Both lanes also carry the transport guards these gateways require (ported from
 the plugin's own issue trail): the body is read by **shape**, not
@@ -166,31 +175,36 @@ to an off request are not offered one.
 
 ```
 pi-extension/
-├── index.js                 factory: registers both providers, chains and /ofm
-├── fingerprint.js           the OpenCode v2 client fingerprint (tools, session, headers)
-├── catalog.js               live listing fetch, mapping to pi models, offline snapshots
-├── lane.js                  shared stream plumbing: alias restore, error translation,
-│                            credential-free fetch, session rotation
-├── transport.js             the host-free half of those guards: body sniffing and
-│                            folding, the idle watchdog, the DSML scrubber, error copy
-├── opencode.js               ofm-opencode provider
-├── kilo.js                  ofm-kilo provider
-├── chains.js                fallback chains: normalize, capacity intersection, routing
-├── chain-store.js           durable chain storage (~/.our-free-model/chains.json)
-└── test/                    offline integration + unit checks (node, no network)
-    ├── fingerprint.test.mjs         payload fingerprint unit checks
-    ├── catalog.test.mjs             mapping and effort-menu unit checks
-    ├── transport.test.mjs          body-shape, fold, DSML scrub, idle watchdog, error copy
-    ├── chains.test.mjs              chain routing state machine unit checks
-    ├── fingerprint-integration.mjs  stand-in gateway asserts the gate's checks;
-    │                                pi must execute the aliased tool call, and a
-    │                                no-menu model must carry no effort at all
-    ├── kilo-integration.mjs         stand-in gateway asserts the Kilo wire shape,
-    │                                the off rung and the non-SSE fold
-    ├── chain-integration.mjs        stand-in gateway drives a real pi run: a retryable
+├── index.ts                  factory: registers both providers, chains and /ofm
+├── fingerprint.ts            the OpenCode v2 client fingerprint (tools, session, headers)
+├── catalog.ts                live listing fetch, mapping to pi models, offline snapshots
+├── lane.ts                   shared stream plumbing: alias restore, error translation,
+│                             credential-free fetch, session rotation
+├── transport.ts              the host-free half of those guards: body sniffing and
+│                             folding, the idle watchdog, the DSML scrubber, error copy
+├── opencode.ts               ofm-opencode provider
+├── kilo.ts                   ofm-kilo provider
+├── chains.ts                 fallback chains: normalize, capacity intersection, routing
+├── chain-store.ts            durable chain storage (~/.our-free-model/chains.json)
+├── disclaimer.ts             the one-time notice the free lanes owe the user
+├── scripts/reverify-upstream.ts   live re-measurement of both lanes (npm run verify:)
+├── dist/                     compiled output (`tsc`); this is what `pi` loads — build first
+└── test/                    offline unit + integration checks (Node type-strip, no network)
+    ├── fingerprint.test.ts          payload fingerprint unit checks
+    ├── catalog.test.ts              mapping and effort-menu unit checks
+    ├── transport.test.ts           body-shape, fold, DSML scrub, idle watchdog, error copy
+    ├── chains.test.ts               chain routing state machine unit checks
+    ├── disclaimer.test.ts           the notice's copy, versioning and OFM_DATA_DIR ack
+    ├── preflight.ts                 shared integration preflight (SKIP when `pi` absent)
+    ├── fingerprint-integration.ts   stand-in gateway asserts the gate's checks; pi must
+    │                                execute the aliased tool call, and a no-menu model
+    │                                must carry no effort at all
+    ├── kilo-integration.ts          stand-in gateway asserts the Kilo wire shape, the off
+    │                                rung and the non-SSE fold
+    ├── chain-integration.ts         stand-in gateway drives a real pi run: a retryable
     │                                failure fails over within the turn, a quota wall
     │                                fails over on the next user turn
-    └── acceptance-live.mjs          the runbook §5 acceptance, as a test: pi loads the
+    └── acceptance-live.ts           the runbook §5 acceptance, as a test: pi loads the
                                      extension and lists both live rosters, then answers
                                      one real turn per lane — end to end, no egress
 ```
@@ -198,7 +212,7 @@ pi-extension/
 ## Tests
 
 ```bash
-npm run test:pi-extension              # unit + integration; integration needs `pi`
+npm run test:pi-extension              # build + unit + integration; integration needs `pi`
 npm run verify:pi-extension-upstream   # live: re-measure both lanes (network)
 ```
 
@@ -216,7 +230,7 @@ for CI either: it spends this egress's free quota.
 
 The live verifier is the executable form of the periodic maintenance item: it
 wears the fingerprint against `opencode.ai` (a `403 FreeTierError` means the
-gate moved and `fingerprint.js` must be re-measured per the plugin's
+gate moved and `fingerprint.ts` must be re-measured per the plugin's
 `docs/free-lane-wire.md`; a `429` means the gate *passed* and this egress spent
 its quota), asks Kilo's free pool with no credential, and diffs both live
 rosters against the offline snapshot — a model that appears, disappears, moves
@@ -239,7 +253,7 @@ without touching either upstream. They need `pi` on `PATH`.
 - `OFM_OPENECODE_BASE`, `OFM_OPENECODE_CHAT_BASE` and `OFM_KILO_BASE` override the
   endpoints (used by the tests; `OFM_OPENECODE_BASE` also moves the listing).
 - The upstream gate changes without notice; if the free lane starts answering
-  `403 FreeTierError`, the fingerprint in `fingerprint.js` must be re-measured
+  `403 FreeTierError`, the fingerprint in `fingerprint.ts` must be re-measured
   against a current official client. This repository's `docs/free-lane-wire.md`
   records the method (TLS man-in-the-middle plus byte-for-byte replay).
 - Kilo's free pool can train on your prompts. Do not send credentials, keys,
