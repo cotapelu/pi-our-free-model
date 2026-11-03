@@ -286,3 +286,28 @@ export function friendlyMessage(message) {
   }
   return null
 }
+
+/**
+ * The socket-level fact behind a transport failure, walked off the error's
+ * `cause` chain (ported from src/http.js).
+ *
+ * Node's fetch collapses every DNS, TCP and TLS refusal into `TypeError: fetch
+ * failed`; the reason a user could act on — the ENOTFOUND, the ECONNRESET, the
+ * certificate alert — lives one or two `cause` links deeper. Walk at most three
+ * links, deduplicate, and append so a bare "fetch failed" reads "fetch failed —
+ * getaddrinfo ENOTFOUND opencode.ai". Returns '' when the chain names nothing.
+ */
+export function transportCause(error) {
+  const parts = []
+  let node = error
+  for (let depth = 0; depth < 3 && node?.cause !== undefined; depth += 1) {
+    node = node.cause
+    if (node === null || typeof node !== 'object') break
+    const code = typeof node.code === 'string' && node.code !== '' ? node.code : ''
+    const line = typeof node.message === 'string' ? node.message.split('\n')[0].trim() : ''
+    if (line === '' && code === '') continue
+    const fact = line === '' || line.includes(code) ? (line === '' ? code : line) : `${line} (${code})`
+    if (!parts.includes(fact)) parts.push(fact)
+  }
+  return parts.length > 0 ? ` — ${parts.join('; ')}` : ''
+}

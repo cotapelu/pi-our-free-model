@@ -16,7 +16,7 @@
  */
 import { createAssistantMessageEventStream } from '@earendil-works/pi-ai/compat'
 import { rotateSession } from './fingerprint.js'
-import { createDsmlScrubber, foldToSse, friendlyMessage, readHead, readRemainder, replayStream, sniffBody, SNIFF_BYTES, withIdleTimeout } from './transport.js'
+import { createDsmlScrubber, foldToSse, friendlyMessage, readHead, readRemainder, replayStream, sniffBody, SNIFF_BYTES, transportCause, withIdleTimeout } from './transport.js'
 
 /** How long a stream may go without a `data:`-bearing chunk. 0 disables. */
 const IDLE_MS = Number(process.env.OFM_STREAM_IDLE_MS ?? 300_000)
@@ -85,7 +85,9 @@ function errorMessageOf(error: unknown): any {
     content: [],
     usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
     stopReason: 'error',
-    errorMessage: error instanceof Error ? error.message : String(error),
+    // A transport failure reads "fetch failed" with no reason; walk the cause
+    // chain so the socket fact (ENOTFOUND, ECONNRESET, TLS) reaches the user.
+    errorMessage: `${error instanceof Error ? error.message : String(error)}${transportCause(error)}`,
     timestamp: Date.now(),
   }
 }

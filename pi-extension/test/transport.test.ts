@@ -10,7 +10,7 @@
  * Usage: node pi-extension/test/transport.test.mjs
  */
 import assert from 'node:assert/strict'
-import { createDsmlScrubber, foldToSse, friendlyMessage, readHead, readRemainder, replayStream, sniffBody, SNIFF_BYTES, withIdleTimeout } from '../dist/transport.js'
+import { createDsmlScrubber, foldToSse, friendlyMessage, readHead, readRemainder, replayStream, sniffBody, SNIFF_BYTES, transportCause, withIdleTimeout } from '../dist/transport.js'
 
 let failures = 0
 function check(label, fn) {
@@ -164,6 +164,17 @@ check('friendlyMessage names the fingerprint refusal, the region, and the WAF', 
   assert.match(friendlyMessage('<!doctype html><html>') ?? '', /HTML error page/)
   assert.match(friendlyMessage('{"error":{"message":"Model is unavailable"}}') ?? '', /no longer routes this model/)
   assert.equal(friendlyMessage('a perfectly ordinary 500'), null, 'unknown failures are left to pi')
+})
+
+check('transportCause walks the cause chain for the reason a fetch failed', () => {
+  const withCode = (message, code) => Object.assign(new Error(message), { code })
+  assert.equal(transportCause(new Error('fetch failed')), '', 'nothing to append when the chain names no cause')
+  const refused = new Error('fetch failed', { cause: withCode('connect ECONNREFUSED 127.0.0.1:443', 'ECONNREFUSED') })
+  assert.equal(transportCause(refused), ' — connect ECONNREFUSED 127.0.0.1:443', 'the socket line rides the message when it already names the code')
+  const named = new Error('fetch failed', { cause: withCode('connect failed', 'ECONNREFUSED') })
+  assert.equal(transportCause(named), ' — connect failed (ECONNREFUSED)', 'the code is parenthesised when the line omits it')
+  const dns = new Error('fetch failed', { cause: new Error('getaddrinfo ENOTFOUND opencode.ai', { cause: withCode('getaddrinfo ENOTFOUND opencode.ai', 'ENOTFOUND') }) })
+  assert.equal(transportCause(dns), ' — getaddrinfo ENOTFOUND opencode.ai', 'a two-link chain is walked and deduplicated to one fact')
 })
 
 await (async () => {
