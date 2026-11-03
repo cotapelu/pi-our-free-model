@@ -15,7 +15,8 @@
   "scripts": {
     "test": "npm run test:pi-extension",
     "test:pi-extension": "npm --prefix pi-extension run test:pi-extension",
-    "verify:pi-extension-upstream": "npm --prefix pi-extension run verify:pi-extension-upstream"
+    "verify:pi-extension-upstream": "npm --prefix pi-extension run verify:pi-extension-upstream",
+    "typecheck:pi-extension-strict": "npm --prefix pi-extension run typecheck:strict"
   },
   "keywords": [
     "pi",
