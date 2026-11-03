@@ -178,8 +178,11 @@ pi-extension/
 ```bash
 npm run test:pi-extension                 # build + unit + integration (integration needs `pi`)
 npm run verify:pi-extension-upstream      # live: re-measure both lanes (network, spends free quota)
-npm --prefix pi-extension run typecheck:strict   # strict type audit (non-gating; see ../docs/TODO.md P3)
 ```
+
+The build (`tsc`) runs under `strict` with `noImplicitAny`, so a type error fails
+`npm run build` — that is the compatibility gate against the installed
+`pi-ai`/`pi-coding-agent` types.
 
 The integration scripts drive a real `pi` process against a loopback stand-in
 gateway, asserting the fingerprint, the alias restore and the wire shape end to

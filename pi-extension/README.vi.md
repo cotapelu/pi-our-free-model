@@ -170,8 +170,11 @@ pi-extension/
 ```bash
 npm run test:pi-extension                 # build + unit + integration (integration cần `pi`)
 npm run verify:pi-extension-upstream      # live: đo lại cả hai làn (mạng, tốn quota free)
-npm --prefix pi-extension run typecheck:strict   # audit type strict (non-gating; xem ../docs/TODO.md P3)
 ```
+
+Build (`tsc`) chạy với `strict` + `noImplicitAny`, nên lỗi type sẽ làm hỏng
+`npm run build` — đó là cổng kiểm-tra tương thích với type của `pi-ai`/
+`pi-coding-agent` đang cài.
 
 Các script integration lái một tiến trình `pi` thật trên gateway đứng-thế
 loopback, khẳng định fingerprint, khôi phục alias và hình-dạng wire đầu-cuối mà
