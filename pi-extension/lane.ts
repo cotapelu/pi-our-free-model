@@ -16,7 +16,7 @@
  */
 import { createAssistantMessageEventStream } from '@earendil-works/pi-ai/compat'
 import { rotateSession } from './fingerprint.js'
-import { createDsmlScrubber, foldToSse, friendlyMessage, sniffBody, withIdleTimeout } from './transport.js'
+import { createDsmlScrubber, foldToSse, friendlyMessage, readHead, readRemainder, replayStream, sniffBody, SNIFF_BYTES, withIdleTimeout } from './transport.js'
 
 /** How long a stream may go without a `data:`-bearing chunk. 0 disables. */
 const IDLE_MS = Number(process.env.OFM_STREAM_IDLE_MS ?? 300_000)
@@ -149,7 +149,7 @@ export function fetchWithoutHeader(header, baseFetch = fetch) {
  *
  * A response that is not already SSE (and is not an error — those carry the
  * gateway's own envelope and must reach the SDK's error path verbatim) is
- * buffered and sniffed:
+ * sniffed by head, not buffered:
  *   - SSE frames with a wrong content-type are re-wrapped unchanged, so the
  *     turn survives the gateway's mislabelling;
  *   - one JSON document answering a stream request is folded into a single SSE
@@ -167,25 +167,33 @@ export function sseGuard(next) {
     }
     const type = String(response.headers.get('content-type') ?? '').toLowerCase()
     if (type.includes('text/event-stream')) return guarded(response.body)
-    // Not labelled SSE: buffer and let the body say what it is.
-    const text = await response.text().catch(() => '')
-    const shape = sniffBody(text)
-    if (shape === 'sse') return sseResponse(text, response.status, response.headers)
+    // Not labelled SSE: sniff only a head, so a live SSE stream is not buffered
+    // to its end before the first token (issue #6). The head bytes are replayed
+    // in front of the still-live reader; a non-stream body is finished and read.
+    const head = await readHead(response.body, SNIFF_BYTES, { signal: init?.signal, timeoutMs: IDLE_MS })
+    const shape = sniffBody(head.text)
+    if (shape === 'sse') return sseResponse(replayStream(head), response.status, response.headers)
+    const text = head.done ? head.text : await readRemainder(head)
     if (shape === 'json') return sseResponse(foldToSse(text), response.status, response.headers)
     if (shape === 'empty') throw new Error('the gateway answered 200 with an empty body; the request produced no stream')
     throw new Error(friendlyMessage(text) ?? `the gateway answered 200 with a non-stream body: ${text.slice(0, 200)}`)
   }
 }
 
-/** Re-wrap buffered body bytes as an SSE response, keeping status and headers. */
-function sseResponse(text, status, headers) {
-  const bytes = new TextEncoder().encode(text)
-  const stream = new ReadableStream({
-    start(controller) {
-      controller.enqueue(bytes)
-      controller.close()
-    },
-  })
+/**
+ * Re-wrap a body as an SSE response, keeping status and headers: a whole text
+ * (the JSON fold) is emitted as one chunk, a `ReadableStream` (the replayed
+ * mislabelled SSE) is passed through so its later bytes keep streaming.
+ */
+function sseResponse(source, status, headers) {
+  const stream = typeof source === 'string'
+    ? new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(source))
+        controller.close()
+      },
+    })
+    : source
   const next = new Headers(headers)
   next.set('content-type', 'text/event-stream')
   next.delete('content-length')

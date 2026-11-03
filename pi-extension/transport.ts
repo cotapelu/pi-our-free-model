@@ -92,6 +92,120 @@ export function foldToSse(text) {
   return frames.join('')
 }
 
+/** How many bytes to look at before deciding what the body is (ported from src/http.js). */
+export const SNIFF_BYTES = 4096
+
+/** The abort error shape a cancelled read is rejected with. */
+function abortError() {
+  return Object.assign(new Error('the request was aborted'), { name: 'AbortError' })
+}
+
+/**
+ * Read only the head of a body — enough to know its shape — without consuming
+ * the rest, so a live stream is never buffered to its end before the first
+ * token (dsh issue #6). Stops as soon as the head says it is SSE; otherwise the
+ * caller finishes the small remainder with `readRemainder`. One deadline spans
+ * the whole head and the caller's abort is honoured, so a connection that
+ * accepts the request but never sends a byte cannot hang the turn here, before
+ * any watchdog exists.
+ *
+ * Returns the reader that follows the head, the chunks already read, and the
+ * decoded head text — the pieces `replayStream` stitches back into one stream.
+ */
+export async function readHead(stream, limit = SNIFF_BYTES, { signal, timeoutMs = 30000 }: { signal?: AbortSignal; timeoutMs?: number } = {}) {
+  const reader = stream.getReader()
+  const decoder = new TextDecoder()
+  const chunks = []
+  let size = 0
+  let text = ''
+  let done = false
+  const deadline = Date.now() + timeoutMs
+  try {
+    while (size < limit) {
+      if (signal?.aborted === true) throw abortError()
+      let timer
+      let onAbort
+      const halted = new Promise((_, reject) => {
+        onAbort = () => reject(abortError())
+        signal?.addEventListener('abort', onAbort, { once: true })
+        timer = setTimeout(() => reject(new Error(`the gateway sent no bytes before its head deadline (${timeoutMs}ms)`)), Math.max(0, deadline - Date.now()))
+        timer.unref?.()
+      })
+      let row
+      try {
+        row = await Promise.race([reader.read(), halted])
+      } finally {
+        clearTimeout(timer)
+        signal?.removeEventListener('abort', onAbort)
+      }
+      if (row.done === true) { done = true; break }
+      if (row.value !== undefined) {
+        chunks.push(row.value)
+        size += row.value.byteLength ?? 0
+        text += decoder.decode(row.value, { stream: true })
+      }
+      if (sniffBody(text) === 'sse') break
+    }
+  } catch (error) {
+    await reader.cancel().catch(() => {})
+    throw error
+  }
+  return { reader, chunks, done, text, decoder }
+}
+
+/**
+ * Stitch a head that was already read back onto the reader that follows it, as
+ * one byte stream: the buffered head bytes first, then the still-live reader.
+ * This is what keeps a mislabelled-SSE turn streaming — only the head spent
+ * deciding the shape is replayed; every later byte flows as it arrives.
+ */
+export function replayStream(head) {
+  const cancelled = { value: false }
+  return new ReadableStream({
+    start(controller) {
+      try {
+        for (const chunk of head.chunks) {
+          if (cancelled.value) return
+          controller.enqueue(chunk)
+        }
+        if (head.done) controller.close()
+      } catch (error) {
+        controller.error(error)
+      }
+    },
+    async pull(controller) {
+      if (head.done) { controller.close(); return }
+      try {
+        const row = await head.reader.read()
+        if (row.done) { controller.close(); return }
+        if (row.value !== undefined) controller.enqueue(row.value)
+      } catch (error) {
+        controller.error(error)
+      }
+    },
+    cancel(reason) {
+      cancelled.value = true
+      if (!head.done) head.reader.cancel(reason).catch(() => {})
+    },
+  })
+}
+
+/** Finish a body that turned out not to be a stream, continuing the head decoder so a character split over the boundary still decodes. */
+export async function readRemainder(head) {
+  let text = head.text
+  try {
+    while (head.done !== true) {
+      const row = await head.reader.read()
+      if (row.done === true) break
+      if (row.value !== undefined) text += head.decoder.decode(row.value, { stream: true })
+    }
+  } catch (error) {
+    await head.reader.cancel().catch(() => {})
+    throw error
+  }
+  return text + head.decoder.decode()
+}
+
 /**
  * Idle watchdog for a response body.
  *

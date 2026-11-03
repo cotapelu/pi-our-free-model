@@ -10,12 +10,22 @@
  * Usage: node pi-extension/test/transport.test.mjs
  */
 import assert from 'node:assert/strict'
-import { createDsmlScrubber, foldToSse, friendlyMessage, sniffBody, withIdleTimeout } from '../dist/transport.js'
+import { createDsmlScrubber, foldToSse, friendlyMessage, readHead, readRemainder, replayStream, sniffBody, SNIFF_BYTES, withIdleTimeout } from '../dist/transport.js'
 
 let failures = 0
 function check(label, fn) {
   try {
     fn()
+    console.log(`ok   ${label}`)
+  } catch (error) {
+    console.log(`FAIL ${label} — ${error.message}`)
+    failures += 1
+  }
+}
+
+async function checkAsync(label, fn) {
+  try {
+    await fn()
     console.log(`ok   ${label}`)
   } catch (error) {
     console.log(`FAIL ${label} — ${error.message}`)
@@ -155,6 +165,43 @@ check('friendlyMessage names the fingerprint refusal, the region, and the WAF', 
   assert.match(friendlyMessage('{"error":{"message":"Model is unavailable"}}') ?? '', /no longer routes this model/)
   assert.equal(friendlyMessage('a perfectly ordinary 500'), null, 'unknown failures are left to pi')
 })
+
+await (async () => {
+  await checkAsync('readHead decides on SSE from the head alone, without waiting for the stream to close', async () => {
+    // The source delivers one SSE head and then holds the connection open: a
+    // reader that buffered the whole body would wait for a close that never
+    // comes. readHead must return as soon as the shape is known (issue #6).
+    const encoder = new TextEncoder()
+    const head1 = 'data: {"choices":[{"delta":{"content":"hi"}}]}\n\n'
+    let ctrl
+    const stream = new ReadableStream({ start(controller) { ctrl = controller; controller.enqueue(encoder.encode(head1)) } })
+    const started = Date.now()
+    const head = await readHead(stream, SNIFF_BYTES, { timeoutMs: 4000 })
+    assert.equal(sniffBody(head.text), 'sse', 'the head is recognised as SSE')
+    assert.equal(head.done, false, 'the body is still open — only the head was spent')
+    assert.ok(Date.now() - started < 2000, 'readHead did not wait for the never-coming close')
+    // replayStream stitches the head back on and keeps the live reader going.
+    const replayed = replayStream(head)
+    const reader = replayed.getReader()
+    const first = await reader.read()
+    assert.equal(new TextDecoder().decode(first.value), head1, 'the head bytes come back first, unchanged')
+    ctrl.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"tail"}}]}\n\n'))
+    const second = await reader.read()
+    assert.ok(new TextDecoder().decode(second.value).includes('tail'), 'bytes pushed after the head flow through the same reader')
+    ctrl.close()
+    const end = await reader.read()
+    assert.equal(end.done, true, 'the reader ends when the source ends')
+  })
+
+  await checkAsync('readRemainder finishes a non-stream body the head split across the boundary', async () => {
+    const document = JSON.stringify({ id: 't', choices: [{ index: 0, message: { role: 'assistant', content: 'ok' }, finish_reason: 'stop' }] })
+    const mid = Math.floor(document.length / 2)
+    const head = await readHead(streamOf([document.slice(0, mid), document.slice(mid)]), SNIFF_BYTES, { timeoutMs: 4000 })
+    const text = head.done ? head.text : await readRemainder(head)
+    assert.equal(text, document, 'the whole document reassembles, the decoder continuing across the split')
+    assert.equal(sniffBody(text), 'json', 'a non-stream body is reported as json, not mistaken for a stream')
+  })
+})()
 
 console.log(failures === 0 ? '\nALL CHECKS PASSED' : `\n${failures} CHECK(S) FAILED`)
 process.exit(failures === 0 ? 0 : 1)

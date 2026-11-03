@@ -79,6 +79,14 @@ const server = createServer((req, res) => {
       }))
       return
     }
+    if (mode === 'sse-mislabelled') {
+      // Labelled JSON, but the body is a real SSE stream: the guard must sniff
+      // the head as SSE and replay it, not fold it as JSON or drop it.
+      res.writeHead(200, { 'content-type': 'application/json' })
+      res.write(`data: ${JSON.stringify({ id: 't', object: 'chat.completion.chunk', choices: [{ index: 0, delta: { role: 'assistant', content: 'mislabeled-stream' }, finish_reason: 'stop' }] })}\n\n`)
+      res.end('data: [DONE]\n\n')
+      return
+    }
     res.writeHead(200, { 'content-type': 'text/event-stream' })
     res.write(`data: ${JSON.stringify({ id: 't', object: 'chat.completion.chunk', choices: [{ index: 0, delta: { role: 'assistant', content: 'pong' }, finish_reason: 'stop' }] })}\n\n`)
     res.write('data: [DONE]\n\n')
@@ -106,6 +114,9 @@ async function main() {
   const high = await run('high')
   const off = await run('off')
   const folded = await run('high', 'json-body')
+  // A 200 whose content-type says JSON but whose body is SSE: replayed, not
+  // folded (issue #6), so the turn still answers.
+  const mislabeled = await run('high', 'sse-mislabelled')
   // The listing fails while the chat lane is up: the offline snapshot serves the
   // roster, and the turn must still carry the upstream's own model spelling.
   const degraded = await run('high', 'listing-fails')
@@ -130,7 +141,8 @@ async function main() {
 
   assert(/pong/.test(high.out), 'the high turn completed', JSON.stringify(high.out.slice(0, 200)))
   assert(/folded/.test(folded.out), 'a 200 JSON document answering a stream request is folded and answered', JSON.stringify(folded.out.slice(0, 300)))
-  const degradedRequest = requests[3]
+  assert(/mislabeled-stream/.test(mislabeled.out), 'a 200 SSE body mislabelled as JSON is replayed, not folded or dropped', JSON.stringify(mislabeled.out.slice(0, 300)))
+  const degradedRequest = requests[4]
   assert(/pong/.test(degraded.out), 'a listing failure does not take the chat lane down', `out=${JSON.stringify(degraded.out.slice(0, 200))} err=${JSON.stringify(degraded.err.slice(0, 300))}`)
   assert(degradedRequest?.body?.model === 'reflection/beam-free', 'the degraded turn carries the upstream wire id, not pi\'s safe id', JSON.stringify(degradedRequest?.body?.model))
   assert(degradedRequest?.headers?.authorization === undefined, 'the degraded turn still carries no credential')
