@@ -236,5 +236,28 @@ check('every id a roster serves can be addressed upstream', () => {
   }
 })
 
+check('the 2026-11-02 drift models are in the offline snapshot with their exact wire ids', () => {
+  // The upstream serves these under `vendor/name:free`; the snapshot must carry
+  // that spelling or an offline turn carries an id the gateway will not route.
+  const map = staticUpstreamIds()
+  assert.equal(map.get('thinkingmachines-inkling-free'), 'thinkingmachines/inkling:free')
+  assert.equal(map.get('thinkingmachines-inkling-small-free'), 'thinkingmachines/inkling-small:free')
+  assert.equal(map.get('google-gemma-4-31b-it-free'), 'google/gemma-4-31b-it:free')
+  const opencodeIds = new Set(staticOpencodeModels().map((model) => model.id))
+  assert.ok(opencodeIds.has('pulse-alpha-free'), 'the OpenCode lane keeps pulse-alpha-free offline')
+})
+
+check('the mandatory-thinking Kilo family offers no off rung, on live and offline paths', () => {
+  // thinkingmachines is in KILO_REASONING_MANDATORY, so `--thinking off` must not
+  // be offered for it; a normal free row keeps the sentinel the wire translates.
+  const liveRows = STATIC_KILO_MODELS.filter((row) => row.id.startsWith('thinkingmachines-'))
+  assert.ok(liveRows.every((row) => row.canDisable === false), 'the snapshot marks the family canDisable:false')
+  const mandatory = kiloEffortMap({ id: 'thinkingmachines/inkling:free', supported_parameters: ['max_tokens', 'reasoning'] })
+  assert.equal(mandatory.off, null, 'the live path assigns the family no off rung')
+  const offline = new Map(staticKiloModels().map((model) => [model.id, model]))
+  assert.equal(offline.get('thinkingmachines-inkling-free').thinkingLevelMap.off, null, 'the offline snapshot matches')
+  assert.equal(offline.get('google-gemma-4-31b-it-free').thinkingLevelMap.off, 'off', 'an ordinary free row keeps off')
+})
+
 console.log(failures === 0 ? '\nALL CHECKS PASSED' : `\n${failures} CHECK(S) FAILED`)
 process.exit(failures === 0 ? 0 : 1)

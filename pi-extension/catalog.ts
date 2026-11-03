@@ -38,6 +38,10 @@ const OPENECODE_OFF = 'none'
  * menu, and only that menu is offered — the gateway validates the field.
  */
 const FREE_ID_OVERRIDES = {
+  'pulse-alpha-free': {
+    vision: true, contextWindow: 1048576, maxOutput: 131072,
+    efforts: ['low', 'high', 'max'],
+  },
   'deepseek-v4.1-flash-free': {
     vision: true, contextWindow: 1048576, maxOutput: 384000,
     efforts: ['disabled', 'low', 'high', 'max'],
@@ -246,6 +250,7 @@ export const STATIC_OPENECODE_MODELS = [
   { id: 'nemotron-3.5-lightning-free', name: 'Nemotron 3.5 Lightning Free', contextWindow: 128000, maxOutput: 32768 },
   { id: 'deepseek-v4.1-flash-free', name: 'DeepSeek V4.1 Flash Free', contextWindow: 1048576, maxOutput: 384000, vision: true, efforts: ['disabled', 'low', 'high', 'max'] },
   { id: 'glm-5.3-flash-free', name: 'GLM-5.3-Flash Free', contextWindow: 1048576, maxOutput: 131072, vision: true, efforts: ['low', 'high', 'max'] },
+  { id: 'pulse-alpha-free', name: 'Pulse Alpha Free', contextWindow: 1048576, maxOutput: 131072, vision: true, efforts: ['low', 'high', 'max'] },
 ]
 
 export const STATIC_KILO_MODELS = [
@@ -268,6 +273,13 @@ export const STATIC_KILO_MODELS = [
   { id: 'nvidia-nemotron-3-nano-omni-30b-a3b-reasoning-free', wire: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', name: 'Nemotron 3 Nano Omni', contextWindow: 256000, maxTokens: 65536, vision: true },
   { id: 'openrouter-free', wire: 'openrouter/free', name: 'OpenRouter Free (router)', contextWindow: 200000, maxTokens: 32000, vision: true, canDisable: false },
   { id: 'inclusionai-ling-3.1-flash-1019-free', wire: 'inclusionai/ling-3.1-flash-1019-free', name: 'Ling 3.1 Flash 1019', contextWindow: 1000000, maxTokens: 262144 },
+  // 2026-11-02 drift: three ids the free pool started serving. The two
+  // `thinkingmachines/` are a mandatory-thinking family (see
+  // KILO_REASONING_MANDATORY), so the snapshot marks them canDisable:false and
+  // the live path assigns them no off rung either.
+  { id: 'thinkingmachines-inkling-free', wire: 'thinkingmachines/inkling:free', name: 'Inkling', contextWindow: 1048576, maxTokens: 262144, vision: true, canDisable: false },
+  { id: 'thinkingmachines-inkling-small-free', wire: 'thinkingmachines/inkling-small:free', name: 'Inkling Small', contextWindow: 1048576, maxTokens: 262144, vision: true, canDisable: false },
+  { id: 'google-gemma-4-31b-it-free', wire: 'google/gemma-4-31b-it:free', name: 'Gemma 4 31B IT', contextWindow: 262144, maxTokens: 32768, vision: true },
 ]
 
 /**
