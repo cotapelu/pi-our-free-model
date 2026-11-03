@@ -223,7 +223,7 @@ function sseResponse(source: string | ReadableStream<Uint8Array>, status: number
  */
 
 /** The session seed for one turn: pi's session id when it has one. */
-export function sessionSeedOf(options: { sessionId?: string }) {
+export function sessionSeedOf(options?: { sessionId?: string }) {
   const id = options?.sessionId
   return typeof id === 'string' && id.trim() ? id.trim() : 'global'
 }

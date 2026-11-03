@@ -40,7 +40,7 @@ const PI_LEVELS = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']
 const UNBOUNDED = Number.MAX_SAFE_INTEGER
 
 /** Stable, URL-safe id: `My Chain` -> `chain:my-chain`. */
-export function chainId(name) {
+export function chainId(name: string) {
   const normalized = String(name ?? '').trim().toLowerCase()
   if (normalized === '') return ''
   const slug = normalized.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48)
@@ -58,7 +58,7 @@ export function chainId(name) {
  * than being honoured as a typo, and a link pointing at the chain itself is
  * dropped so a chain can never route to itself.
  */
-export function normalizeChains(raw) {
+export function normalizeChains(raw: any) {
   const rows = Array.isArray(raw) ? raw : []
   const seen = new Set()
   const out = []
@@ -68,8 +68,8 @@ export function normalizeChains(raw) {
     const id = typeof row.id === 'string' && row.id.startsWith(CHAIN_PREFIX) ? row.id : chainId(name)
     if (id === '' || seen.has(id)) continue
     const links = [...new Set((Array.isArray(row.models) ? row.models : [])
-      .map((value) => String(value ?? '').trim())
-      .filter((value) => /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.:-]+$/.test(value) && value !== id))]
+      .map((value: any) => String(value ?? '').trim())
+      .filter((value: string) => /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.:-]+$/.test(value) && value !== id))]
     if (links.length === 0) continue
     seen.add(id)
     out.push({
@@ -87,10 +87,10 @@ export function normalizeChains(raw) {
 }
 
 /** Find a chain by its id, its id-from-name, or its display name. */
-export function chainByName(chains, nameOrId) {
+export function chainByName(chains: any[], nameOrId: string) {
   const wanted = String(nameOrId ?? '').trim()
   if (wanted === '') return undefined
-  return chains.find((chain) => chain.id === wanted || chain.id === chainId(wanted) || chain.name === wanted)
+  return chains.find((chain: any) => chain.id === wanted || chain.id === chainId(wanted) || chain.name === wanted)
 }
 
 /**
@@ -100,7 +100,7 @@ export function chainByName(chains, nameOrId) {
  * @param {string} text
  * @returns {{links:string[], bad?:string}}
  */
-export function parseLinkList(text) {
+export function parseLinkList(text: string) {
   const raw = String(text ?? '')
     .split(/[\n|]/)
     .map((field) => field.trim())
@@ -118,7 +118,7 @@ export function parseLinkList(text) {
  *
  * @returns {{chain:object}|{error:string}}
  */
-export function buildChainEdit({ current, name, links, strategy, stickyLimit }) {
+export function buildChainEdit({ current, name, links, strategy, stickyLimit }: any) {
   if (current === undefined || current === null) return { error: 'no such chain' }
   const parsedLinks = Array.isArray(links) ? links : parseLinkList(links).links
   if (!Array.isArray(parsedLinks) || parsedLinks.length === 0) return { error: 'the chain needs at least one link' }
@@ -147,7 +147,7 @@ export function buildChainEdit({ current, name, links, strategy, stickyLimit }) 
  * @param {string} input the text after `set`
  * @returns {{target:string, models:string[]}|{error:string}}
  */
-export function parseChainSetLinks(input) {
+export function parseChainSetLinks(input: string) {
   const text = String(input ?? '').trim()
   // `<id|name> links <a> | <b>` — the id and the keyword share the first field,
   // because only the link list is pipe-separated.
@@ -176,10 +176,10 @@ export function parseChainSetLinks(input) {
  * @param {(address:string) => boolean} resolves
  * @returns {{ok:boolean, live:string[], dead:string[], error?:string}}
  */
-export function evaluateAdd(parsed, resolves) {
+export function evaluateAdd(parsed: any, resolves: (address: string) => boolean) {
   const models = Array.isArray(parsed?.models) ? parsed.models : []
-  const live = []
-  const dead = []
+  const live: string[] = []
+  const dead: string[] = []
   for (const address of models) {
     let ok = false
     try {
@@ -213,7 +213,7 @@ const LINK_FIELD = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.:-]+$/
  * @param {string} input the text after `chain add`
  * @returns {{name:string, models:string[], strategy:string, stickyLimit:number}|{error:string}}
  */
-export function parseChainAdd(input) {
+export function parseChainAdd(input: string) {
   const fields = String(input ?? '').split('|').map((field) => field.trim())
   while (fields.length > 0 && fields[fields.length - 1] === '') fields.pop()
   if (fields.length < 2) return { error: 'usage: /ofm chain add <name> | <provider/model> | <provider/model> [| fallback|round-robin[:sticky]]' }
@@ -223,7 +223,7 @@ export function parseChainAdd(input) {
   let links = fields.slice(1)
   const last = links[links.length - 1]
   if (links.length >= 2 && STRATEGY_FIELD.test(last)) {
-    const matched = STRATEGY_FIELD.exec(last)
+    const matched = STRATEGY_FIELD.exec(last)!
     strategy = matched[1].toLowerCase()
     if (matched[2] !== undefined) stickyLimit = Math.min(16, Number(matched[2]))
     links = links.slice(0, -1)
@@ -244,20 +244,20 @@ export function parseChainAdd(input) {
  * 1M window would overrun a 128K fallback. Only what every link can honour is
  * advertised, and a level any link refuses is not offered.
  */
-export function intersectCapabilities(models) {
+export function intersectCapabilities(models: any[]) {
   const members = models.filter(Boolean)
   if (members.length === 0) return {}
-  const input = ['text', 'image'].filter((kind) => members.every((model) => (model.input ?? []).includes(kind)))
-  const levels = PI_LEVELS.filter((level) => members.every((model) => supportsLevel(model, level)))
+  const input = ['text', 'image'].filter((kind) => members.every((model: any) => (model.input ?? []).includes(kind)))
+  const levels = PI_LEVELS.filter((level) => members.every((model: any) => supportsLevel(model, level)))
   return {
-    contextWindow: Math.min(...members.map((model) => model.contextWindow || UNBOUNDED)),
-    maxTokens: Math.min(...members.map((model) => model.maxTokens || UNBOUNDED)),
+    contextWindow: Math.min(...members.map((model: any) => model.contextWindow || UNBOUNDED)),
+    maxTokens: Math.min(...members.map((model: any) => model.maxTokens || UNBOUNDED)),
     input,
     thinkingLevels: levels.length > 0 ? levels : ['off'],
   }
 }
 
-function supportsLevel(model, level) {
+function supportsLevel(model: any, level: string) {
   const map = model.thinkingLevelMap
   if (map === undefined) return level === 'off'
   const mapped = map[level]
@@ -271,12 +271,12 @@ function supportsLevel(model, level) {
  * dispatched), `walks` (failures since the last success, capped at
  * `links - 1`), and the round-robin cursor fields.
  */
-export function decideLink({ chain, members, request }) {
+export function decideLink({ chain, members, request }: any) {
   const total = members.length
-  const address = (model) => `${model?.provider}/${model?.id}`
+  const address = (model: any) => `${model?.provider}/${model?.id}`
   const bare = { index: 0, cursor: 0, windowTurn: 0, turn: 0, walks: 0 }
   let state = { ...bare, ...(request.state ?? {}) }
-  const positionOf = (wanted) => members.findIndex((model) => address(model) === wanted)
+  const positionOf = (wanted: string) => members.findIndex((model: any) => address(model) === wanted)
   // `previous` is pi's own view of the latest successful answer, but it is not
   // populated on every path (measured: undefined for print-mode turns). The
   // transcript always carries it, so fall back to the last non-error assistant
@@ -286,7 +286,7 @@ export function decideLink({ chain, members, request }) {
     ? address(request.previous.model)
     : (fromTranscript !== undefined ? fromTranscript : undefined)
   const failedAddress = request.failed?.model ? address(request.failed.model) : undefined
-  const advanceFrom = (wanted) => {
+  const advanceFrom = (wanted: string) => {
     const position = positionOf(wanted)
     const next = wrap((position >= 0 ? position : currentIndex()) + 1, total)
     return { ...state, index: next, walks: (state.walks ?? 0) + 1 }
@@ -336,12 +336,12 @@ export function decideLink({ chain, members, request }) {
 }
 
 /** Wrap an index into the chain. */
-function wrap(index, total) {
+function wrap(index: number, total: number) {
   return ((index % total) + total) % total
 }
 
 /** The last assistant answer that is not an error, as `provider/model`, if any. */
-function lastAnswerIn(messages) {
+function lastAnswerIn(messages: any[]) {
   const list = Array.isArray(messages) ? messages : []
   for (let index = list.length - 1; index >= 0; index -= 1) {
     const message = list[index]
@@ -361,7 +361,7 @@ function lastAnswerIn(messages) {
  * user's own decision. Everything else (quota, region, 5xx, transport) is what a
  * chain exists for.
  */
-export function isAdvanceable(message) {
+export function isAdvanceable(message: any) {
   if (!message || typeof message !== 'object') return false
   if (message.stopReason === 'aborted') return false
   const text = String(message.errorMessage ?? '')
