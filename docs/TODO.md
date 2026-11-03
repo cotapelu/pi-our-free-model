@@ -188,9 +188,9 @@ Thêm 2 check `catalog.test.ts` (wire-id chính xác + off-rung family). **127/9
       **→ ĐÃ FIX (`6055c78`)**: thêm 2 nhánh vào `friendlyMessage` + test. (Không cần reshape
       envelope `error_type`/`error.code` riêng vì pi-ai đã stringify body vào `errorMessage`,
       nên regex trên text là đủ — khác cách dsh tự decode envelope.)
-- [ ] **(tuỳ chọn) session xuyên restart**: dsh lưu `session-map.json` (ổn định upstream-session qua restart,
+- [x] **session xuyên restart — đã chốt, KHÔNG persist**: dsh lưu `session-map.json` (ổn định upstream-session qua restart,
       nhận canonical id của caller); pi-extension giữ **in-process**. Hiện vẫn đúng (mint thời-gian-thật mỗi
-      lần, gate chấp nhận) — chỉ ghi chú/quyết định có persist không.
+      lần, gate chấp nhận) — **KHÔNG persist** (2026-11-02): trong 1 tiến trình `sessionFor` giữ session ổn định theo hội thoại (tránh mint-mỗi-request gây 429); qua restart mint lại bằng thời-gian-thật → gate chấp nhận (200, đã đo); chỉ là một session-ID khác cho quota per-session/IP, không phải lỗi. Không ghi-đĩa.
 - [x] **(tuỳ chọn) rationale effort**: `src/effort.js` dùng **budget ladder** (gateway cũ bỏ qua
       `reasoning_effort`, chỉ ép `max_tokens`); pi-extension dùng **menu `reasoning_effort` do model khai
       báo** (đã đo lại: gateway hiện **honours** menu này + 400 nếu ngoài menu — audit §3 G4/G5). Ghi rationale vào
