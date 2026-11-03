@@ -155,21 +155,15 @@ bộ thư mục** (`src/**`, `index.js`, `client.js`, `adapter/`, `worker/`, `ca
 `scripts/` 184 file, `vendor/` [channel-pack 148 TS + dsh-std + magpie], `packages/` [standalone + desktop
 Tauri], `cordis.patch.yml`, `tsconfig.json`). Bản đồ 7 hệ thống: `docs/pi-extension-audit.md` §1.
 
-### P0 — DRIFT thật, đang sửa DỞ (làm ngay, rồi verify+commit)
-- [ ] Verify báo **roster đổi** (2026-11-02 ~19:00): OpenCode +`pulse-alpha-free` (menu `low|high|max`);
-      Kilo +`thinkingmachines/inkling-free`, `thinkingmachines/inkling-small-free`
-      (family **cấm tắt thinking** → `canDisable:false`), +`google/gemma-4-31b-it-free`.
-      **Đã làm:** thêm `FREE_ID_OVERRIDES['pulse-alpha-free']` (vision, 1M/131072, efforts low|high|max).
-      **Còn lại:**
-      - [ ] `STATIC_OPENECODE_MODELS` += `pulse-alpha-free` (vision true, 1048576/131072, efforts low|high|max).
-      - [ ] `STATIC_KILO_MODELS` += `{ id:'thinkingmachines-inkling-free', wire:'thinkingmachines/inkling-free',
-            name:'Inkling', contextWindow:1048576, maxTokens:262144, vision:true, canDisable:false }`,
-            `…inkling-small-free` (wire `thinkingmachines/inkling-small-free`, tương tự), và
-            `{ id:'google-gemma-4-31b-it-free', wire:'google/gemma-4-31b-it-free', name:'Gemma 4 31B IT',
-            contextWindow:262144, maxTokens:32768, vision:true }`.
-      - [ ] Kiểm `KILO_REASONING_MANDATORY` đã có `/^thinkingmachines\//` (để off-rung `null` cho live path).
-      - [ ] Unit test snapshot round-trip (safeId→wire) cho 4 id mới; `npm run test:pi-extension` xanh;
-            rebuild dist; `npm run verify:pi-extension-upstream` **PASS**; commit `fix(pi-extension): …`.
+### P0 — DRIFT roster 2026-11-02 ✅ ĐÃ XONG (`d411b4f`)
+Verify bắt được roster live đổi: OpenCode +`pulse-alpha-free`; Kilo +3
+(`thinkingmachines/inkling:free`, `thinkingmachines/inkling-small:free` — family **cấm tắt
+thinking** → `canDisable:false`; `google/gemma-4-31b-it:free`).
+Đã sửa `catalog.ts`: `FREE_ID_OVERRIDES['pulse-alpha-free']` (vision, 1M/131072, low|high|max);
+bù cả 4 id vào `STATIC_*` (wire là dạng **hai-chấm `:free`** — đã sửa lại từ nhầm gạch-nối);
+`KILO_REASONING_MANDATORY` đã có `/^thinkingmachines\//` nên off-rung `null` cả live+offline.
+Thêm 2 check `catalog.test.ts` (wire-id chính xác + off-rung family). **127/9 suite PASS**;
+`npm run verify:pi-extension-upstream` giờ **PASS** (snapshot khớp live 9 opencode + 18 kilo).
 
 ### P1 — Gap hành vi free-lane (từ đối chiếu code gốc; ảnh hưởng chất lượng lane)
 - [ ] **G-a (trung bình)** `lane.sseGuard`/`transport`: trên path body **SSE bị gán nhãn sai** (content-type
