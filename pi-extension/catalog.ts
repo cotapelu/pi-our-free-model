@@ -96,7 +96,7 @@ const KILO_NO_DISABLE_IDS = new Set(['kilo-auto/free', 'openrouter/free'])
  * from the picker instead of emitting a 400). `xhigh` rides `max` when the model
  * declares `max` but not `xhigh`, and `max` falls back to `xhigh` the other way.
  */
-export function effortMap(declared) {
+export function effortMap(declared: string[]) {
   const set = new Set(declared ?? [])
   const map: Record<string, string | null> = {}
   for (const level of PI_LEVELS) {
@@ -114,7 +114,7 @@ export function effortMap(declared) {
  * is what rides `reasoning_effort` on pi's wire, and `kilo.js` translates it —
  * pi itself needs a value, not an absence.
  */
-export function kiloEffortMap(row) {
+export function kiloEffortMap(row: any) {
   const params = new Set(Array.isArray(row?.supported_parameters) ? row.supported_parameters : [])
   const id = String(row?.id ?? '')
   if (!params.has('reasoning')) return undefined
@@ -131,7 +131,7 @@ export function kiloEffortMap(row) {
 }
 
 /** `/` and `:` are pi's provider separator and nothing else; ids stay wire-safe. */
-export function safeId(id) {
+export function safeId(id: string) {
   return String(id).replace(/[:/]/g, '-')
 }
 
@@ -153,24 +153,24 @@ async function getJson(url: string, { headers = {}, signal }: { headers?: Record
 }
 
 /** Fetch the OpenCode free lane's listing, wearing the client fingerprint. */
-export function fetchOpencodeListing(signal) {
+export function fetchOpencodeListing(signal?: AbortSignal) {
   return getJson(OPENECODE_LISTING, { headers: gatewayHeaders({ session: sessionFor('listing'), accept: 'application/json' }), signal })
 }
 
 /** Fetch Kilo's public listing. No credential at all: the free pool is anonymous. */
-export function fetchKiloListing(signal) {
+export function fetchKiloListing(signal?: AbortSignal) {
   return getJson(KILO_LISTING, { headers: { accept: 'application/json' }, signal })
 }
 
 /** Is this id on the keyless pool? The listing mixes paid and free ids. */
-export function isOpencodeFreeId(id) {
+export function isOpencodeFreeId(id: string) {
   const base = String(id)
   return ALWAYS_FREE.has(base) || /(^|[-_])free($|[-_.])/.test(base)
 }
 
 /** The free-lane capabilities for one base id: per-id override, family, default. */
-function freeCapabilitiesFor(base) {
-  const override = FREE_ID_OVERRIDES[base]
+function freeCapabilitiesFor(base: string) {
+  const override = (FREE_ID_OVERRIDES as any)[base]
   if (override !== undefined) return override
   for (const entry of FREE_CAPABILITIES) {
     if (entry.match.test(base)) {
@@ -190,7 +190,7 @@ function freeCapabilitiesFor(base) {
  * `union-alpha` on `/messages`, or an Anthropic/Google `base_url`) are skipped:
  * this extension speaks one wire, and an id on the wrong one fails every turn.
  */
-export function opencodeModel(row) {
+export function opencodeModel(row: any) {
   if (!row || typeof row.id !== 'string' || !isOpencodeFreeId(row.id)) return null
   const api = row.api ?? {}
   const chat = api['chat-completions']
@@ -200,7 +200,7 @@ export function opencodeModel(row) {
   const reasoning = Array.isArray(declared) && declared.length > 0
   const limit = row.limit ?? {}
   const vision = caps.vision === true
-    || (row.modalities?.input ?? []).some((m) => String(m).startsWith('image/'))
+    || (row.modalities?.input ?? []).some((m: string) => String(m).startsWith('image/'))
   const model: any = {
     id: safeId(row.id),
     name: typeof row.name === 'string' && row.name ? row.name : row.id,
@@ -216,7 +216,7 @@ export function opencodeModel(row) {
 }
 
 /** One Kilo listing row -> pi chat model config, `null` when the row is not free. */
-export function kiloModel(row) {
+export function kiloModel(row: any) {
   if (!row || row.isFree !== true || typeof row.id !== 'string' || row.id.trim() === '') return null
   const map = kiloEffortMap(row)
   const vision = (row.architecture?.input_modalities ?? []).includes('image')
@@ -336,7 +336,7 @@ export function staticKiloModels() {
 }
 
 /** `safeId -> wire id`, for the lanes whose upstream ids carry `/` and `:`. */
-export function upstreamIdMap(rows, mapper) {
+export function upstreamIdMap(rows: any[], mapper: (row: any) => any) {
   const map = new Map()
   for (const row of rows) {
     const model = mapper(row)
@@ -364,20 +364,20 @@ export function upstreamIdMap(rows, mapper) {
  */
 export function createKiloRoster() {
   /** The last roster a live listing actually served, if it ever did. */
-  let live = null
+  let live: any = null
   /** `safeId -> wire id`; the snapshot seeds it, a live listing tops it up. */
   const wireIds = new Map(staticUpstreamIds())
   return {
     /** The models to register: the last live roster, else the snapshot. */
     models: () => live ?? staticKiloModels(),
     /** The upstream spelling for a registered id, safe on every path. */
-    wireId: (id) => wireIds.get(id) ?? id,
+    wireId: (id: string) => wireIds.get(id) ?? id,
     /**
      * A listing answered. An empty free slice is authoritative — the gateway
      * saying it serves nothing free right now — so it degrades like a failure
      * instead of resurrecting a roster the upstream just withdrew.
      */
-    accept: (rows) => {
+    accept: (rows: any[]) => {
       const models = rows.map(kiloModel).filter(Boolean)
       if (models.length === 0) {
         live = null
