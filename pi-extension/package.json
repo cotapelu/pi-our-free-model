@@ -23,6 +23,7 @@
     ]
   },
   "scripts": {
+    "prepare": "tsc -p tsconfig.json",
     "build": "tsc -p tsconfig.json",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "test:pi-extension": "npm run build && node test/catalog.test.ts && node test/transport.test.ts && node test/fingerprint.test.ts && node test/chains.test.ts && node test/disclaimer.test.ts && node test/fingerprint-integration.ts && node test/kilo-integration.ts && node test/chain-integration.ts && node test/acceptance-live.ts",
