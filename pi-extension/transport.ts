@@ -19,7 +19,7 @@ const DSML_TAG = /<｜DSML｜[^>]*>/g
 export function createDsmlScrubber() {
   let held = ''
   return {
-    push(delta) {
+    push(delta: string) {
       let text = held + delta
       held = ''
       const cut = text.lastIndexOf('<')
@@ -42,7 +42,7 @@ export function createDsmlScrubber() {
 }
 
 /** Classify the beginning of a body by shape (ported from src/http.js). */
-export function sniffBody(text) {
+export function sniffBody(text: unknown) {
   const head = String(text ?? '').replace(/^﻿/, '').trimStart()
   if (head === '') return 'empty'
   if (head.startsWith(':') || /^(?:data|event|id|retry)[ \t]*:/m.test(head.slice(0, 64))) return 'sse'
@@ -56,14 +56,14 @@ export function sniffBody(text) {
  * that answers a *stream* request with the whole document carries
  * `choices[].message`, which the decoder drops as "no SSE lines".
  */
-export function foldToSse(text) {
+export function foldToSse(text: string) {
   let document
   try {
     document = JSON.parse(text)
   } catch {
     return `data: ${text.trim()}\n\ndata: [DONE]\n\n`
   }
-  const frame = (chunk) => `data: ${JSON.stringify(chunk)}\n\n`
+  const frame = (chunk: any) => `data: ${JSON.stringify(chunk)}\n\n`
   const frames = []
   const choices = Array.isArray(document?.choices) ? document.choices : []
   for (const [index, choice] of choices.entries()) {
@@ -73,7 +73,7 @@ export function foldToSse(text) {
     if (typeof message.content === 'string' && message.content !== '') delta.content = message.content
     if (message.reasoning_content !== undefined && message.reasoning_content !== null && message.reasoning_content !== '') delta.reasoning_content = message.reasoning_content
     if (Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
-      delta.tool_calls = message.tool_calls.map((call, position) => ({
+      delta.tool_calls = message.tool_calls.map((call: any, position: number) => ({
         index: position,
         id: call?.id,
         type: 'function',
@@ -112,7 +112,7 @@ function abortError() {
  * Returns the reader that follows the head, the chunks already read, and the
  * decoded head text — the pieces `replayStream` stitches back into one stream.
  */
-export async function readHead(stream, limit = SNIFF_BYTES, { signal, timeoutMs = 30000 }: { signal?: AbortSignal; timeoutMs?: number } = {}) {
+export async function readHead(stream: ReadableStream<Uint8Array>, limit = SNIFF_BYTES, { signal, timeoutMs = 30000 }: { signal?: AbortSignal; timeoutMs?: number } = {}) {
   const reader = stream.getReader()
   const decoder = new TextDecoder()
   const chunks = []
@@ -123,9 +123,9 @@ export async function readHead(stream, limit = SNIFF_BYTES, { signal, timeoutMs 
   try {
     while (size < limit) {
       if (signal?.aborted === true) throw abortError()
-      let timer
-      let onAbort
-      const halted = new Promise((_, reject) => {
+      let timer: ReturnType<typeof setTimeout> | undefined
+      let onAbort: (() => void) | undefined
+      const halted = new Promise<never>((_, reject) => {
         onAbort = () => reject(abortError())
         signal?.addEventListener('abort', onAbort, { once: true })
         timer = setTimeout(() => reject(new Error(`the gateway sent no bytes before its head deadline (${timeoutMs}ms)`)), Math.max(0, deadline - Date.now()))
@@ -136,7 +136,7 @@ export async function readHead(stream, limit = SNIFF_BYTES, { signal, timeoutMs 
         row = await Promise.race([reader.read(), halted])
       } finally {
         clearTimeout(timer)
-        signal?.removeEventListener('abort', onAbort)
+        if (onAbort) signal?.removeEventListener('abort', onAbort)
       }
       if (row.done === true) { done = true; break }
       if (row.value !== undefined) {
@@ -159,7 +159,7 @@ export async function readHead(stream, limit = SNIFF_BYTES, { signal, timeoutMs 
  * This is what keeps a mislabelled-SSE turn streaming — only the head spent
  * deciding the shape is replayed; every later byte flows as it arrives.
  */
-export function replayStream(head) {
+export function replayStream(head: any) {
   const cancelled = { value: false }
   return new ReadableStream({
     start(controller) {
@@ -191,7 +191,7 @@ export function replayStream(head) {
 }
 
 /** Finish a body that turned out not to be a stream, continuing the head decoder so a character split over the boundary still decodes. */
-export async function readRemainder(head) {
+export async function readRemainder(head: any) {
   let text = head.text
   try {
     while (head.done !== true) {
@@ -215,7 +215,7 @@ export async function readRemainder(head) {
  * same stream when the watchdog is off, so the caller can pass it straight
  * through.
  */
-export function withIdleTimeout(body, ms) {
+export function withIdleTimeout(body: ReadableStream<Uint8Array> | null | undefined, ms: number): ReadableStream<Uint8Array> | null | undefined {
   if (!(ms > 0) || body === null || body === undefined) return body
   const reader = body.getReader()
   const decoder = new TextDecoder()
@@ -226,7 +226,7 @@ export function withIdleTimeout(body, ms) {
       try {
         const row = await Promise.race([
           reader.read(),
-          new Promise((_, reject) => {
+          new Promise<never>((_, reject) => {
             timer = setTimeout(() => {
               reader.cancel().catch(() => {})
               reject(new Error(`upstream stream went idle past ${ms}ms without a data frame; the turn was cut`))
@@ -258,7 +258,7 @@ export function withIdleTimeout(body, ms) {
  * stringifies that body into `errorMessage`; a bare `HTTP 403` tells nobody
  * anything.
  */
-export function friendlyMessage(message) {
+export function friendlyMessage(message: string) {
   if (/FreeTierError/i.test(message)) {
     return 'upstream refused the free lane: the client fingerprint no longer matches (the gateway tightened its gate). Update this extension; the lane needs no key, so nothing on your side is wrong.'
   }
@@ -303,9 +303,9 @@ export function friendlyMessage(message) {
  * links, deduplicate, and append so a bare "fetch failed" reads "fetch failed —
  * getaddrinfo ENOTFOUND opencode.ai". Returns '' when the chain names nothing.
  */
-export function transportCause(error) {
-  const parts = []
-  let node = error
+export function transportCause(error: unknown) {
+  const parts: string[] = []
+  let node: any = error
   for (let depth = 0; depth < 3 && node?.cause !== undefined; depth += 1) {
     node = node.cause
     if (node === null || typeof node !== 'object') break
