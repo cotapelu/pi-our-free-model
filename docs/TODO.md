@@ -179,9 +179,12 @@ Thêm 2 check `catalog.test.ts` (wire-id chính xác + off-rung family). **127/9
       `transport.ts`; `errorMessageOf` (`lane.ts`) ghép vào `errorMessage`; test 4 nhánh.
 - [ ] **G-b (thấp)** hint **empty-5xx + ảnh** (dsh issue #549): khi gateway trả 5xx body rỗng và request
       mang ảnh, nói rõ “có thể model không nhận vision”; cần `carriesImageContent`.
-- [ ] **Kilo envelope (thấp)** `friendlyMessage`/kilo path chưa xử lý envelope Kilo riêng:
-      `PAID_MODEL_AUTH_REQUIRED` (id trả phí yêu cầu account → “không nằm ở free pool”) và
+- [x] **Kilo envelope (thấp)** `friendlyMessage`/kilo path chưa xử lý envelope Kilo riêng:
+      `PAID_MODEL_AUTH_REQUIRED` (id trả phí yêu cầu account → "không nằm ở free pool") và
       `moderation|flagged|filtered` (chặn nội dung) — dsh `classifyKilo` đã tách.
+      **→ ĐÃ FIX (`6055c78`)**: thêm 2 nhánh vào `friendlyMessage` + test. (Không cần reshape
+      envelope `error_type`/`error.code` riêng vì pi-ai đã stringify body vào `errorMessage`,
+      nên regex trên text là đủ — khác cách dsh tự decode envelope.)
 - [ ] **(tuỳ chọn) session xuyên restart**: dsh lưu `session-map.json` (ổn định upstream-session qua restart,
       nhận canonical id của caller); pi-extension giữ **in-process**. Hiện vẫn đúng (mint thời-gian-thật mỗi
       lần, gate chấp nhận) — chỉ ghi chú/quyết định có persist không.
