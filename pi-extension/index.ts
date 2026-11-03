@@ -26,17 +26,17 @@ import { kiloModels, kiloProvider, PROVIDER_ID as KILO_ID } from './kilo.js'
 import { opencodeModels, opencodeProvider, PROVIDER_ID as OPENECODE_ID } from './opencode.js'
 
 /** Resolve one `provider/model` address against the live registry. */
-function resolveLink(ctx, address) {
+function resolveLink(ctx: any, address: string) {
   const slash = address.indexOf('/')
   if (slash <= 0 || slash === address.length - 1) return undefined
   return ctx.modelRegistry.find(address.slice(0, slash), address.slice(slash + 1))
 }
 
 /** Register (or re-register) one chain as a virtual model. */
-function registerChain(pi, chain, ctx) {
+function registerChain(pi: any, chain: any, ctx?: any) {
   // Limits come from the links that resolve right now; pi replaces them with the
   // dispatched model's own after the first response either way.
-  const members = ctx === undefined ? [] : chain.models.map((address) => resolveLink(ctx, address)).filter(Boolean)
+  const members = ctx === undefined ? [] : chain.models.map((address: string) => resolveLink(ctx, address)).filter(Boolean)
   const limits = intersectCapabilities(members)
   pi.registerVirtualModel({
     provider: CHAIN_PROVIDER,
@@ -46,8 +46,8 @@ function registerChain(pi, chain, ctx) {
     ...(limits.contextWindow === undefined ? {} : { contextWindow: limits.contextWindow }),
     ...(limits.maxTokens === undefined ? {} : { maxTokens: limits.maxTokens }),
     ...(limits.input === undefined ? {} : { input: limits.input }),
-    route: (request, routeCtx) => {
-      const links = chain.models.map((address) => resolveLink(routeCtx, address)).filter(Boolean)
+    route: (request: any, routeCtx: any) => {
+      const links = chain.models.map((address: string) => resolveLink(routeCtx, address)).filter(Boolean)
       if (links.length === 0) {
         throw new Error(`the chain "${chain.name}" has no link that exists right now: ${chain.models.join(', ')}`)
       }
@@ -59,7 +59,7 @@ function registerChain(pi, chain, ctx) {
 }
 
 /** The highest level the picked model actually accepts; `off` always is. */
-function clampLevel(level, model) {
+function clampLevel(level: any, model: any) {
   const map = model.thinkingLevelMap
   if (map === undefined) return 'off'
   if (map[level] !== undefined && map[level] !== null) return level
@@ -83,13 +83,13 @@ function registerChains(pi: any, chains: any[], ctx?: any) {
 }
 
 /** Describe the chains for the command's status output. */
-function describeChains(ctx, chains) {
+function describeChains(ctx: any, chains: any[]) {
   if (chains.length === 0) return 'no chains yet — add one with /ofm chain add'
   return chains
     .map((chain) => {
-      const live = chain.models.filter((address) => resolveLink(ctx, address) !== undefined)
+      const live = chain.models.filter((address: string) => resolveLink(ctx, address) !== undefined)
       const links = chain.models
-        .map((address) => `${resolveLink(ctx, address) ? '' : '⚠ '}${address}`)
+        .map((address: string) => `${resolveLink(ctx, address) ? '' : '⚠ '}${address}`)
         .join(' → ')
       const strategy = chain.strategy + (chain.stickyLimit > 1 ? `:${chain.stickyLimit}` : '')
       return `${chain.enabled === false ? '⏸ ' : '▶ '}${chain.id}  ${chain.name}  [${strategy}]  ${live.length}/${chain.models.length} live  ${links}`
@@ -103,7 +103,7 @@ function describeChains(ctx, chains) {
  * startup model selection, and the offline snapshot covers a machine with no
  * route upstream.
  */
-export default async function (pi) {
+export default async function (pi: any) {
   const [kilo, opencode, chains] = await Promise.all([kiloModels(), opencodeModels(), Promise.resolve(readChains())])
 
   pi.registerProvider(KILO_ID, kiloProvider({ models: kilo }))
@@ -114,7 +114,7 @@ export default async function (pi) {
   // session_start handler rather than the factory: the factory cannot show UI,
   // and marking the notice seen without showing it would swallow it in print
   // mode — the next interactive session would stay silent about it.
-  pi.on('session_start', (_event, ctx) => {
+  pi.on('session_start', (_event: any, ctx: any) => {
     if (ctx?.hasUI !== true || !shouldNotice()) return
     writeAck()
     ctx.ui.notify(noticeText(), 'warning')
@@ -122,11 +122,11 @@ export default async function (pi) {
 
   pi.registerCommand('ofm', {
     description: 'Our Free Model: status | refresh | chain [add|set|remove|enable|disable]',
-    handler: async (arg, ctx) => {
+    handler: async (arg: string, ctx: any) => {
       const words = String(arg ?? '').trim().split(/\s+/).filter(Boolean)
       const head = (words[0] ?? 'status').toLowerCase()
       const rest = words.slice(1).join(' ')
-      const notify = (message) => {
+      const notify = (message: string) => {
         if (ctx.hasUI) ctx.ui.notify(message, 'info')
       }
 
@@ -138,9 +138,9 @@ export default async function (pi) {
         }
         // Check the links against the live registry before storing: a dead one is
         // usually a typo, and the alternative is discovering it mid-turn.
-        const check = evaluateAdd(parsed, (address) => resolveLink(ctx, address) !== undefined)
+        const check = evaluateAdd(parsed, (address: string) => resolveLink(ctx, address) !== undefined)
         if (!check.ok) {
-          notify(check.error)
+          notify(check.error ?? '')
           return
         }
         const stored = writeChains([...chains, { id: chainId(parsed.name), name: parsed.name, models: parsed.models, strategy: parsed.strategy, stickyLimit: parsed.stickyLimit }])
@@ -198,9 +198,9 @@ export default async function (pi) {
           notify(built.error)
           return
         }
-        const check = evaluateAdd({ models: built.chain.models }, (address) => resolveLink(ctx, address) !== undefined)
+        const check = evaluateAdd({ models: built.chain.models }, (address: string) => resolveLink(ctx, address) !== undefined)
         if (!check.ok) {
-          notify(check.error)
+          notify(check.error ?? '')
           return
         }
         const stored = writeChains(chains.map((chain) => (chain.id === target.id ? built.chain : chain)))
@@ -221,7 +221,7 @@ export default async function (pi) {
           if (parsed.error === undefined) {
             const named = chainByName(chains, parsed.target)
             if (named !== undefined) {
-              const check = evaluateAdd(parsed, (address) => resolveLink(ctx, address) !== undefined)
+              const check = evaluateAdd(parsed, (address: string) => resolveLink(ctx, address) !== undefined)
               if (check.ok) {
                 const stored = writeChains(chains.map((chain) => (chain.id === named.id ? { ...chain, models: parsed.models } : chain)))
                 chains.length = 0
@@ -232,7 +232,7 @@ export default async function (pi) {
                 notify(`chain ${named.id} now links ${check.live.length}/${parsed.models.length} live${dead}`)
                 return
               }
-              notify(check.error)
+              notify(check.error ?? '')
               return
             }
           }
