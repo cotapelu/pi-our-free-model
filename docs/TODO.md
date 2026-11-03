@@ -223,7 +223,7 @@ Mỗi dòng: hệ thống → thư mục/module gốc → cần gì cho pi → k
       manifest ký).
 
 ### P3 — Chất lượng mã
-- [ ] Siết `strict:true` — **gate đã dựng** (`tsconfig.strict.json` + `npm run typecheck:strict`, non-gating; `npm run build` vẫn dùng `tsconfig.json` non-strict, đang xanh). **Baseline 165 lỗi** (chains 47, fingerprint 27, index 25, catalog 18, lane 17, transport 16, kilo 7, opencode 5, disclaimer 2, chain-store 1). Còn lại: giảm 165→0 **theo module, mỗi lần một commit xanh** (ưu tiên opencode/kilo/index — biên pi-API, vừa siết type vừa tăng kiểm-tra tương thích; giữ `any` có chủ-đích ở payload gateway động). Về 0 → bật strict ở build chính.
+- [ ] Siết `strict:true` — **gate đã dựng** (`tsconfig.strict.json` + `npm run typecheck:strict`, non-gating; `npm run build` vẫn dùng `tsconfig.json` non-strict, đang xanh). Giảm 165→0 **theo module, mỗi lần một commit xanh**. **Tiến độ:** kilo 7→0 (`8dea232`), opencode 5→0 (`a9a84e9`) → **còn 153** (chains 47, fingerprint 27, index 25, catalog 18, lane 17, transport 16, disclaimer 2, chain-store 1). Biên pi-API (opencode/kilo) đã type thật `Model`/`TranscriptContext`/`SimpleStreamOptions` — vừa siết type vừa tăng kiểm-tra tương thích; giữ `any` có chủ-đích ở payload gateway động. Về 0 → bật strict ở build chính.
 - [x] `npm audit` pi-extension: 3 vuln (2 mod, 1 high) — **dev-only, không ship** (extension chỉ ship `dist/`,
       runtime do `pi` cấp pi-ai). Quyết định có `overrides` hay bỏ. **→ ĐÃ XONG (`0461cf4`)**: `overrides`
       vá `undici^8.12.3`+`minimatch^11.0.3`, giữ pi 1.4.0; audit **0 vuln**, build+suite xanh.
