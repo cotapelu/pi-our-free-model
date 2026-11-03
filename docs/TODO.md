@@ -166,9 +166,13 @@ Thêm 2 check `catalog.test.ts` (wire-id chính xác + off-rung family). **127/9
 `npm run verify:pi-extension-upstream` giờ **PASS** (snapshot khớp live 9 opencode + 18 kilo).
 
 ### P1 — Gap hành vi free-lane (từ đối chiếu code gốc; ảnh hưởng chất lượng lane)
-- [ ] **G-a (trung bình)** `lane.sseGuard`/`transport`: trên path body **SSE bị gán nhãn sai** (content-type
+- [x] **G-a (trung bình)** `lane.sseGuard`/`transport`: trên path body **SSE bị gán nhãn sai** (content-type
       JSON nhưng body là SSE) hiện `await response.text()` → **đệm toàn bộ** rồi mới phát lại, mất
       streaming tăng dần (dsh `http.js` chỉ sniff 4KB rồi `replayStream`). Port `readHead`+`replayStream`.
+      **→ ĐÃ FIX (`0e2ca0a`)**: thêm `readHead`(4KB, có deadline+abort)/`replayStream`/`readRemainder`
+      vào `transport.ts`; `sseGuard` dùng chúng (không còn `response.text()` cho path SSE); `sseResponse`
+      nhận cả `ReadableStream`. Test: unit “readHead quyết SSE từ head, không đợi close”+“readRemainder
+      stitching”; integration kilo `sse-mislabelled` replayed. Suite **130/9 PASS**.
 - [ ] **G-c (thấp)** `transportCause`: thêm lý do DNS/TLS (ENOTFOUND/ECONNRESET…) vào thông báo lỗi
       transport (`fetch failed — getaddrinfo ENOTFOUND …`), như `http.js transportCause`.
 - [ ] **G-b (thấp)** hint **empty-5xx + ảnh** (dsh issue #549): khi gateway trả 5xx body rỗng và request
