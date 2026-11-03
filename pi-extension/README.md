@@ -145,6 +145,11 @@ its turn instead of flapping forever. Chains persist in
   upstream accepted ~1M-token prompts on `deepseek-v4.1-flash-free`), a level the
   model does not declare is never offered (the gateway validates the field and
   answers 400), and a model with no declared menu gets no picker at all.
+  (This differs from the dsh plugin's older free lane, which sent no
+  `reasoning_effort` and enforced a token-budget ladder instead — see
+  `src/effort.js` — because that gateway ignored the field. The OpenCode gateway
+  now declares and validates a menu, so sending the declared value is the correct
+  behaviour; the difference is deliberate, not a regression.)
 
   The lane meters per session/IP: a `429 FreeUsageLimitError` is translated into
   an actionable message and rotates the mapped session, and a `403 RegionError`

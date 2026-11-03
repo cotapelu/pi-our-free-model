@@ -179,6 +179,9 @@ Thêm 2 check `catalog.test.ts` (wire-id chính xác + off-rung family). **127/9
       `transport.ts`; `errorMessageOf` (`lane.ts`) ghép vào `errorMessage`; test 4 nhánh.
 - [ ] **G-b (thấp)** hint **empty-5xx + ảnh** (dsh issue #549): khi gateway trả 5xx body rỗng và request
       mang ảnh, nói rõ “có thể model không nhận vision”; cần `carriesImageContent`.
+      **→ DEFERRED**: path empty-5xx do **pi-ai sở hữu** (extension trả nguyên response lỗi cho pi-ai); thêm
+      hint đòi canh sửa thông báo lỗi của pi-ai (rủi ro hồi quy) hoặc pre-check `init.body` lúc fetch rồi
+      rewrite lỗi. #549 là quirk gateway cũ — **chỉ làm nếu tái hiện được** trên lane OpenCode/Kilo hiện tại.
 - [x] **Kilo envelope (thấp)** `friendlyMessage`/kilo path chưa xử lý envelope Kilo riêng:
       `PAID_MODEL_AUTH_REQUIRED` (id trả phí yêu cầu account → "không nằm ở free pool") và
       `moderation|flagged|filtered` (chặn nội dung) — dsh `classifyKilo` đã tách.
@@ -188,10 +191,10 @@ Thêm 2 check `catalog.test.ts` (wire-id chính xác + off-rung family). **127/9
 - [ ] **(tuỳ chọn) session xuyên restart**: dsh lưu `session-map.json` (ổn định upstream-session qua restart,
       nhận canonical id của caller); pi-extension giữ **in-process**. Hiện vẫn đúng (mint thời-gian-thật mỗi
       lần, gate chấp nhận) — chỉ ghi chú/quyết định có persist không.
-- [ ] **(tuỳ chọn) rationale effort**: `src/effort.js` dùng **budget ladder** (gateway cũ bỏ qua
+- [x] **(tuỳ chọn) rationale effort**: `src/effort.js` dùng **budget ladder** (gateway cũ bỏ qua
       `reasoning_effort`, chỉ ép `max_tokens`); pi-extension dùng **menu `reasoning_effort` do model khai
       báo** (đã đo lại: gateway hiện **honours** menu này + 400 nếu ngoài menu — audit §3 G4/G5). Ghi rationale vào
-      README/audit để khỏi tưởng bug khi đối chiếu `effort.js`.
+      README/audit để khỏi tưởng bug khi đối chiếu `effort.js`. **→ ĐÃ GHI** vào README §“Thinking strength …”.
 
 ### P2 — Hệ thống 2–7 (đã inventory; **out-of-scope v1** — chỉ port nếu chốt)
 Mỗi dòng: hệ thống → thư mục/module gốc → cần gì cho pi → khuyến nghị.
