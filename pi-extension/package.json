@@ -15,7 +15,8 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "README.vi.md"
   ],
   "pi": {
     "extensions": [
