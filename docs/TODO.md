@@ -144,3 +144,82 @@ Checklist phiên làm việc này. Trạng thái cập nhật sau mỗi bước.
     **(b) KHÔNG khôi phục**, mà **gỡ claim CI** khỏi README/TODO cho khớp thực tế. Nếu sau này
     cần CI lại: `git show f4709c1:.github/workflows/test.yml` rồi trỏ về `npm run
     test:pi-extension`.
+
+---
+
+## Việc cần làm — gap-analysis toàn bộ repo dsh → `pi-extension/` (2026-11-02)
+
+Nguồn: đã **đọc/đối chiếu** code gốc nhóm lane-free (`src/http.js`, `src/upstream.js`, `src/effort.js`,
+`src/kilo.js`; `src/stream.js`/`catalog.js`/`probe`/`recovery`/`combos` ở mức mapping) và **inventory toàn
+bộ thư mục** (`src/**`, `index.js`, `client.js`, `adapter/`, `worker/`, `catalog/`, `feed/`, `locale/`,
+`scripts/` 184 file, `vendor/` [channel-pack 148 TS + dsh-std + magpie], `packages/` [standalone + desktop
+Tauri], `cordis.patch.yml`, `tsconfig.json`). Bản đồ 7 hệ thống: `docs/pi-extension-audit.md` §1.
+
+### P0 — DRIFT thật, đang sửa DỞ (làm ngay, rồi verify+commit)
+- [ ] Verify báo **roster đổi** (2026-11-02 ~19:00): OpenCode +`pulse-alpha-free` (menu `low|high|max`);
+      Kilo +`thinkingmachines/inkling-free`, `thinkingmachines/inkling-small-free`
+      (family **cấm tắt thinking** → `canDisable:false`), +`google/gemma-4-31b-it-free`.
+      **Đã làm:** thêm `FREE_ID_OVERRIDES['pulse-alpha-free']` (vision, 1M/131072, efforts low|high|max).
+      **Còn lại:**
+      - [ ] `STATIC_OPENECODE_MODELS` += `pulse-alpha-free` (vision true, 1048576/131072, efforts low|high|max).
+      - [ ] `STATIC_KILO_MODELS` += `{ id:'thinkingmachines-inkling-free', wire:'thinkingmachines/inkling-free',
+            name:'Inkling', contextWindow:1048576, maxTokens:262144, vision:true, canDisable:false }`,
+            `…inkling-small-free` (wire `thinkingmachines/inkling-small-free`, tương tự), và
+            `{ id:'google-gemma-4-31b-it-free', wire:'google/gemma-4-31b-it-free', name:'Gemma 4 31B IT',
+            contextWindow:262144, maxTokens:32768, vision:true }`.
+      - [ ] Kiểm `KILO_REASONING_MANDATORY` đã có `/^thinkingmachines\//` (để off-rung `null` cho live path).
+      - [ ] Unit test snapshot round-trip (safeId→wire) cho 4 id mới; `npm run test:pi-extension` xanh;
+            rebuild dist; `npm run verify:pi-extension-upstream` **PASS**; commit `fix(pi-extension): …`.
+
+### P1 — Gap hành vi free-lane (từ đối chiếu code gốc; ảnh hưởng chất lượng lane)
+- [ ] **G-a (trung bình)** `lane.sseGuard`/`transport`: trên path body **SSE bị gán nhãn sai** (content-type
+      JSON nhưng body là SSE) hiện `await response.text()` → **đệm toàn bộ** rồi mới phát lại, mất
+      streaming tăng dần (dsh `http.js` chỉ sniff 4KB rồi `replayStream`). Port `readHead`+`replayStream`.
+- [ ] **G-c (thấp)** `transportCause`: thêm lý do DNS/TLS (ENOTFOUND/ECONNRESET…) vào thông báo lỗi
+      transport (`fetch failed — getaddrinfo ENOTFOUND …`), như `http.js transportCause`.
+- [ ] **G-b (thấp)** hint **empty-5xx + ảnh** (dsh issue #549): khi gateway trả 5xx body rỗng và request
+      mang ảnh, nói rõ “có thể model không nhận vision”; cần `carriesImageContent`.
+- [ ] **Kilo envelope (thấp)** `friendlyMessage`/kilo path chưa xử lý envelope Kilo riêng:
+      `PAID_MODEL_AUTH_REQUIRED` (id trả phí yêu cầu account → “không nằm ở free pool”) và
+      `moderation|flagged|filtered` (chặn nội dung) — dsh `classifyKilo` đã tách.
+- [ ] **(tuỳ chọn) session xuyên restart**: dsh lưu `session-map.json` (ổn định upstream-session qua restart,
+      nhận canonical id của caller); pi-extension giữ **in-process**. Hiện vẫn đúng (mint thời-gian-thật mỗi
+      lần, gate chấp nhận) — chỉ ghi chú/quyết định có persist không.
+- [ ] **(tuỳ chọn) rationale effort**: `src/effort.js` dùng **budget ladder** (gateway cũ bỏ qua
+      `reasoning_effort`, chỉ ép `max_tokens`); pi-extension dùng **menu `reasoning_effort` do model khai
+      báo** (đã đo lại: gateway hiện **honours** menu này + 400 nếu ngoài menu — audit §3 G4/G5). Ghi rationale vào
+      README/audit để khỏi tưởng bug khi đối chiếu `effort.js`.
+
+### P2 — Hệ thống 2–7 (đã inventory; **out-of-scope v1** — chỉ port nếu chốt)
+Mỗi dòng: hệ thống → thư mục/module gốc → cần gì cho pi → khuyến nghị.
+- [ ] **EAC co-pay** (`src/eac*`, `worker/`) — kênh trả tiền, GitHub login+star, seal HMAC → pi không có;
+      khuyến nghị **KHÔNG**.
+- [ ] **10 kênh tài khoản** (`vendor/channel-pack/src/**` ~148 TS + 2 wasm) — OAuth/QR cho 10 IDE, gom
+      credential, check-in → **rất lớn**, không keyless; khuyến nghị **KHÔNG trong v1** (nếu cần: provider
+      per-IDE riêng, đòi login).
+- [ ] **Engine account-pool** (`src/magpie*` + `vendor/magpie` binary Go 68MB `yetone/magpie`) → local OpenAI
+      gateway 127.0.0.1:8326; pi tự chọn model; khuyến nghị **KHÔNG**.
+- [ ] **Local gateway 3 protocol** (`src/forward.js`, `anthropic.js`, `gemini.js`, `chan-relay.js`, `combos.js`
+      + LAN relay) — biến dsh thành server OpenAI/Anthropic/Gemini; **tuỳ chọn**: port nếu muốn dùng pi làm
+      gateway cho tool khác; nếu không → **KHÔNG**.
+- [ ] **Egress/proxy tự quản** (`src/egress.js`, `bun-fetch.js` — spawn mihomo/Clash, health-check) →
+      pi-extension hiểu chỉ cần `NODE_USE_ENV_PROXY` + `HTTPS_PROXY` (README §Notes); mihomo/Clash là quá mức;
+      khuyến nghị **KHÔNG**.
+- [ ] **Vỏ sản phẩm** (`index.js` host + `client.js` UI 11 trang; `store/updater/reload/feed/push/trust/sponsor/picks`)
+      → `/ofm` command + settings của pi đã đủ; khuyến nghị **KHÔNG** (trừ khi muốn dashboard usage trong pi).
+- [ ] **Token-saver** (`src/token-saver/**` ~17 file, nén tool-result git/ls/grep/tree/read…) → **xem xét**:
+      phù hợp để tiết kiệm token cho pi; cần thiết kế hook tool-result của pi (`registerToolRenderer`/
+      `tool_result` event). Để **quyết định**.
+- [ ] **Aggregate 76 provider** (`src/aggregate.js` + `src/providers/registry.json`) → thêm provider có-key;
+      pi quản key/đăng nhập riêng; khuyến nghị **KHÔNG/optional**.
+- [ ] **Phân phối/đóng gói** (`scripts/build-manifest*`, `catalog/*.json` ký, `packages/standalone+desktop+Tauri`,
+      `updater` Ed25519) → cài qua `pi install ./pi-extension`; khuyến nghị phát hành bằng **git tag** (không cần
+      manifest ký).
+
+### P3 — Chất lượng mã
+- [ ] Siết `strict:true` dần theo module (giữ `any` ở biên pi-API); hiện `strict:false` để port cơ học.
+- [ ] `npm audit` pi-extension: 3 vuln (2 mod, 1 high) — **dev-only, không ship** (extension chỉ ship `dist/`,
+      runtime do `pi` cấp pi-ai). Quyết định có `overrides` hay bỏ.
+
+> Cách tiếp cận: mọi mục P2 là “đã phân tích → cần chủ ý port”, không phải “còn nợ âm thầm”. P0/P1 là việc
+> thật, khả thi, có test.
