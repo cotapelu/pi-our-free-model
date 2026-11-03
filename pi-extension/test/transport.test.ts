@@ -177,6 +177,11 @@ check('transportCause walks the cause chain for the reason a fetch failed', () =
   assert.equal(transportCause(dns), ' — getaddrinfo ENOTFOUND opencode.ai', 'a two-link chain is walked and deduplicated to one fact')
 })
 
+check('friendlyMessage names a paid Kilo id and a moderation block distinctly', () => {
+  assert.match(friendlyMessage('gateway error PAID_MODEL_AUTH_REQUIRED'), /not on the free pool/, 'a paid id is the caller picking a model this keyless lane does not serve')
+  assert.match(friendlyMessage('request flagged by the moderation filter'), /moderation/, 'a moderation block is the model terms, not a key or transport fault')
+})
+
 await (async () => {
   await checkAsync('readHead decides on SSE from the head alone, without waiting for the stream to close', async () => {
     // The source delivers one SSE head and then holds the connection open: a

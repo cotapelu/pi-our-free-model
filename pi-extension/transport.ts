@@ -278,11 +278,17 @@ export function friendlyMessage(message) {
   if (/Model is unavailable|ModelError/i.test(message)) {
     return 'the gateway no longer routes this model id on the free pool; pick another model.'
   }
+  if (/PAID_MODEL_AUTH_REQUIRED/i.test(message)) {
+    return 'this model is not on the free pool: it needs a Kilo account, so this keyless lane does not serve it; pick a model from the free roster.'
+  }
   if (/INVALID_TOKEN|authentication_required/i.test(message)) {
     return 'the gateway refused the request\'s credentials — this lane is keyless, so this means the request carried a token it should not have; update the extension.'
   }
   if (/signature rejected|signature mismatch/i.test(message)) {
     return 'the gateway rejected the request signature — the request body was modified in transit; if a local proxy plugin is installed, disable it for this lane.'
+  }
+  if (/moderation|flagged|filtered/i.test(message)) {
+    return 'the upstream blocked this request\'s content (moderation): the free model refused it, which is a terms problem, not a key or transport fault.'
   }
   return null
 }
