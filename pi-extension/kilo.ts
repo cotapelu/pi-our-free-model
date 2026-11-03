@@ -15,7 +15,7 @@
  *
  * @module pi-extension/kilo.js
  */
-import { openAICompletionsApi } from '@earendil-works/pi-ai/compat'
+import { openAICompletionsApi, type Api, type Model, type SimpleStreamOptions, type TranscriptContext } from '@earendil-works/pi-ai/compat'
 import { KILO_BASE, createKiloRoster, fetchKiloListing } from './catalog.js'
 import { composeFetches, fetchWithoutHeader, restoreAliases, sseGuard } from './lane.js'
 
@@ -42,7 +42,7 @@ const roster = createKiloRoster()
  * rather than through compat flags, which would apply to a provider pi shares
  * with other lanes.
  */
-function normalizeKiloPayload(params, model) {
+function normalizeKiloPayload(params: any, model: Model<Api>) {
   const effort = params.reasoning_effort
   delete params.reasoning_effort
   const supported = model.reasoning === true
@@ -64,7 +64,7 @@ function normalizeKiloPayload(params, model) {
 }
 
 /** One turn on the free pool, with the Authorization header stripped on the wire. */
-export function streamKilo(model, context, options) {
+export function streamKilo(model: Model<Api>, context: TranscriptContext, options?: SimpleStreamOptions) {
   // The registered id stays the identity pi records (usage, transcript, chains);
   // the upstream's `vendor/name:free` spelling rides only the request payload.
   const wireId = roster.wireId(model.id)
@@ -76,7 +76,9 @@ export function streamKilo(model, context, options) {
     fetch: composeFetches(options?.fetch ?? fetch, fetchWithoutHeader('authorization'), sseGuard),
     onPayload: async (params, current) => {
       const replaced = await options?.onPayload?.(params, current)
-      const payload = replaced ?? params
+      // `onPayload` returns whatever the caller replaced the body with; treat it
+      // as the dynamic request payload this normaliser expects.
+      const payload: any = replaced ?? params
       payload.model = wireId
       return normalizeKiloPayload(payload, model)
     },
@@ -104,14 +106,14 @@ export async function kiloModels({ signal }: { signal?: AbortSignal } = {}) {
 }
 
 /** Registration payload for `pi.registerProvider`. */
-export function kiloProvider({ models }) {
+export function kiloProvider({ models }: { models: Model<Api>[] }) {
   return {
     name: 'Our Free Model · Kilo',
     baseUrl: KILO_BASE,
     api: 'ofm-free-api',
     apiKey: 'public',
     models,
-    refreshModels: async (context) => kiloModels({ signal: context?.signal }),
+    refreshModels: async (context: { signal?: AbortSignal }) => kiloModels({ signal: context?.signal }),
     streamSimple: streamKilo,
   }
 }
