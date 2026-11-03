@@ -98,7 +98,7 @@ function errorMessageOf(error: unknown): any {
  * already stringified that body into `errorMessage`; a bare `HTTP 403` tells the
  * user nothing.
  */
-export function translateError(event) {
+export function translateError(event: any) {
   if (event?.type !== 'error') return event
   const message = String(event.error?.errorMessage ?? '')
   const rewritten = friendlyMessage(message)
@@ -108,7 +108,7 @@ export function translateError(event) {
 
 
 /** True when the stream ended on the free lane's quota error. */
-export function isQuotaExhausted(event) {
+export function isQuotaExhausted(event: any) {
   return event?.type === 'error' && /FreeUsageLimitError|429|usage limit/i.test(String(event.error?.errorMessage ?? ''))
 }
 
@@ -118,7 +118,7 @@ export function isQuotaExhausted(event) {
  * has the shape `next => (input, init)` and returns the innermost `fetch` when
  * no wrapper is given.
  */
-export function composeFetches(base = fetch, ...wrappers) {
+export function composeFetches(base: typeof fetch = fetch, ...wrappers: any[]) {
   const list = wrappers.filter((wrap) => typeof wrap === 'function').reverse()
   let next = typeof base === 'function' ? base : fetch
   for (const wrap of list) next = wrap(next)
@@ -132,9 +132,9 @@ export function composeFetches(base = fetch, ...wrappers) {
  * placeholder token is a `401 INVALID_TOKEN` there, so the SDK's Authorization
  * header is dropped on the way out and everything else is left untouched.
  */
-export function fetchWithoutHeader(header, baseFetch = fetch) {
+export function fetchWithoutHeader(header: string, baseFetch: typeof fetch = fetch) {
   const name = header.toLowerCase()
-  return (next) => (input, init) => {
+  return (next: typeof fetch) => (input: any, init?: any) => {
     if (typeof input === 'string') {
       const headers = new Headers(init?.headers)
       headers.delete(name)
@@ -159,11 +159,11 @@ export function fetchWithoutHeader(header, baseFetch = fetch) {
  *   - markup or an empty body becomes a typed error instead of a silent empty
  *     turn.
  */
-export function sseGuard(next) {
-  return async (input, init) => {
+export function sseGuard(next: typeof fetch) {
+  return async (input: any, init?: any) => {
     const response = await next(input, init)
     if (!response.ok || response.body === null) return response
-    const guarded = (stream) => {
+    const guarded = (stream: ReadableStream<Uint8Array> | null) => {
       const body = withIdleTimeout(stream, IDLE_MS)
       return body === stream ? response : new Response(body, { status: response.status, statusText: response.statusText, headers: response.headers })
     }
@@ -187,7 +187,7 @@ export function sseGuard(next) {
  * (the JSON fold) is emitted as one chunk, a `ReadableStream` (the replayed
  * mislabelled SSE) is passed through so its later bytes keep streaming.
  */
-function sseResponse(source, status, headers) {
+function sseResponse(source: string | ReadableStream<Uint8Array>, status: number, headers: any) {
   const stream = typeof source === 'string'
     ? new ReadableStream({
       start(controller) {
@@ -223,12 +223,12 @@ function sseResponse(source, status, headers) {
  */
 
 /** The session seed for one turn: pi's session id when it has one. */
-export function sessionSeedOf(options) {
+export function sessionSeedOf(options: { sessionId?: string }) {
   const id = options?.sessionId
   return typeof id === 'string' && id.trim() ? id.trim() : 'global'
 }
 
 /** Rotate the mapped upstream session after a spent session. */
-export function rotateOnQuota(event, seed) {
+export function rotateOnQuota(event: any, seed: string) {
   if (isQuotaExhausted(event)) rotateSession(seed)
 }
