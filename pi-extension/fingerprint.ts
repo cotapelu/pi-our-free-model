@@ -119,13 +119,13 @@ export function mintSessionId(timestamp = Date.now(), seqState = { last: 0, stam
 const counter = { last: 0, stamp: 0 }
 
 /** Random 14 base62 characters for the session id's entropy half. */
-function base62From(bytes) {
+function base62From(bytes: Uint8Array) {
   let out = ''
   for (const byte of bytes) out += BASE62[byte % 62]
   return out
 }
 
-function cryptoRandomBytes(n) {
+function cryptoRandomBytes(n: number) {
   const bytes = new Uint8Array(n)
   crypto.getRandomValues(bytes)
   return bytes
@@ -139,7 +139,7 @@ function cryptoRandomBytes(n) {
  * conversation). A real `Date.now()` mint stays valid across turns and restarts
  * of the same conversation, so the map keeps it for the process lifetime.
  */
-export function sessionFor(seed) {
+export function sessionFor(seed: string) {
   const key = typeof seed === 'string' && seed.trim() ? seed.trim() : 'global'
   const known = sessions.get(key)
   if (known !== undefined && SESSION_RE.test(known)) return known
@@ -149,7 +149,7 @@ export function sessionFor(seed) {
 }
 
 /** Forget the mapped session, so the next turn for `seed` mints a fresh one. */
-export function rotateSession(seed) {
+export function rotateSession(seed: string) {
   const key = typeof seed === 'string' && seed.trim() ? seed.trim() : 'global'
   sessions.delete(key)
 }
@@ -171,7 +171,7 @@ export function gatewayHeaders({ session, stream, accept }: { session: string; s
 }
 
 /** Name of a chat-completions tool entry (`{type:'function', function:{name}}`) or the flat Responses one. */
-function toolNameOf(tool) {
+function toolNameOf(tool: any) {
   if (!tool || typeof tool !== 'object') return ''
   if (typeof tool.name === 'string' && tool.name.trim()) return tool.name.trim()
   const fn = tool.function
@@ -180,18 +180,18 @@ function toolNameOf(tool) {
 }
 
 /** Does this tool already carry OpenCode's own definition for `name`? */
-function carriesFingerprintDefinition(tool, name) {
+function carriesFingerprintDefinition(tool: any, name: string) {
   const body = toolBodyOf(tool)
   const own =
     body && typeof body === 'object'
       ? { description: body.description, schema: body.parameters ?? body.input_schema }
       : null
   if (own === null) return false
-  const want = FINGERPRINT_TOOL_DEFINITIONS[name]
+  const want = (FINGERPRINT_TOOL_DEFINITIONS as any)[name]
   return own.description === want.description && JSON.stringify(own.schema) === JSON.stringify(want.parameters)
 }
 
-function toolBodyOf(tool) {
+function toolBodyOf(tool: any) {
   return tool.function && typeof tool.function === 'object' ? tool.function : tool
 }
 
@@ -202,8 +202,8 @@ function toolBodyOf(tool) {
  * call them. The wording was measured upstream: "unavailable" makes the model
  * refuse the caller's own tools too, while "placeholder" keeps both sides sane.
  */
-function placeholderNote(names) {
-  const list = names.map((name) => `\`${name}\``).join(' or ')
+function placeholderNote(names: string[]) {
+  const list = names.map((name: string) => `\`${name}\``).join(' or ')
   return names.length > 1
     ? `Do not call the ${list} tools; they are placeholders that do nothing. Use the other tools you have been given instead.`
     : `Do not call the ${list} tool; it is a placeholder that does nothing. Use the other tools you have been given instead.`
@@ -225,11 +225,11 @@ function placeholderNote(names) {
  * @param {{aliases?: Map<string,string>, environment?: object}} [collect]
  * @returns {object} the same payload, fingerprinted
  */
-export function applyFingerprint(params, collect) {
+export function applyFingerprint(params: any, collect: any) {
   if (!params || typeof params !== 'object') return params
   const aliases = collect?.aliases ?? new Map()
   const messages = Array.isArray(params.messages) ? params.messages : []
-  const taken = new Set((Array.isArray(params.tools) ? params.tools : []).map(toolNameOf).filter(name => name !== ''))
+  const taken = new Set((Array.isArray(params.tools) ? params.tools : []).map(toolNameOf).filter((name: string) => name !== ''))
 
   // 1. The two names the lane meters by identity (429 without the rename),
   //    then the gate slots: every caller tool that collides with `read`/`shell`
@@ -242,7 +242,7 @@ export function applyFingerprint(params, collect) {
   if (Array.isArray(params.tools)) {
     for (const tool of params.tools) {
       const name = toolNameOf(tool)
-      const compatibilityBase = Object.hasOwn(FREE_LANE_TOOL_ALIASES, name) ? FREE_LANE_TOOL_ALIASES[name] : undefined
+      const compatibilityBase = Object.hasOwn(FREE_LANE_TOOL_ALIASES, name) ? (FREE_LANE_TOOL_ALIASES as any)[name] : undefined
       if (compatibilityBase !== undefined) {
         let alias: string = compatibilityBase
         for (let i = 2; taken.has(alias); i += 1) alias = `${compatibilityBase}${i}`
@@ -268,9 +268,9 @@ export function applyFingerprint(params, collect) {
   //    carried with OpenCode's own definitions.
   if (!Array.isArray(params.tools)) params.tools = []
   for (const name of FINGERPRINT_TOOLS) {
-    const present = params.tools.some((tool) => toolNameOf(tool) === name && carriesFingerprintDefinition(tool, name))
+    const present = params.tools.some((tool: any) => toolNameOf(tool) === name && carriesFingerprintDefinition(tool, name))
     if (present) continue
-    params.tools.push({ type: 'function', function: { name, ...FINGERPRINT_TOOL_DEFINITIONS[name] } })
+    params.tools.push({ type: 'function', function: { name, ...(FINGERPRINT_TOOL_DEFINITIONS as any)[name] } })
   }
 
   // 3. Prior-turn calls were recorded under the caller's names; rename them to
@@ -306,13 +306,13 @@ export function applyFingerprint(params, collect) {
 }
 
 /** Rename a tool declaration in place, whichever shape it arrived in. */
-function renameToolInPlace(tool, alias) {
+function renameToolInPlace(tool: any, alias: string) {
   const body = toolBodyOf(tool)
   if (body && typeof body === 'object') body.name = alias
 }
 
 /** Point an explicit `tool_choice` at the alias of a tool that was renamed. */
-function retargetToolChoice(params, renameOf) {
+function retargetToolChoice(params: any, renameOf: Map<string, string>) {
   if (!renameOf || renameOf.size === 0) return
   const choice = params.tool_choice
   if (!choice || typeof choice !== 'object' || Array.isArray(choice)) return
@@ -327,7 +327,7 @@ function retargetToolChoice(params, renameOf) {
 }
 
 /** Append `note` to the leading system message, creating one when there is none. */
-function appendSystemNote(params, note) {
+function appendSystemNote(params: any, note: string) {
   const messages = params.messages
   if (!Array.isArray(messages)) return
   const first = messages.find((message) => message?.role === 'system')
@@ -350,11 +350,11 @@ function appendSystemNote(params, note) {
 export function ensureFreeLaneEnvironment(params: any, environment: { directory?: string; platform?: string } = {}) {
   const messages = Array.isArray(params?.messages) ? params.messages : []
   const existing = messages
-    .filter((message) => message?.role === 'system' || message?.role === 'developer')
-    .map((message) => textOfContent(message.content))
+    .filter((message: any) => message?.role === 'system' || message?.role === 'developer')
+    .map((message: any) => textOfContent(message.content))
     .join('\n')
   if (/<env>[\s\S]*?<\/env>/i.test(existing)) return params
-  const line = (value) => String(value).replace(/[\r\n<>]/g, ' ')
+  const line = (value: any) => String(value).replace(/[\r\n<>]/g, ' ')
   const cwd = environment.directory ?? process.cwd()
   const platform = environment.platform ?? process.platform
   const note = `Here is some useful information about the environment you are running in:\n<env>\n  Working directory: ${line(cwd)}\n  Platform: ${line(platform)}\n</env>`
@@ -362,7 +362,7 @@ export function ensureFreeLaneEnvironment(params: any, environment: { directory?
   return params
 }
 
-function textOfContent(content) {
+function textOfContent(content: any) {
   if (typeof content === 'string') return content
   if (Array.isArray(content)) return content.map((part) => part?.text ?? '').join('\n')
   return ''
