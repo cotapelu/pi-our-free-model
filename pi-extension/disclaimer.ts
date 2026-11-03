@@ -24,13 +24,13 @@ export const NOTICE_VERSION = 1
 const FILE_NAME = 'notice-ack.json'
 
 /** `<dataDir or $OFM_DATA_DIR or ~/.our-free-model>/notice-ack.json`. */
-export function ackPath(dataDir) {
+export function ackPath(dataDir?: string) {
   const root = dataDir ?? process.env.OFM_DATA_DIR ?? path.join(os.homedir(), '.our-free-model')
   return path.join(root, FILE_NAME)
 }
 
 /** The stored acknowledgement's version, or 0 when there is none. */
-export function readAck(dataDir) {
+export function readAck(dataDir?: string) {
   try {
     const parsed = JSON.parse(fs.readFileSync(ackPath(dataDir), 'utf8'))
     return Number.isFinite(parsed?.version) ? parsed.version : 0

@@ -31,7 +31,7 @@ export function readChains() {
 }
 
 /** Write the chains atomically; returns what was stored, normalized. */
-export function writeChains(chains) {
+export function writeChains(chains: any[]) {
   const normalized = normalizeChains(chains)
   const file = chainsPath()
   const directory = path.dirname(file)
