@@ -173,8 +173,10 @@ Thêm 2 check `catalog.test.ts` (wire-id chính xác + off-rung family). **127/9
       vào `transport.ts`; `sseGuard` dùng chúng (không còn `response.text()` cho path SSE); `sseResponse`
       nhận cả `ReadableStream`. Test: unit “readHead quyết SSE từ head, không đợi close”+“readRemainder
       stitching”; integration kilo `sse-mislabelled` replayed. Suite **130/9 PASS**.
-- [ ] **G-c (thấp)** `transportCause`: thêm lý do DNS/TLS (ENOTFOUND/ECONNRESET…) vào thông báo lỗi
+- [x] **G-c (thấp)** `transportCause`: thêm lý do DNS/TLS (ENOTFOUND/ECONNRESET…) vào thông báo lỗi
       transport (`fetch failed — getaddrinfo ENOTFOUND …`), như `http.js transportCause`.
+      **→ ĐÃ FIX (`3a78696`)**: port `transportCause` (đi tối đa 3 nhánh `cause`, dedupe) vào
+      `transport.ts`; `errorMessageOf` (`lane.ts`) ghép vào `errorMessage`; test 4 nhánh.
 - [ ] **G-b (thấp)** hint **empty-5xx + ảnh** (dsh issue #549): khi gateway trả 5xx body rỗng và request
       mang ảnh, nói rõ “có thể model không nhận vision”; cần `carriesImageContent`.
 - [ ] **Kilo envelope (thấp)** `friendlyMessage`/kilo path chưa xử lý envelope Kilo riêng:
