@@ -12,7 +12,7 @@
  *
  * @module pi-extension/opencode.js
  */
-import { openAICompletionsApi } from '@earendil-works/pi-ai/compat'
+import { openAICompletionsApi, type Api, type Model, type SimpleStreamOptions, type TranscriptContext } from '@earendil-works/pi-ai/compat'
 import { applyFingerprint, gatewayHeaders, sessionFor } from './fingerprint.js'
 import {
   OPENECODE_CHAT_BASE,
@@ -39,7 +39,7 @@ const DSML_FAMILY = /deepseek/i
  *  - the transport guard that reads a mislabelled or non-SSE 200 body by shape
  *    instead of dropping the turn.
  */
-export function streamOpencode(model, context, options) {
+export function streamOpencode(model: Model<Api>, context: TranscriptContext, options?: SimpleStreamOptions) {
   const seed = sessionSeedOf(options)
   const aliases = new Map()
   const headers = gatewayHeaders({ session: sessionFor(seed), stream: true })
@@ -75,7 +75,7 @@ export async function opencodeModels({ signal }: { signal?: AbortSignal } = {}) 
 }
 
 /** Registration payload for `pi.registerProvider`. */
-export function opencodeProvider({ models }) {
+export function opencodeProvider({ models }: { models: Model<Api>[] }) {
   return {
     name: 'Our Free Model · OpenCode',
     baseUrl: OPENECODE_CHAT_BASE,
@@ -83,7 +83,7 @@ export function opencodeProvider({ models }) {
     // The pooled public credential this lane publishes; not a per-user secret.
     apiKey: 'public',
     models,
-    refreshModels: async (context) => opencodeModels({ signal: context?.signal }),
+    refreshModels: async (context: { signal?: AbortSignal }) => opencodeModels({ signal: context?.signal }),
     streamSimple: streamOpencode,
   }
 }
