@@ -7,11 +7,10 @@
  * unrecognised value falls back to the shipped default rather than being
  * honoured as a typo.
  *
- * The default is **off**, and that is deliberate. Compaction changes what the
- * model reads: a compacted `ls` is not the `ls` the user ran, and a user who
- * turns it on should be told that once. It is the same order the dsh plugin
- * ships with — prompt-level shaping off, tool compaction a single switch the
- * user flips.
+ * The default is **everything off**, and that is deliberate. Compaction changes
+ * what the model reads, and a prompt family changes how the model *writes* —
+ * both are a user's choice to make, not something a provider extension silently
+ * turns on for them.
  *
  * @module pi-extension/saver-store.js
  */
@@ -19,26 +18,45 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { CAVEMAN_LEVELS, PONYTAIL_LEVELS, OFF } from './token-saver/prompts.js'
 
 const FILE_NAME = 'saver.json'
 
-/** The switches this store holds. `rtk` is tool-output compaction. */
+/** The switches this store holds. */
 export interface SaverSettings {
+  /** Tool-output compaction (`token-saver/index.js`). */
   rtk: boolean
+  /** Answer-shaping prompt family level. */
+  caveman: string
+  /** Work-shaping prompt family level. */
+  ponytail: string
 }
 
 /** What a fresh machine starts from: the saver off, the user turns it on. */
-export const SAVER_DEFAULTS: Readonly<SaverSettings> = Object.freeze({ rtk: false })
+export const SAVER_DEFAULTS: Readonly<SaverSettings> = Object.freeze({
+  rtk: false,
+  caveman: OFF,
+  ponytail: OFF,
+})
 
 /** `<dataDir or $OFM_DATA_DIR or ~/.our-free-model>/saver.json`. */
 export function saverPath() {
   return path.join(process.env.OFM_DATA_DIR ?? path.join(os.homedir(), '.our-free-model'), FILE_NAME)
 }
 
+/** One family's level: the stored value when it is a real level, else `off`. */
+function levelOf(value: unknown, levels: readonly string[]): string {
+  return typeof value === 'string' && levels.includes(value) ? value : OFF
+}
+
 /** Coerce a stored value into the settings shape, field by field. */
 export function normalizeSaver(raw: any): SaverSettings {
   const section = raw !== null && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}
-  return { rtk: typeof section.rtk === 'boolean' ? section.rtk : SAVER_DEFAULTS.rtk }
+  return {
+    rtk: typeof section.rtk === 'boolean' ? section.rtk : SAVER_DEFAULTS.rtk,
+    caveman: levelOf(section.caveman, CAVEMAN_LEVELS),
+    ponytail: levelOf(section.ponytail, PONYTAIL_LEVELS),
+  }
 }
 
 /**
@@ -67,6 +85,8 @@ export function writeSaver(patch: Partial<SaverSettings>): SaverSettings {
   const next = normalizeSaver({
     ...current,
     ...(patch?.rtk === undefined ? {} : { rtk: patch.rtk }),
+    ...(patch?.caveman === undefined ? {} : { caveman: patch.caveman }),
+    ...(patch?.ponytail === undefined ? {} : { ponytail: patch.ponytail }),
   })
   const file = saverPath()
   const directory = path.dirname(file)

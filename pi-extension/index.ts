@@ -24,7 +24,9 @@ import { readChains, writeChains } from './chain-store.js'
 import { readSaver, writeSaver } from './saver-store.js'
 import { allSavings } from './saver-stats.js'
 import { describeSavings } from './token-saver/index.js'
+import { activePrompts, CAVEMAN_LEVELS, PONYTAIL_LEVELS, OFF } from './token-saver/prompts.js'
 import { noticeText, shouldNotice, writeAck } from './disclaimer.js'
+import fs from 'node:fs'
 import { kiloModels, kiloProvider, PROVIDER_ID as KILO_ID } from './kilo.js'
 import { opencodeModels, opencodeProvider, PROVIDER_ID as OPENECODE_ID } from './opencode.js'
 
@@ -107,6 +109,9 @@ function describeChains(ctx: any, chains: any[]) {
  * route upstream.
  */
 export default async function (pi: any) {
+  fs.appendFileSync('/tmp/ofm-debug.log', 'factory ran\n')
+  pi.on('session_start', () => { fs.appendFileSync('/tmp/ofm-debug.log', 'session_start fired\n') })
+  pi.on('before_agent_start', (event: any) => { fs.appendFileSync('/tmp/ofm-debug.log', 'before_agent_start syslen=' + String(event.systemPrompt).length + '\n') })
   const [kilo, opencode, chains] = await Promise.all([kiloModels(), opencodeModels(), Promise.resolve(readChains())])
 
   pi.registerProvider(KILO_ID, kiloProvider({ models: kilo }))
@@ -121,6 +126,16 @@ export default async function (pi: any) {
     if (ctx?.hasUI !== true || !shouldNotice()) return
     writeAck()
     ctx.ui.notify(noticeText(), 'warning')
+  })
+
+  // The prompt families shape how the model *writes*, so they ride the system
+  // prompt itself — the one place every lane and every turn observes. Appending
+  // rather than replacing is what keeps the user's own instructions intact.
+  pi.on('before_agent_start', (event: any) => {
+    const saver = readSaver()
+    const prompts = activePrompts(saver)
+    if (prompts.length === 0) return
+    return { systemPrompt: `${event.systemPrompt}\n\n${prompts.map((entry) => entry.text).join('\n\n')}` }
   })
 
   pi.registerCommand('ofm', {
@@ -325,7 +340,7 @@ export default async function (pi: any) {
       }
 
       if (head === 'saver') {
-        // `saver` with no verb reports the switch and the last reading, so the
+        // `saver` with no verb reports every switch and the last reading, so the
         // answer to "is it doing anything" does not need a second command.
         const verb = (words[1] ?? '').toLowerCase()
         if (verb === '') {
@@ -334,7 +349,7 @@ export default async function (pi: any) {
           const measured = readings.length === 0
             ? 'no request measured yet'
             : readings.map(({ provider, reading }) => `${provider}: ${describeSavings(reading.stats) ?? 'switched off'}`).join('\n')
-          notify(`token saver: ${saver.rtk ? 'ON' : 'OFF'} — /ofm saver on|off\n${measured}`)
+          notify(`token saver: ${saver.rtk ? 'ON' : 'OFF'} · caveman: ${saver.caveman} · ponytail: ${saver.ponytail}\n${measured}`)
           return
         }
         if (verb === 'on' || verb === 'off') {
@@ -342,6 +357,22 @@ export default async function (pi: any) {
           notify(stored.rtk
             ? 'token saver on — tool output (ls / grep / git diff / logs / find / tree) is compacted before it leaves this machine. The transcript keeps the full result; only the request changes.'
             : 'token saver off — every request ships the tool output as it was returned')
+          return
+        }
+        // The two prompt families take a level, not a switch: `off` disables
+        // one, and an unrecognised level is refused rather than coerced, so a
+        // typo never silently becomes "no prompt".
+        if (verb === 'caveman' || verb === 'ponytail') {
+          const levels = verb === 'caveman' ? CAVEMAN_LEVELS : PONYTAIL_LEVELS
+          const level = (words[2] ?? '').toLowerCase()
+          if (!levels.includes(level as any)) {
+            notify(`usage: /ofm saver ${verb} ${levels.join('|')}`)
+            return
+          }
+          const stored = writeSaver({ [verb]: level } as any)
+          notify(level === OFF
+            ? `${verb} off — the prompt family is no longer added to the system prompt`
+            : `${verb} ${level} — its prompt is added to the system prompt from the next turn. It changes how the model writes; your own instructions are left intact.`)
           return
         }
         if (verb === 'stats') {
@@ -354,7 +385,7 @@ export default async function (pi: any) {
           notify(readings.map(({ provider, reading }) => `${provider}: ${describeSavings(reading.stats) ?? 'nothing compacted'}`).join('\n'))
           return
         }
-        notify('usage: /ofm saver on|off\n       /ofm saver stats')
+        notify('usage: /ofm saver on|off\n       /ofm saver caveman off|lite|full|ultra|wenyan-lite|wenyan|wenyan-ultra\n       /ofm saver ponytail off|lite|full|ultra\n       /ofm saver stats')
         return
       }
 
