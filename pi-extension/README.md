@@ -65,22 +65,60 @@ npm --prefix pi-extension install     # dev deps (typescript, @types/node, the p
 npm --prefix pi-extension run build   # tsc → pi-extension/dist  (also runs automatically via "prepare")
 ```
 
-then install it:
+## Install
+
+### To run it in this repository only
 
 ```bash
-pi install ./pi-extension     # from this repository root — loads on every `pi`, no approval
+cd pi-extension
+npm run install        # build, then copy dist → ../.pi/extensions/ofm-provider
+
+cd ..
+pi --approve          # loads the copy; project-local resources need project trust
 ```
 
-or try it for one invocation:
+`npm run install` does exactly two things: it runs the build, and it replaces
+`.pi/extensions/ofm-provider/` with the freshly compiled `dist/`. Because that
+is a copy, **re-run it after every source edit** — editing a `.ts` file changes
+`pi-extension/dist`, not the copy pi reads. (A file left in the copy from an
+older build is removed rather than merged over: two versions of one module
+sitting side by side is worse than a stale one.)
+
+Verified against pi 1.4.0's own discovery (`dist/core/extensions/loader.js`): it
+walks `<cwd>/.pi/extensions/`, takes the `index.js` at the top of a
+subdirectory, and recurses no further — so exactly one extension entry point
+loads and the rest of `dist/` is never mistaken for a second one.
+
+Two consequences of that path worth knowing:
+
+- it is read from the **current working directory only**, so `pi` must be run
+  from this repository root — running it from a subdirectory finds nothing;
+- project-local resources are **trust-gated**, so every session needs
+  `--approve` until a decision is saved (`/trust`, or `~/.pi/agent/trust.json`).
+
+### To run it everywhere
+
+```bash
+pi install ./pi-extension     # from this repository root — no approval needed
+```
+
+This registers the *directory* instead of copying it, so the compiled output is
+resolved live and no re-copy is ever needed. `pi install ./pi-extension` writes
+`~/.pi/agent/settings.json`; `pi install ./pi-extension -l` writes
+`.pi/settings.json` for this repository only and is still trust-gated.
+
+Copying to a user-level directory is the third form — it works from any working
+directory and needs no approval, but it is a snapshot like the project copy:
+
+```bash
+cp -r pi-extension/dist ~/.pi/agent/extensions/ofm-provider
+```
+
+### For a single invocation
 
 ```bash
 pi -e ./pi-extension
 ```
-
-The project-local form, `pi install ./pi-extension -l`, records the package in
-`.pi/settings.json` so it activates only inside this repository. pi gates
-project-local resources behind a trust check, so it is **not loaded** until you
-pass `--approve` when you run `pi` in the repo.
 
 ## Pick a model
 

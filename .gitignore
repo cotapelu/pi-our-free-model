@@ -47,3 +47,6 @@ packages/desktop/src-tauri/.node-license-cache/
 packages/desktop/node_modules/
 
 _audit/
+
+# pi coding agent runtime: project-local extensions copied by `npm run install`
+.pi/

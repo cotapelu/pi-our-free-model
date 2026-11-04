@@ -65,22 +65,60 @@ npm --prefix pi-extension install     # dev deps (typescript, @types/node, các 
 npm --prefix pi-extension run build   # tsc → pi-extension/dist  (cũng tự chạy qua "prepare")
 ```
 
-rồi cài:
+### Chỉ dùng trong repo này
 
 ```bash
-pi install ./pi-extension     # từ gốc repo — nạp ở mọi phiên `pi`, không cần approve
+cd pi-extension
+npm run install        # build, rồi copy dist → ../.pi/extensions/ofm-provider
+
+cd ..
+pi --approve          # nạp bản copy; tài nguyên project-local cần project trust
 ```
 
-hoặc thử trong một lần gọi:
+`npm run install` làm đúng hai việc: chạy build, và **thay**
+`.pi/extensions/ofm-provider/` bằng `dist/` vừa biên dịch. Vì đó là bản copy,
+**chạy lại sau mỗi lần sửa nguồn** — sửa một file `.ts` chỉ đổi
+`pi-extension/dist`, không đổi bản copy mà `pi` đọc. File cũ còn sót trong copy
+bị xoá chứ không gộp đè: hai phiên bản của một module nằm cạnh nhau còn tệ hơn
+một bản cũ.
+
+Đã kiểm chứng với chính cơ chế discovery của pi 1.4.0
+(`dist/core/extensions/loader.js`): nó quét `<cwd>/.pi/extensions/`, lấy
+`index.js` ở đầu mỗi thư mục con, và **không** đệ quy sâu hơn — nên chỉ đúng một
+entry point extension được nạp, phần còn lại của `dist/` không bị nhầm thành
+extension thứ hai.
+
+Hai hệ quả của đường dẫn đó:
+
+- nó chỉ đọc ở **thư mục làm việc hiện tại**, nên `pi` phải chạy từ gốc repo này
+  — chạy từ thư mục con sẽ không thấy gì;
+- tài nguyên project-local bị **chặn bởi project trust**, nên mỗi phiên cần
+  `--approve` cho tới khi có quyết định được lưu (`/trust`, hoặc
+  `~/.pi/agent/trust.json`).
+
+### Dùng ở mọi nơi
+
+```bash
+pi install ./pi-extension     # từ gốc repo này — không cần approve
+```
+
+Cách này đăng ký *thư mục* thay vì copy, nên output biên dịch được resolve live
+và không bao giờ phải copy lại. `pi install ./pi-extension` ghi vào
+`~/.pi/agent/settings.json`; `pi install ./pi-extension -l` ghi
+`.pi/settings.json` chỉ cho repo này và vẫn bị chặn bởi trust.
+
+Copy sang thư mục cấp user là cách thứ ba — chạy từ mọi thư mục làm việc và
+không cần approve, nhưng cũng là bản snapshot như bản project:
+
+```bash
+cp -r pi-extension/dist ~/.pi/agent/extensions/ofm-provider
+```
+
+### Chỉ một lần chạy
 
 ```bash
 pi -e ./pi-extension
 ```
-
-Dạng project-local `pi install ./pi-extension -l` ghi package vào
-`.pi/settings.json` để chỉ kích hoạt trong repo này. pi **gate tin cậy** tài
-nguyên project-local, nên nó **không nạp** tới khi truyền `--approve` lúc chạy
-`pi` trong repo.
 
 ## Chọn model
 
