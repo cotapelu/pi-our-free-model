@@ -18,6 +18,42 @@ carries pi's own safe id to a lane that is up. Tool calls, thinking deltas,
 usage accounting and cancellation behave like any other provider, because both
 lanes stream through pi-ai's OpenAI-Completions implementation.
 
+## Token saver
+
+A long agent turn is mostly tool output — diffs, listings, search results,
+build logs — and almost all of it is redundancy a model does not need. The
+saver rewrites those blobs into compacted shapes before the request leaves this
+machine. **Off by default**, because it changes what the model reads; the
+transcript still holds the full result, only the request changes.
+
+```bash
+/ofm saver          # the switch plus what the last request measured
+/ofm saver on|off   # turn tool-output compaction on or off
+/ofm saver stats    # bytes saved per lane since load
+```
+
+What it compacts, and how — the filters are ported byte-for-byte from the RTK
+filter set so the markers match what a model already reads:
+
+| Output | What survives |
+|---|---|
+| `git diff` | file names, hunk headers, `+N -M` per file, and a bounded window of each hunk — with `... (N lines truncated)` saying how much is gone |
+| `git status` | branch, staged/modified/untracked/conflict counts, and a bounded path list |
+| `git log` | sha, author, date, subject and the diffstat — commit bodies and graph decoration go |
+| `ls -la` | names with human sizes, and a `Summary: N files, M dirs (…)` line |
+| `grep -rn` | grouped by file, first 10 matches per file, `+N` when more were dropped |
+| `find` | grouped by directory with basenames, capped |
+| `tree` | the glyphs stay (they are the information), the trailing summary goes |
+| build output | errors with their continuation lines, a bounded warning set, the summary — progress lines become counts |
+| other logs | duplicate runs collapse to one line plus `... (N duplicate lines)`, capped |
+
+Three rules bound what may be touched: only tool *output* is compacted (system
+prompts, your turns and the model's own tool-call arguments are left alone); an
+errored tool result is never compacted — it is the model's only evidence of
+what failed; and a blob is only replaced when the replacement is non-empty and
+strictly smaller. Settings live in `~/.our-free-model/saver.json`
+(`OFM_DATA_DIR` overrides).
+
 ## Install
 
 The folder is a pi package. It is **TypeScript**, and `pi` loads the compiled
@@ -167,6 +203,14 @@ pi-extension/
 ├── kilo.ts               ofm-kilo provider
 ├── chains.ts             fallback chains: normalize, capacity intersection, routing
 ├── chain-store.ts        durable chain storage (~/.our-free-model/chains.json)
+├── saver-store.ts        durable token-saver switch (~/.our-free-model/saver.json)
+├── saver-stats.ts        what the saver last measured, per lane (/ofm saver stats)
+├── token-saver/          tool-output compaction: 12 RTK filters, autodetect, gates
+│   ├── index.ts          compressRequest / compressText, the walk over a payload
+│   ├── autodetect.ts     which filter a blob is, from its own header shape
+│   ├── constants.ts      every threshold; a compatibility surface, not a knob
+│   └── filters/          git-diff, git-status, git-log, ls, grep, find, tree,
+│                         build-output, dedup-log, read-numbered, search-list
 ├── disclaimer.ts         the one-time notice the free lanes owe the user
 ├── scripts/reverify-upstream.ts   live re-measurement of both lanes
 ├── dist/                 compiled output (`tsc`) — this is what `pi` loads

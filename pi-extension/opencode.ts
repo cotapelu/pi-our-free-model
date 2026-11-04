@@ -21,6 +21,9 @@ import {
   staticOpencodeModels,
 } from './catalog.js'
 import { composeFetches, restoreAliases, rotateOnQuota, sessionSeedOf, sseGuard } from './lane.js'
+import { compressRequest } from './token-saver/index.js'
+import { readSaver } from './saver-store.js'
+import { recordSavings } from './saver-stats.js'
 
 /** Provider id, also the pi model prefix: `ofm-opencode/<model>`. */
 export const PROVIDER_ID = 'ofm-opencode'
@@ -37,7 +40,10 @@ const DSML_FAMILY = /deepseek/i
  *    the identity-metered tool renames, no `tool_choice: 'none'`);
  *  - the response-side un-aliasing (and the DSML scrub for DeepSeek v4);
  *  - the transport guard that reads a mislabelled or non-SSE 200 body by shape
- *    instead of dropping the turn.
+ *    instead of dropping the turn;
+ *  - the token saver, when the user switched it on: tool results are compacted
+ *    *after* the fingerprint, so the bytes counted describe the body that
+ *    actually ships (and the fingerprint's rename map still matches it).
  */
 export function streamOpencode(model: Model<Api>, context: TranscriptContext, options?: SimpleStreamOptions) {
   const seed = sessionSeedOf(options)
@@ -52,7 +58,12 @@ export function streamOpencode(model: Model<Api>, context: TranscriptContext, op
       fetch: composeFetches(options?.fetch ?? fetch, sseGuard),
       onPayload: async (params, current) => {
         const replaced = await options?.onPayload?.(params, current)
-        return applyFingerprint(replaced ?? params, { aliases })
+        const body: any = applyFingerprint(replaced ?? params, { aliases })
+        if (!readSaver().rtk) return body
+        // pi-ai builds an OpenAI Chat body, so the wire is `chat`; tool results
+        // are `{role:'tool'}` messages and nothing else is touched.
+        recordSavings(PROVIDER_ID, compressRequest(body, 'chat', { enabled: true }).stats)
+        return body
       },
     },
   )

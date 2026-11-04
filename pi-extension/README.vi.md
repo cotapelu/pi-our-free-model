@@ -17,6 +17,43 @@ chính tả upstream đã học, nên một lượt không bao giờ mang safe-i
 một làn đang sống. Tool-call, delta thinking, tính usage và hủy hoạt động như
 mọi provider khác, vì cả hai làn đều stream qua bản OpenAI-Completions của pi-ai.
 
+## Token saver (nén kết quả tool)
+
+Một lượt làm việc dài phần lớn là **đầu ra của tool** — diff, listing, kết quả
+tìm kiếm, log build — và hầu như toàn là dư thừa model không cần: đường dẫn lặp
+lại trên mỗi match, dòng tiến trình cho mỗi crate biên dịch, thân hunk to gấp
+nhiều lần thay đổi nó mô tả. Saver viết lại các khối đó thành dạng compact
+**trước khi request rời máy này**. **Mặc định tắt**, vì nó thay đổi những gì
+model đọc; transcript vẫn giữ kết quả đầy đủ, chỉ có request thay đổi.
+
+```bash
+/ofm saver          # trạng thái công tắc + số đo của lượt gần nhất
+/ofm saver on|off   # bật/tắt nén đầu ra tool
+/ofm saver stats    # byte đã tiết kiệm theo từng làn kể từ lúc nạp
+```
+
+Nén cái gì, giữ lại gì — các filter được port **từng byte** từ bộ RTK nên marker
+giống đúng dạng model vốn đã đọc:
+
+| Đầu ra | Giữ lại |
+|---|---|
+| `git diff` | tên file, hunk header, `+N -M` mỗi file, một cửa sổ có giới hạn của mỗi hunk — kèm `... (N lines truncated)` nói đã bỏ bao nhiêu |
+| `git status` | nhánh, số lượng staged/modified/untracked/conflict, danh sách đường dẫn có giới hạn |
+| `git log` | sha, tác giả, ngày, subject và diffstat — thân commit và trang trí graph bị bỏ |
+| `ls -la` | tên kèm cỡ đọc được, và dòng `Summary: N files, M dirs (…)` |
+| `grep -rn` | gom theo file, 10 match đầu mỗi file, `+N` khi còn bị bỏ |
+| `find` | gom theo thư mục với basename, có giới hạn |
+| `tree` | giữ glyph (nó chính là thông tin), bỏ dòng tổng kết cuối |
+| log build | lỗi kèm dòng tiếp theo, tập warning có giới hạn, dòng tổng kết — dòng tiến trình thành số đếm |
+| log khác | chuỗi dòng trùng gọn thành một dòng + `... (N duplicate lines)`, có giới hạn |
+
+Ba luật giới hạn cái được đụng vào: chỉ **đầu ra tool** được nén (system prompt,
+lượt của người dùng và argument của tool-call do model sinh ra được để nguyên);
+kết quả tool **báo lỗi không bao giờ** bị nén — nó là bằng chứng duy nhất cho
+biết cái gì hỏng; và một khối chỉ bị thay khi bản thay **khác rỗng và nhỏ hơn
+rõ rệt**. Cấu hình nằm ở `~/.our-free-model/saver.json`
+(`OFM_DATA_DIR` ghi đè).
+
 ## Cài đặt
 
 Thư mục này là một package của pi. Nó là **TypeScript**, và `pi` nạp
@@ -159,6 +196,14 @@ pi-extension/
 ├── kilo.ts               provider ofm-kilo
 ├── chains.ts             chain fallback: normalize, giao tường lực, định tuyến
 ├── chain-store.ts        lưu chain bền (~/.our-free-model/chains.json)
+├── saver-store.ts        công tắc saver bền (~/.our-free-model/saver.json)
+├── saver-stats.ts        saver vừa đo gì, theo từng làn (/ofm saver stats)
+├── token-saver/          nén đầu ra tool: 12 filter RTK, autodetect, các cổng an toàn
+│   ├── index.ts          compressRequest / compressText, lượt đi trong payload
+│   ├── autodetect.ts     một khối là filter nào, từ hình-dạng header của nó
+│   ├── constants.ts      mọi ngưỡng; là mặt tương-thích, không phải nút chỉnh
+│   └── filters/          git-diff, git-status, git-log, ls, grep, find, tree,
+│                         build-output, dedup-log, read-numbered, search-list
 ├── disclaimer.ts         thông báo một-lần mà các làn free nợ người dùng
 ├── scripts/reverify-upstream.ts   đo lại live cả hai làn
 ├── dist/                 output biên dịch (`tsc`) — cái mà `pi` nạp
@@ -177,8 +222,8 @@ Build (`tsc`) chạy với `strict` + `noImplicitAny`, nên lỗi type sẽ làm
 `pi-coding-agent` đang cài.
 
 Các script integration lái một tiến trình `pi` thật trên gateway đứng-thế
-loopback, khẳng định fingerprint, khôi phục alias và hình-dạng wire đầu-cuối mà
-không chạm upstream. Khi không có `pi`, chúng in
+loopback, khẳng định fingerprint, khôi phục alias, **nén kết quả tool trên wire**
+và hình-dạng wire đầu-cuối mà không chạm upstream. Khi không có `pi`, chúng in
 `SKIP <script> — the pi binary is not on PATH` và exit 0, nên contributor không
 có pi vẫn chạy toàn bộ phần offline. Verifier live không dành cho CI vì nó tốn
 quota free của egress.
@@ -194,7 +239,7 @@ snapshot offline. Nó exit khác-0 khi drift; khi đó quy trình nằm ở
 
 - Model bị chặn vùng cần proxy ra ngoài: `NODE_USE_ENV_PROXY=1` kèm
   `HTTPS_PROXY=...` định tuyến cả hai làn qua nó.
-- `OFM_DATA_DIR` đổi chỗ `chains.json` và `notice-ack.json`.
+- `OFM_DATA_DIR` đổi chỗ `chains.json`, `saver.json` và `notice-ack.json`.
 - `OFM_OPENECODE_BASE`, `OFM_OPENECODE_CHAT_BASE`, `OFM_KILO_BASE` ghi đè endpoint
   (test dùng; `OFM_OPENECODE_BASE` cũng đổi listing).
 - Không gì ở đây giữ credential riêng, tài khoản hay token store. Cả hai làn chỉ

@@ -21,6 +21,9 @@
  */
 import { CHAIN_PREFIX, CHAIN_PROVIDER, buildChainEdit, chainByName, chainId, decideLink, evaluateAdd, intersectCapabilities, normalizeChains, parseChainAdd, parseChainSetLinks, parseLinkList } from './chains.js'
 import { readChains, writeChains } from './chain-store.js'
+import { readSaver, writeSaver } from './saver-store.js'
+import { allSavings } from './saver-stats.js'
+import { describeSavings } from './token-saver/index.js'
 import { noticeText, shouldNotice, writeAck } from './disclaimer.js'
 import { kiloModels, kiloProvider, PROVIDER_ID as KILO_ID } from './kilo.js'
 import { opencodeModels, opencodeProvider, PROVIDER_ID as OPENECODE_ID } from './opencode.js'
@@ -121,7 +124,7 @@ export default async function (pi: any) {
   })
 
   pi.registerCommand('ofm', {
-    description: 'Our Free Model: status | refresh | chain [add|set|remove|enable|disable]',
+    description: 'Our Free Model: status | refresh | saver [on|off|stats] | chain [add|set|remove|enable|disable]',
     handler: async (arg: string, ctx: any) => {
       const words = String(arg ?? '').trim().split(/\s+/).filter(Boolean)
       const head = (words[0] ?? 'status').toLowerCase()
@@ -318,6 +321,40 @@ export default async function (pi: any) {
         pi.registerProvider(KILO_ID, kiloProvider({ models: nextKilo }))
         pi.registerProvider(OPENECODE_ID, opencodeProvider({ models: nextOpencode }))
         notify(`refreshed: ofm-kilo ${nextKilo.length} models · ofm-opencode ${nextOpencode.length} models`)
+        return
+      }
+
+      if (head === 'saver') {
+        // `saver` with no verb reports the switch and the last reading, so the
+        // answer to "is it doing anything" does not need a second command.
+        const verb = (words[1] ?? '').toLowerCase()
+        if (verb === '') {
+          const saver = readSaver()
+          const readings = allSavings()
+          const measured = readings.length === 0
+            ? 'no request measured yet'
+            : readings.map(({ provider, reading }) => `${provider}: ${describeSavings(reading.stats) ?? 'switched off'}`).join('\n')
+          notify(`token saver: ${saver.rtk ? 'ON' : 'OFF'} — /ofm saver on|off\n${measured}`)
+          return
+        }
+        if (verb === 'on' || verb === 'off') {
+          const stored = writeSaver({ rtk: verb === 'on' })
+          notify(stored.rtk
+            ? 'token saver on — tool output (ls / grep / git diff / logs / find / tree) is compacted before it leaves this machine. The transcript keeps the full result; only the request changes.'
+            : 'token saver off — every request ships the tool output as it was returned')
+          return
+        }
+        if (verb === 'stats') {
+          // The savings for the lanes that have answered a turn since load.
+          const readings = allSavings()
+          if (readings.length === 0) {
+            notify('no request measured yet — run a turn with the saver on')
+            return
+          }
+          notify(readings.map(({ provider, reading }) => `${provider}: ${describeSavings(reading.stats) ?? 'nothing compacted'}`).join('\n'))
+          return
+        }
+        notify('usage: /ofm saver on|off\n       /ofm saver stats')
         return
       }
 

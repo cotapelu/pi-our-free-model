@@ -147,7 +147,75 @@ Checklist phiên làm việc này. Trạng thái cập nhật sau mỗi bước.
 
 ---
 
-## Việc cần làm — gap-analysis toàn bộ repo dsh → `pi-extension/` (2026-11-02)
+## Việc cần làm — làm full như dsh (2026-11-03)
+
+Kế hoạch từ báo cáo `BAOCAO.md`. Nguyên tắc: **mọi việc dưới đây đều OFF mặc định,
+bật qua `/ofm`** — chúng làm thay đổi hành vi/model, không được tự ý canh thiệp.
+Thứ tự theo giá trị/effort.
+
+- [x] **A1 — Token-saver RTK (nén tool result)** ✅ ĐÃ XONG (2026-11-03)
+      Port `src/token-saver/rtk/**` sang `pi-extension/token-saver/` (12 filter +
+      autodetect + registry + gates), nối vào `onPayload` của **cả 2 lane** — chạy SAU
+      fingerprint và SAU normalize Kilo, nên byte đếm được đúng là body thật sự gửi đi.
+      (Quyết định thiết kế khác kế hoạch ban đầu: **không** dùng event `tool_result`.
+      dsh cũng compact ở phía request — nén trong payload thì transcript vẫn giữ
+      kết quả đầy đủ, user xem được gốc; nén ở `tool_result` sẽ ghi đè lên lịch sử
+      phiên làm mất dữ liệu vĩnh viễn và thay đổi cả cửa sổ context của pi.)
+      - `saver-store.ts` (`~/.our-free-model/saver.json`, 0600, atomic) — **off mặc định**
+      - `saver-stats.ts` — đọc lại qua `/ofm saver stats`
+      - `/ofm saver` (báo switch + số đo), `/ofm saver on|off`, `/ofm saver stats`
+      - chỉ `wire: 'chat'` (pi-ai luôn dựng OpenAI chat cho 2 lane), 2 wire còn lại
+        giữ để parity + được unit test bao phủ
+      - **Unit 33 check** (`token-saver.test.ts`): round-trip từng filter, autodetect,
+        3 luật an toàn (chỉ output/không nén lỗi/không lớn hơn input), `compressRequest`
+        trên wire chat, `saver-store` round-trip + damaged file + 0600
+      - **Integration 9 check** (`saver-integration.ts`) qua `pi` thật: đọc 1 file chứa
+        `ls -la` qua tool `read` của pi → assert lượt 2 mang result ĐÃ compact
+        (`Summary: 30 files`, hết cột permission, nhỏ hơn bản gốc); lần chạy với
+        saver off → nguyên văn. **Kiểm răng**: gỡ hook compact → đúng 4 check FAIL.
+      - Suite sau khi nối: **174 check / 11 script PASS**, không SKIP.
+- [ ] **A2 — Prompt-saver (caveman/ponytail)**
+      Port `src/token-saver/prompts.js` (7 level caveman + 4 ponytail, text thuần)
+      qua `on('before_agent_start')` → append vào `systemPrompt`.
+      Điều khiển: `/ofm saver caveman off|lite|full|ultra|wenyan*`, `/ofm saver ponytail ...`
+      Off mặc định. Test pin độ dài từng level (chống paraphrase) + 1 turn assert
+      `systemPrompt` chứa text đúng level.
+- [ ] **A3 — Recovery/continuation (fix turn rỗng)**
+      **Bước 0 (blocker)**: kiểm pi-ai 1.4.0 đã tự recover turn rỗng chưa — nếu có thì
+      port sẽ trùng lặp, chỉ ghi chú, không code.
+      Nếu chưa: port `src/recovery.js` (200 dòng) — `recoveryMessages` cho
+      "chỉ có reasoning, không có text", `continuationMessages` cho finish `length`.
+      Chặn trong `restoreAliases` (lane.ts), bật qua env `OFM_RECOVERY=1` trước đã.
+      Rủi ro: `TranscriptContext` chỉ cho `messages` — phải verify thinking signature
+      không mất khi tự phát lại.
+- [ ] **A4 — chain 3 strategy còn lại (smart/usage/pace)**
+      Port nhánh `comboChain` smart/usage/pace của `src/combos.js` (~120 dòng).
+      Phần khó: pi **không** cho extension ghi `routingQuota` vào `ModelRouteRequest`
+      → phải tự đo: đếm 429 mỗi link trong `lane.ts` (`isQuotaExhausted` đã có)
+      → ghi `~/.our-free-model/quota.json` → `decideLink` đọc map đó (~200 dòng).
+      Để sau A1/A2 — fallback + round-robin đã giải quyết ~80% nhu cầu.
+- [ ] **A5 — Local gateway (pi làm server cho tool khác)** tuỳ chọn
+      Port `src/forward.js`+`anthropic.js`+`gemini.js` (2911 dòng) nếu cần dùng từ
+      Claude Code/Cline/Continue. Wiring mới: `node:http` listener trong factory (~50 dòng).
+      Bắt buộc: bind loopback + key auth (không `0.0.0.0`) + tự giữ SSE heartbeat.
+      **Bỏ nếu không cần** — `pi -e ./pi-extension` đã là đường dùng chính.
+
+### Việc phụ (sau A1)
+- [ ] **Stats** (`~/.our-free-model/usage.json` + `/ofm stats` widget) — ghi trong
+      `on('after_provider_response')`, render qua `ctx.ui.setWidget`.
+
+### TUYỆT ĐỐI KHÔNG LÀM (đã phân loại — xem BAOCAO.md Phần C)
+- EAC co-pay (cần gateway server + seal HMAC do bên thứ 3 vận hành)
+- 10 kênh tài khoản (148 file TS + 2 wasm, OAuth/QR từng IDE)
+- Egress mihomo/Clash spawn (pi dùng `HTTPS_PROXY`/`NODE_USE_ENV_PROXY` sẵn)
+- Vỏ sản phẩm UI/updater/feed/push/sponsor (pi có settings + command riêng)
+- Subscription import OAuth codex/claude/gemini (vi phạm ToS)
+- Magpie engine (binary Go 68MB)
+- Aggregate 76 provider (pi tự quản key qua `/login` — thêm storage thứ 2 là rủi ro)
+
+**Mốc A1 xong = đã có ~80% giá trị "làm full".** Còn lại là edge case.
+---
+
 
 Nguồn: đã **đọc/đối chiếu** code gốc nhóm lane-free (`src/http.js`, `src/upstream.js`, `src/effort.js`,
 `src/kilo.js`; `src/stream.js`/`catalog.js`/`probe`/`recovery`/`combos` ở mức mapping) và **inventory toàn

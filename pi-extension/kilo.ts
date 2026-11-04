@@ -18,6 +18,9 @@
 import { openAICompletionsApi, type Api, type Model, type SimpleStreamOptions, type TranscriptContext } from '@earendil-works/pi-ai/compat'
 import { KILO_BASE, createKiloRoster, fetchKiloListing } from './catalog.js'
 import { composeFetches, fetchWithoutHeader, restoreAliases, sseGuard } from './lane.js'
+import { compressRequest } from './token-saver/index.js'
+import { readSaver } from './saver-store.js'
+import { recordSavings } from './saver-stats.js'
 
 /** Provider id, also the pi model prefix: `ofm-kilo/<model>`. */
 export const PROVIDER_ID = 'ofm-kilo'
@@ -63,7 +66,13 @@ function normalizeKiloPayload(params: any, model: Model<Api>) {
   return params
 }
 
-/** One turn on the free pool, with the Authorization header stripped on the wire. */
+/**
+ * One turn on the free pool, with the Authorization header stripped on the wire.
+ *
+ * The token saver runs last, after the gateway's own payload normalisation and
+ * after the wire id is stamped, so the bytes it counts describe the body that
+ * actually ships.
+ */
 export function streamKilo(model: Model<Api>, context: TranscriptContext, options?: SimpleStreamOptions) {
   // The registered id stays the identity pi records (usage, transcript, chains);
   // the upstream's `vendor/name:free` spelling rides only the request payload.
@@ -80,6 +89,7 @@ export function streamKilo(model: Model<Api>, context: TranscriptContext, option
       // as the dynamic request payload this normaliser expects.
       const payload: any = replaced ?? params
       payload.model = wireId
+      if (readSaver().rtk) recordSavings(PROVIDER_ID, compressRequest(payload, 'chat', { enabled: true }).stats)
       return normalizeKiloPayload(payload, model)
     },
   })
