@@ -33,7 +33,7 @@ import { createHash } from 'node:crypto'
 export const CHAIN_PREFIX = 'chain:'
 /** The provider id chains are listed under; no physical model uses it. */
 export const CHAIN_PROVIDER = 'ofm-chain'
-export const CHAIN_STRATEGIES = ['fallback', 'round-robin']
+export const CHAIN_STRATEGIES = ['fallback', 'round-robin', 'smart', 'usage', 'pace']
 
 /** pi's thinking levels, in the order the picker lists them. */
 const PI_LEVELS = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']
@@ -196,7 +196,7 @@ export function evaluateAdd(parsed: any, resolves: (address: string) => boolean)
 }
 
 /** A trailing `fallback`, `round-robin`, or `round-robin:3` field. */
-const STRATEGY_FIELD = /^(fallback|round-robin)(?::([1-9][0-9]{0,3}))?$/i
+const STRATEGY_FIELD = /^(fallback|round-robin|smart|usage|pace)(?::([1-9][0-9]{0,3}))?$/i
 /** One link: `provider/model` with the characters either side may carry. */
 const LINK_FIELD = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.:-]+$/
 
@@ -271,6 +271,49 @@ function supportsLevel(model: any, level: string) {
  * dispatched), `walks` (failures since the last success, capped at
  * `links - 1`), and the round-robin cursor fields.
  */
+
+/** Pick the best member index for smart/usage/pace strategies. */
+function pickBestLink(chain: any, members: any[], request: any): number {
+  const now = Date.now()
+  const quotaMap = (request?.quota ?? {}) as Record<string, any>
+  const usageMap = (request?.usage ?? {}) as Record<string, any>
+  const address = (m: any) => `${m?.provider}/${m?.id}`
+  const readings = (row: any) => {
+    const quota = quotaMap[address(row)]
+    const checked = Date.parse(quota?.checkedAt ?? '')
+    if (!quota || !['ok','available'].includes(quota.status) || !Number.isFinite(checked) || now - checked > 15*60_000 || checked > now + 60_000) return []
+    return (quota.windows ?? []).filter((w: any) => typeof w?.remainingPercent === 'number' && w.remainingPercent >= 0 && w.remainingPercent <= 100)
+  }
+  const scored = members.map((row, index) => {
+    const windows = readings(row)
+    const exhausted = windows.some((w: any) => w.remainingPercent <= 0)
+    const reset = Math.min(...windows.filter((w:any)=>w.remainingPercent>0).map((w:any)=>Date.parse(w.resetsAt??'')).filter(Number.isFinite))
+    const weekly = windows.find((w:any)=>w.kind==='weekly' || w.windowSeconds===604800)
+    const hours = weekly ? (Date.parse(weekly.resetsAt ?? '') - now)/3600000 : NaN
+    const pace = weekly && Number.isFinite(hours) && hours > 0 ? weekly.remainingPercent / Math.max(hours, 1/60) : null
+    const use = usageMap[address(row)]
+    const usage = typeof use === 'number' && Number.isFinite(use) && use >= 0 ? use : null
+    const known = windows.length > 0
+    return { row, index, exhausted, known, reset, pace, usage }
+  })
+  const strategy = chain.strategy
+  const sorted = scored.filter(v=>!v.exhausted).sort((left:any,right:any) => {
+    if (left.exhausted !== right.exhausted) return left.exhausted ? 1 : -1
+    if (strategy === 'usage') {
+      if ((left.usage !== null) !== (right.usage !== null)) return left.usage !== null ? -1 : 1
+      if (left.usage !== null && right.usage !== null && left.usage !== right.usage) return left.usage - right.usage
+    } else if (strategy === 'pace') {
+      if ((left.pace !== null) !== (right.pace !== null)) return left.pace !== null ? -1 : 1
+      if (left.pace !== null && right.pace !== null && left.pace !== right.pace) return right.pace - left.pace
+    } else {
+      if (left.known !== right.known) return left.known ? -1 : 1
+      if (left.reset !== right.reset) return left.reset - right.reset
+    }
+    return left.index - right.index
+  })
+  return (sorted[0]?.index ?? 0)
+}
+
 export function decideLink({ chain, members, request }: any) {
   const total = members.length
   const address = (model: any) => `${model?.provider}/${model?.id}`
@@ -316,6 +359,9 @@ export function decideLink({ chain, members, request }: any) {
     // A failure pi will not retry (quota, region) still costs this turn; the
     // next one starts past the wall.
     state = { ...advanceFrom(dead), turn: 0 }
+  } else if (request.reason === 'user' && ['smart','usage','pace'].includes(chain.strategy)) {
+    const best = pickBestLink(chain, members, request)
+    state = { ...state, index: best, turn: 0 }
   } else if (request.reason === 'user' && chain.strategy === 'round-robin') {
     const cursor = Number.isFinite(state.cursor) ? state.cursor : 0
     const windowTurn = (Number.isFinite(state.windowTurn) ? state.windowTurn : 0) + 1

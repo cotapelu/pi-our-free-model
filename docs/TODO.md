@@ -174,13 +174,13 @@ Thứ tự theo giá trị/effort.
         (`Summary: 30 files`, hết cột permission, nhỏ hơn bản gốc); lần chạy với
         saver off → nguyên văn. **Kiểm răng**: gỡ hook compact → đúng 4 check FAIL.
       - Suite sau khi nối: **174 check / 11 script PASS**, không SKIP.
-- [ ] **A2 — Prompt-saver (caveman/ponytail)**
+- [x] **A2 — Prompt-saver (caveman/ponytail)**
       Port `src/token-saver/prompts.js` (7 level caveman + 4 ponytail, text thuần)
       qua `on('before_agent_start')` → append vào `systemPrompt`.
       Điều khiển: `/ofm saver caveman off|lite|full|ultra|wenyan*`, `/ofm saver ponytail ...`
       Off mặc định. Test pin độ dài từng level (chống paraphrase) + 1 turn assert
       `systemPrompt` chứa text đúng level.
-- [ ] **A3 — Recovery/continuation (fix turn rỗng)**
+- [x] **A3 — Recovery/continuation (fix turn rỗng)** — DEFERRED có lý do: pi-ai 1.4.0 **không** tự recover (đã grep: không có recoveryMessages/canRecover), nhưng pi sở hữu agent loop/turn — extension không thể transparent re-run một turn hay chèn continuation mà không phá thinking signature & transcript. Port `src/recovery.js` đòi hook sâu hơn khả năng extension (không có `onTurnComplete` với checkpoint). Giữ gated `OFM_RECOVERY=1` như placeholder; chỉ làm nếu tái hiện turn rỗng thực tế trên lane (hiện không có bằng chứng).
       **Bước 0 (blocker)**: kiểm pi-ai 1.4.0 đã tự recover turn rỗng chưa — nếu có thì
       port sẽ trùng lặp, chỉ ghi chú, không code.
       Nếu chưa: port `src/recovery.js` (200 dòng) — `recoveryMessages` cho
@@ -188,7 +188,7 @@ Thứ tự theo giá trị/effort.
       Chặn trong `restoreAliases` (lane.ts), bật qua env `OFM_RECOVERY=1` trước đã.
       Rủi ro: `TranscriptContext` chỉ cho `messages` — phải verify thinking signature
       không mất khi tự phát lại.
-- [ ] **A4 — chain 3 strategy còn lại (smart/usage/pace)**
+- [x] **A4 — chain 3 strategy còn lại (smart/usage/pace)**
       Port nhánh `comboChain` smart/usage/pace của `src/combos.js` (~120 dòng).
       Phần khó: pi **không** cho extension ghi `routingQuota` vào `ModelRouteRequest`
       → phải tự đo: đếm 429 mỗi link trong `lane.ts` (`isQuotaExhausted` đã có)
