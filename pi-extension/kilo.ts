@@ -32,10 +32,12 @@ export const PROVIDER_ID = 'ofm-kilo'
  * starts and the ids already learned must survive that (see
  * `createKiloRoster`).
  */
-const roster = createKiloRoster()
+export const roster = createKiloRoster()
 
 /**
- * Normalise one payload onto the gateway's parameter set.
+ * Normalise one payload onto the gateway's parameter set. Exported for the
+ * standalone API gateway, which builds its own OpenAI-shaped payload rather
+ * than borrowing pi-ai's message conversion.
  *
  * pi-ai sends OpenAI's `reasoning_effort`; this gateway's rows declare
  * OpenRouter's `reasoning` object, where the off rung is `{enabled:false}` rather
@@ -45,7 +47,7 @@ const roster = createKiloRoster()
  * rather than through compat flags, which would apply to a provider pi shares
  * with other lanes.
  */
-function normalizeKiloPayload(params: any, model: Model<Api>) {
+export function normalizeKiloPayload(params: any, model: Model<Api>) {
   const effort = params.reasoning_effort
   delete params.reasoning_effort
   const supported = model.reasoning === true

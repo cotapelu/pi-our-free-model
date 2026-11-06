@@ -308,6 +308,41 @@ npm run verify:pi-extension-upstream
    3. Không port thêm gì trong P2 trừ khi có yêu cầu cụ thể.
    4. Nếu sau này gặp đúng hình dạng "5xx body rỗng + request ảnh", quay lại G-b.
 
+---
+
+## PHẦN 7 — HƯỚNG PHÁT TRIỂN API PROVIDER (cập nhật 2026-11-05)
+
+Sau khi đối chiếu toàn bộ 859 mục trong toàn bộ thư mục gốc (không chỉ `src/`), quyết
+định mới: **phát triển pi-extension thành api provider đầy đủ** cho mọi coding agent,
+không chỉ pi. pi-extension giữ nguyên vai trò pi extension và mở rộng thành HTTP
+server độc lập phạm vi đầy đủ.
+
+**Những gì sẽ port từ dsh sang pi-extension (cần thiết cho api provider):**
+
+| Nhóm | Nguồn dsh | Vai trò trong api provider |
+|---|---|---|
+| HTTP forward listener | `src/forward.js` (1392 dòng) | node:http server, loopback bind, key auth, CORS, port retry/scan, LAN relay, tool hygiene |
+| SSE response guard | `src/deferred-response.js` | hold stream metadata, heartbeat commit, không buffer toàn stream |
+| Anthropic codec | `src/anthropic.js` (~650 dòng) | /v1/messages request/response, streaming frames, countTokens |
+| Gemini wire | `src/gemini.js` (~270 dòng) | /v1/models/:model:method, generateContent, functionCall/Response |
+| Adapter / turn orchestration | `src/adapter.js` (~2000 dòng) | runStream/runCombo/runSingle, chain走位 commit rule, recovery, buildPayload 3 wire |
+| Recovery | `src/recovery.js` | canRecover, canRecoverSilentStop, recoveryMessages, continuationMessages, checkpointFits |
+| Failure classification | `src/route/classify.js` + `src/failure.js` | classifyFailure, backoff, forwardFailure map sang HTTP + anthropic error |
+| Store | `src/store.js` | JsonStore coalesced, 0600, temp+rename, backup corrupt |
+| Local optimize | `src/local-optimize.js` | 5 câu trả lời local (quota/prefix/title/suggestion/filepath), không tốn quota |
+| Egress/proxy | `src/egress.js` + `src/bun-fetch.js` | loopback relay, subscription/client proxy, bun worker |
+| Probe/availability | `src/probe.js` | probeModel, detectEgress, verdict state mapping |
+
+**Không port (vì ngoài phạm vi api provider cho coding agent):**
+EAC co-pay (cần GitHub login + gateway server), 10 kênh tài khoản (148 file OAuth/QR
+channel-pack), magpie binary Go 68MB, UI 11 trang React, updater Ed25519, self
+hot-reload, feed/push/sponsor, packages/desktop Tauri, vendor/wasm.
+
+**Kiến trúc mục tiêu của pi-extension:** giữ nguyên 2 provider (ofm-kilo, ofm-opencode),
+thêm HTTP layer trên `opencodeCompletionsApi().streamSimple` đã có, thêm 5 chain strategy
+từ `combos.js`, thêm recovery + classification, chạy độc lập (`node dist/server.js`) hoặc
+như pi extension (`pi.extensions`).
+
 *(Phạm vi đọc thực tế — **toàn bộ 10 file source + 9 file test + preflight +
 reverify script + README + tsconfig + package.json của pi-extension đã đọc từng dòng**;
 phía dsh gốc: đọc toàn bộ nhóm lane-free (`src/upstream.js`, `http.js`, `catalog.js`,

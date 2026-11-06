@@ -172,7 +172,10 @@ export function sseGuard(next: typeof fetch) {
     // Not labelled SSE: sniff only a head, so a live SSE stream is not buffered
     // to its end before the first token (issue #6). The head bytes are replayed
     // in front of the still-live reader; a non-stream body is finished and read.
-    const head = await readHead(response.body, SNIFF_BYTES, { signal: init?.signal, timeoutMs: IDLE_MS })
+    // The head-sniff deadline is independent of the idle watchdog: disabling the
+    // watchdog (OFM_STREAM_IDLE_MS=0) must not make the first-bytes deadline
+    // expire immediately and break every turn that lands here.
+    const head = await readHead(response.body, SNIFF_BYTES, { signal: init?.signal, timeoutMs: IDLE_MS || 30000 })
     const shape = sniffBody(head.text)
     if (shape === 'sse') return sseResponse(replayStream(head), response.status, response.headers)
     const text = head.done ? head.text : await readRemainder(head)

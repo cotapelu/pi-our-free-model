@@ -1,300 +1,210 @@
-# TODO — pi provider extension (pi-extension/)
+# TODO — pi-extension làm API provider đầy đủ
 
-Checklist phiên làm việc này. Trạng thái cập nhật sau mỗi bước.
+Checklist. Cập nhật trạng thái sau mỗi bước.
 
-## Đã xong
+## Hướng (quyết định 2026-11-05)
 
-- [x] Phân tích bản chất repo dsh: 7 hệ thống (xem `docs/pi-extension-audit.md` §1)
-- [x] Quét repo dsh: src/ đủ phần lane miễn phí + cấu trúc toàn bộ thư mục con
-- [x] Viết `docs/pi-extension-audit.md`: repo làm gì + 14 gap + kết quả đo lại upstream
-- [x] Sửa extension theo gap G1–G12
-- [x] Port combo/fallback-chain (G13) → `chains.js` + `chain-store.js` + virtual model
-      `ofm-chain` + `/ofm chain add|set|remove|enable|disable`
-- [x] Sửa 3 lỗi thật phát hiện bằng test (429 mất token FreeUsageLimitError; kilo.js đổi
-      model.id phá address; previous thiếu → suy từ transcript)
-- [x] `chain add` nhận `strategy`/`stickyLimit`; `chain set` sửa strategy/sticky/**links**
-      (thay link chain đã có, cùng validate lúc thêm)
-- [x] `chain add`/`set links` kiểm tra link lúc chạy lệnh (all-dead → từ chối)
-- [x] **Đo lại upstream (2026-11-01)**: listing 200, 8 free id toàn chat-wired; chat 429
-      (gate pass, không drift); Kilo 200 không credential — kết quả ghi ở audit §6
-- [x] Smoke command qua pi RPC thật cho mọi nhánh của `/ofm chain`
-- [x] Biến mục bảo trì thành lệnh chạy lại được: `pi-extension/scripts/reverify-upstream.mjs`
-      (`npm run verify:pi-extension-upstream`) — đo fingerprint trên lane thật, phân biệt
-      403 (drift) với 429 (gate pass), và **diff roster live với snapshot**; chạy đầu tiên
-      đã phát hiện `big-pickle` thiếu trong snapshot offline → đã bù
-- [x] Editor wizard `/ofm chain edit <id>` (name → links → strategy → sticky), dùng
-      `buildChainEdit`/`parseLinkList` thuần + cùng validate lúc add; headless chỉ đường
-      dùng `set`; RPC smoke: 4 bước, giữ id/enabled, ghi đúng chains.json
+pi-extension phát triển thành **api provider đầy đủ** (HTTP server độc lập) cho mọi coding
+agent (pi, Claude Code, Codex, Continue, curl…), không chỉ pi. Mọi thứ cần từ dsh sẽ được
+port vào. pi-extension vẫn chạy được như pi extension (`pi.extensions`).
 
-## Còn lại
+Chi tiết phân tích: `BAOCAO.md` Phần 7 và `docs/pi-extension-audit.md`.
 
-- [x] Sửa lỗ hỏng thật do chính bài kiểm tra degenerate phát hiện: listing Kilo fail
-      (5xx/timeout) trong khi chat vẫn chạy → snapshot offline phục vụ roster nhưng map
-      wire-id KHÔNG được dựng lại → lượt gọi mang `reflection-beam-free` (safeId của pi)
-      thay vì `reflection/beam-free` (id Kilo định tuyến) → "model not found" trên lane
-      đang sống. Sửa: lưu `wire` trong mỗi row `STATIC_KILO_MODELS` + `staticUpstreamIds()`,
-      `kiloModels()` dựng lại map trên mọi đường fallback. Unit test (15 id, round-trip
-      safeId) + integration test (stand-in 500 cho /models, chat trả lời; payload phải
-      mang wire id). Đã kiểm chứng test bắt lỗi: bỏ fix → FAIL `"reflection-beam-free"`
-- [x] **Nối test extension vào CI** — ⚠ đã xong lúc viết, nhưng `.github/workflows/test.yml`
-      (cùng 3 workflow macOS/release) **bị xoá ở `1552888`** (chủ repo) khi sang pi-extension-only
-      → **CI không còn chạy ở checkout này** (đã phân loại: KHÔNG khôi phục, gỡ claim cho khớp
-      thực tế). Còn giá trị & vẫn đúng: `test/preflight.mjs` cho 3 script integration **SKIP có
-      lý do + exit 0** khi thiếu `pi` (đã mô phỏng: 4 unit PASS, 3 integration SKIP) nên
-      contributor không có pi vẫn chạy hết phần offline; verifier live cố ý chạy tay (tiêu quota
-      free egress). Khôi phục CI 1 bước nếu cần: `git show f4709c1:.github/workflows/test.yml`
-- [x] Disclaimer một lần cho người dùng lane miễn phí (G14): `disclaimer.js` +
-      `session_start` — nói rõ Kilo log prompt, OpenCode meter theo session/IP,\      đừng gửi dữ liệu nhạy cảm; hiện đúng một lần ở session tương tác
-      (version-gate như dsh, ghi `notice-ack.json`). Smoke RPC: phiên 1 hiện 1
-      lần, phiên 2 im. Smoke cũng phát hiện + sửa bug thật: `writeAck()` bỏ qua
-      `OFM_DATA_DIR` nên ghi nhượng quyền vào home thật (đã dọn + test chống hồi quy)
-- [x] Lấp lỗ hỏng test do chính fix `big-pickle` tạo ra: model KHÔNG có menu effort giờ
-      có integration test qua `pi` thật — `--thinking high` trên `ofm-opencode/big-pickle`
-      → không có `reasoning_effort` nào ra wire (upstream trả 400 nếu ngoài menu), block
-      `<env>` + tool verbatim vẫn đủ, lượt hoàn thành. Đã kiểm chứng test có "răng":
-      tạm cho big-pickle menu thì đúng FAIL với `"high"` trên wire
-- [x] Viết runbook phản ứng drift: `docs/pi-extension-drift-runbook.md` — bảng
-      triệu chứng→nghĩa, quy trình đo (tham chiếu `free-lane-wire.md`), bảng
-      file·symbol phải sửa cho từng yếu tố (đã đối chiếu 18 symbol đều tồn tại),
-      verify trước commit, và các bước sau khi sửa
-- [x] **Lỗi thật do chính việc bảo trì định kỳ lộ ra**: đợt reverify 2026-11-02
-      PASS cả hai lane, nhưng `chain-integration.mjs` flaky (2/8 lần FAIL). Không
-      phải lỗi test: pi abort refresh của provider bằng AbortController theo
-      *generation*, và abort đó rơi **sau** khi fetch đã thành công; nhánh `catch`
-      của `kiloModels()` coi đó như thất bại và gọi `staticSnapshot()` — **thay**
-      map `safeId → wire id` live bằng snapshot offline. Lượt Kilo kế tiếp mang
-      `reflection-beam-free` thay vì `reflection/beam-free` → "model not found"
-      trên lane đang sống. Sửa: `createKiloRoster()` trong `catalog.js` — map
-      được **seed** từ snapshot và chỉ **thêm** không bao giờ mất, refresh bị
-      abort/timeout/5xx giữ nguyên roster live cuối + mọi wire id đã học; chỉ có
-      listing trả slice free **rỗng** mới degrade về snapshot. 5 unit check mới;
-      đã kiểm chứng test có "răng" (khôi phục hành vi cũ → đúng 2 FAIL). Sau fix:
-      `chain-integration.mjs` 15/15 PASS (trước đó ~25% fail). Lane OpenCode không
-      có lỗ hổng tương đương (id không chứa `/` hay `:` nên safeId == wire id).
-- [x] **Acceptance smoke qua `pi` thật với `-e ./pi-extension`** (runbook §5 —
-      bước chưa từng chạy độc lập, 2026-11-02): `--list-models` thấy đủ **23 model**
-      (15 Kilo + 8 OpenCode, khớp audit); một lượt thật `-nt -p "…pong" --model
-      ofm-kilo/kilo-auto-free` → trả lời `pong`, exit 0. Chứng minh extension
-      nạp/routing/turn hoạt động đầu-cuối trên lane miễn phí. OpenCode lane hết quota
-      ở IP này nên lượt thật dùng Kilo; verifier đã xác nhận gate OpenCode vẫn PASS.
-- [x] **Biến acceptance smoke #5 thành script chạy lại được trong CI** (hướng C):
-      `pi-extension/test/acceptance-live.mjs` đứng stand-in loopback cho cả 2 lane
-      (không tốn quota egress) rồi lái `pi` thật qua `--list-models` + một lượt mỗi
-      lane; assert roster **live** (không phải snapshot) + cả hai lane trả lời
-      đầu-cuối (`answered-by-kilo` / `answered-by-opencode`). Nối vào
-      `test:pi-extension` (tự SKIP khi thiếu `pi` qua preflight; timeout 90s để treo
-      thành FAIL). Teeth-check: đổi id listing OpenCode → assert roster đúng **FAIL**,
-      Kilo vẫn PASS. Sau khi nối vào suite: **124 check / 9 script PASS**.
-- [x] **Dọn `package.json` về chỉ-phục-vụ-pi-extension** (2026-11-02): giữ đúng 3
-      script (`test` → `test:pi-extension`, `test:pi-extension` 9 script,
-      `verify:pi-extension-upstream`); bỏ toàn bộ của dsh plugin — `files[]` 40 mục,
-      `exports`, `main` host-half, `dsh.bundle/client`, peerDeps/devDeps `@deepseek-ai/*`
-      + esbuild/typescript/undici, `overrides`, và 15 script standalone/magpie/channel/
-      manifest/legacy. Suite vẫn **124/124 PASS** sau khi dọn. **Không cần `npm run
-      build`**: `pi-extension/` là ESM thuần, pi nạp trực tiếp.
-- [x] **Đối chiếu API extension/provider với gói `pi` 1.4.0 thật** (2026-11-02): đọc
-      `@earendil-works/pi-coding-agent@1.4.0` + `pi-ai@1.4.0` (docs + `.d.ts` + `models.js`) và
-      xác minh **khớp toàn bộ** — factory async, `registerProvider`+custom `streamSimple`,
-      `refreshModels(context.signal)`, `ProviderConfig.api`/`models`, field `Model`
-      (`thinkingLevelMap`/`compat`/`baseUrl`), `registerVirtualModel`+
-      `route→{model,thinkingLevel,state}`, `registerCommand`, `ctx.hasUI/ui/modelRegistry`, và
-      cơ chế refresh-abort-theo-generation (nền của `createKiloRoster`). Bảng bằng chứng:
-      audit §7. **Không cần sửa code** — extension đã đúng.
-- [x] **Kiểm chứng đường dùng thật của pi-extension (2026-11-02)**: `pi install
-      ./pi-extension` (global) → `pi --list-models` **23 model** (không cần approve) + một
-      lượt thật qua đường đã-cài `pi -p "…" --model ofm-kilo/kilo-auto-free` → **`pong`**,
-      exit 0; `pi -e ./pi-extension` cùng hoạt động. **Phát hiện**: biến thể project-local
-      `pi install ./pi-extension -l` bị pi **gate tin cậy** → không nạp tới khi `--approve`
-      (23 model khi `--approve`, 0 khi không) → ghi vào README §Install. Đã dọn sạch install
-      sau khi kiểm (`.pi/` nguyên trạng, git sạch).
-- [x] **Sửa claim sai trong README (2026-11-02)**: mô tả wizard `/ofm chain edit` ghi
-      "name … prefilled with the current" nhưng code chỉ **prefill thật ở links**
-      (`ctx.ui.editor`); **name là placeholder** (`ctx.ui.input`) và để trống thì giữ nguyên
-      (`buildChainEdit`, đã test `chains.test.mjs`). Sửa README §chains cho khớp code.
-- [x] **Rà soát chính xác README ↔ `fingerprint.js` (2026-11-02)**: mọi khẳng định fingerprint
-      (UA v2, 4 session header, session-id descending counter 1–63, 2 tool verbatim, 2 alias
-      danh-tính, block `<env>`, cấm `tool_choice:'none'`) **khớp 1:1**; UA còn qua gate (429
-      không 403). Không mismatch → không sửa code. Ghi ở audit §7.
-- [x] **Chứng minh RUNTIME cơ chế provider (2026-11-02)**: đọc
-      `pi-coding-agent/dist/core/provider-composer.js` → (a) `api` **bắt buộc** khi có
-      `streamSimple` (L343–344 throw nếu thiếu); (b) model kế thừa `config.api` (L135); (c)
-      `streamWith` chọn đúng stream của ext vì `model.api === extension.api`, không rơi vào
-      nhánh "No API provider" (L378–392); (d) `baseUrl`/`apiKey` đáp ứng guard; (e) stream của
-      ext tự set `api:'openai-completions'` cho lời gọi pi-ai. Ghi **invariant bảo trì**: đừng bỏ/
-      đổi `api:'ofm-free-api'`. Không sửa code — extension đã đúng. Audit §7b.
-- [x] **Chuyển toàn bộ pi-extension sang TypeScript + build `dist` + cài local kiểm chứng**
-      (2026-11-02): `git mv` 10 file nguồn + 9 test + `reverify` sang `.ts` (giữ char-for-char,
-      chỉ thêm type); `tsconfig.json` (NodeNext → `dist`); `package.json` 0.2.0 trỏ
-      `pi.extensions → dist/index.js`; `tsc` **sạch 0 lỗi** với type `pi-ai`/`pi-coding-agent`
-      1.4.0. **Phát hiện + sửa 1 bug thật** (`fingerprint.ts` `const alias` bị gán lại trong `for`
-      → crash khi trụng slot gate) + test hồi quy có-răng. `npm run test:pi-extension` →
-      **125/125 PASS**. **Cài local tại thư mục hiện tại kiểm chứng:** `pi install
-      ./pi-extension -l --approve` → `--list-models` **23 model** + lượt thật **`installed-ok`**
-      (đã gỡ cho repo sạch). Chi tiết: audit §8.
-- [ ] (còn lại duy nhất, điều kiện — chờ trigger) Khi `npm run
-      verify:pi-extension-upstream` báo FAIL → làm theo runbook trên. Lần đo gần
-      nhất (2026-11-02 ~18:54, **post-migration TS** — vì vừa sửa `fingerprint.ts` nên phải đo
-      lại gate): test offline **125/125 PASS (9 script)**; verify **ĐO LẠI cả hai lane PASS**
-      (chạy từ `reverify-upstream.ts`) — listing OpenCode 200, 8 id toàn chat-wired, không lệch
-      snapshot; chat 429 (gate PASS); Kilo 200 không credential. **Không drift** → sửa
-      TS/fingerprint không hồi quy gate. (Cadence: chỉ chạy lại khi qua ngày, nghi drift, hoặc
-      sau khi sửa `fingerprint.js`/roster — không lặp theo từng tin nhắn.)
-  - ✅ Đã phân loại (2026-11-02): `1552888 "fix"` (chủ repo) **xoá cố ý cả 4 workflow**
-    (test / build-macos / prepare-release / release-sign) khi sang pi-only → chọn phương án
-    **(b) KHÔNG khôi phục**, mà **gỡ claim CI** khỏi README/TODO cho khớp thực tế. Nếu sau này
-    cần CI lại: `git show f4709c1:.github/workflows/test.yml` rồi trỏ về `npm run
-    test:pi-extension`.
+## Đã xong (pi provider extension — chạy tốt, ~124 check PASS)
 
----
+- [x] Đọc/toàn soát luồng dsh: `task-adapter`, `flow-rule`, `http.js` guard, `upstream.js`
+      fingerprint v2, `catalog.js`, `effort.js`, `kilo.js`, `stream.js`, `messages.js`
+- [x] Port lane free sang TS strict: `diagnose` (catalog/fingerprint/transport/lane/opencode/kilo)
+- [x] Provider `ofm-opencode` + `ofm-kilo` stream qua `openAICompletionsApi().streamSimple`
+- [x] Fingerprint OpenCode v2: UA, 4 session header, session mint, 2 tool verbatim, aliases, `<env>`
+- [x] Transport guard: sseGuard, foldToSse, readHead/replayStream, withIdleTimeout, DSML scrubber
+- [x] Catalog: live listing + offline snapshot, effortMap, kiloEffortMap, createKiloRoster
+- [x] Chain fallback + round-robin: `chains.ts`, `chain-store.ts`, virtual model ofm-chain
+- [x] Token saver RTK 12 filters + prompt family (caveman/ponytail) — OFF mặc định
+- [x] Disclaimer một lần (version-gate, notice-ack.json)
+- [x] Reverify upstream script + drift runbook
+- [x] 12 suite test (~124 check) PASS, 4 script integration chạy thật qua `pi`
+- [x] Fix bug thật: `lane.ts` readHead deadline khi `OFM_STREAM_IDLE_MS=0`
+- [x] Đối chiếu API extension/provider với pi 1.4.0 (provider-composer, models.js)
 
-## Việc cần làm — làm full như dsh (2026-11-03)
+## Trạng thái hiện tại (2026-11-05)
 
-Kế hoạch từ báo cáo `BAOCAO.md`. Nguyên tắc: **mọi việc dưới đây đều OFF mặc định,
-bật qua `/ofm`** — chúng làm thay đổi hành vi/model, không được tự ý canh thiệp.
-Thứ tự theo giá trị/effort.
+- Build: `tsc` strict **sạch 0 lỗi** (`tsconfig.json` include `gateway/**/*.ts`)
+- Test: **20/20 script PASS**, 362 check `ok`, 0 FAIL — kể cả 5 script integration/live
+  (chạy thật qua `pi`, không SKIP)
+- Smoke thật: `node pi-extension/dist/server.js --port 18941` → `/v1/models` 20 model live,
+  1 lượt `ofm-kilo/kilo-auto-free` trả lời `pong` (cả stream lẫn non-stream)
+- Smoke 3 giao thức trên live Kilo: OpenAI `pong` · Anthropic `message`/`end_turn`/`pong`/
+  usage · Gemini `candidates`/`STOP`/`pong`/`usageMetadata`
+- Route đang sống: `GET /v1/models`, `POST /v1/chat/completions` (stream + non-stream),
+  `POST /v1/messages` + `/v1/messages/count_tokens` (Anthropic),
+  `POST /v1beta/models/{model}:generateContent|streamGenerateContent` + `GET /v1beta/models`
+  (Gemini), `/health`, CORS
+- File mới: `gateway/{protocol,loopback,dispatch,response-stream,anthropic,gemini,server}.ts`,
+  `server.ts`, `test/gateway.test.ts` (29 check)
+- Pi extension mode vẫn nguyên: `pi -e ./pi-extension`, `/ofm`, chain, saver
 
-- [x] **A1 — Token-saver RTK (nén tool result)** ✅ ĐÃ XONG (2026-11-03)
-      Port `src/token-saver/rtk/**` sang `pi-extension/token-saver/` (12 filter +
-      autodetect + registry + gates), nối vào `onPayload` của **cả 2 lane** — chạy SAU
-      fingerprint và SAU normalize Kilo, nên byte đếm được đúng là body thật sự gửi đi.
-      (Quyết định thiết kế khác kế hoạch ban đầu: **không** dùng event `tool_result`.
-      dsh cũng compact ở phía request — nén trong payload thì transcript vẫn giữ
-      kết quả đầy đủ, user xem được gốc; nén ở `tool_result` sẽ ghi đè lên lịch sử
-      phiên làm mất dữ liệu vĩnh viễn và thay đổi cả cửa sổ context của pi.)
-      - `saver-store.ts` (`~/.our-free-model/saver.json`, 0600, atomic) — **off mặc định**
-      - `saver-stats.ts` — đọc lại qua `/ofm saver stats`
-      - `/ofm saver` (báo switch + số đo), `/ofm saver on|off`, `/ofm saver stats`
-      - chỉ `wire: 'chat'` (pi-ai luôn dựng OpenAI chat cho 2 lane), 2 wire còn lại
-        giữ để parity + được unit test bao phủ
-      - **Unit 33 check** (`token-saver.test.ts`): round-trip từng filter, autodetect,
-        3 luật an toàn (chỉ output/không nén lỗi/không lớn hơn input), `compressRequest`
-        trên wire chat, `saver-store` round-trip + damaged file + 0600
-      - **Integration 9 check** (`saver-integration.ts`) qua `pi` thật: đọc 1 file chứa
-        `ls -la` qua tool `read` của pi → assert lượt 2 mang result ĐÃ compact
-        (`Summary: 30 files`, hết cột permission, nhỏ hơn bản gốc); lần chạy với
-        saver off → nguyên văn. **Kiểm răng**: gỡ hook compact → đúng 4 check FAIL.
-      - Suite sau khi nối: **174 check / 11 script PASS**, không SKIP.
-- [x] **A2 — Prompt-saver (caveman/ponytail)**
-      Port `src/token-saver/prompts.js` (7 level caveman + 4 ponytail, text thuần)
-      qua `on('before_agent_start')` → append vào `systemPrompt`.
-      Điều khiển: `/ofm saver caveman off|lite|full|ultra|wenyan*`, `/ofm saver ponytail ...`
-      Off mặc định. Test pin độ dài từng level (chống paraphrase) + 1 turn assert
-      `systemPrompt` chứa text đúng level.
-- [x] **A3 — Recovery/continuation (fix turn rỗng)** — DEFERRED có lý do: pi-ai 1.4.0 **không** tự recover (đã grep: không có recoveryMessages/canRecover), nhưng pi sở hữu agent loop/turn — extension không thể transparent re-run một turn hay chèn continuation mà không phá thinking signature & transcript. Port `src/recovery.js` đòi hook sâu hơn khả năng extension (không có `onTurnComplete` với checkpoint). Giữ gated `OFM_RECOVERY=1` như placeholder; chỉ làm nếu tái hiện turn rỗng thực tế trên lane (hiện không có bằng chứng).
-      **Bước 0 (blocker)**: kiểm pi-ai 1.4.0 đã tự recover turn rỗng chưa — nếu có thì
-      port sẽ trùng lặp, chỉ ghi chú, không code.
-      Nếu chưa: port `src/recovery.js` (200 dòng) — `recoveryMessages` cho
-      "chỉ có reasoning, không có text", `continuationMessages` cho finish `length`.
-      Chặn trong `restoreAliases` (lane.ts), bật qua env `OFM_RECOVERY=1` trước đã.
-      Rủi ro: `TranscriptContext` chỉ cho `messages` — phải verify thinking signature
-      không mất khi tự phát lại.
-- [x] **A4 — chain 3 strategy còn lại (smart/usage/pace)**
-      Port nhánh `comboChain` smart/usage/pace của `src/combos.js` (~120 dòng).
-      Phần khó: pi **không** cho extension ghi `routingQuota` vào `ModelRouteRequest`
-      → phải tự đo: đếm 429 mỗi link trong `lane.ts` (`isQuotaExhausted` đã có)
-      → ghi `~/.our-free-model/quota.json` → `decideLink` đọc map đó (~200 dòng).
-      Để sau A1/A2 — fallback + round-robin đã giải quyết ~80% nhu cầu.
-- [ ] **A5 — Local gateway (pi làm server cho tool khác)** tuỳ chọn
-      Port `src/forward.js`+`anthropic.js`+`gemini.js` (2911 dòng) nếu cần dùng từ
-      Claude Code/Cline/Continue. Wiring mới: `node:http` listener trong factory (~50 dòng).
-      Bắt buộc: bind loopback + key auth (không `0.0.0.0`) + tự giữ SSE heartbeat.
-      **Bỏ nếu không cần** — `pi -e ./pi-extension` đã là đường dùng chính.
+## Việc cần làm — cho full api provider (ưu tiên theo thứ tự)
 
-### Việc phụ (sau A1)
-- [ ] **Stats** (`~/.our-free-model/usage.json` + `/ofm stats` widget) — ghi trong
-      `on('after_provider_response')`, render qua `ctx.ui.setWidget`.
+### P0 — HTTP server (lõi api provider) ✅ ĐÃ XONG (2026-11-05)
+- [x] `gateway/protocol.ts`: key auth (`generateKey`/`keyMatches` constant-time),
+      bounded body, CORS, OpenAI error envelope
+- [x] `gateway/loopback.ts`: resolve DNS + kiểm tra mọi IP là loopback (issue #19),
+      `bindGatewayPort` retry + scan cổng kế cận, `rankLanAddresses`
+- [x] `gateway/dispatch.ts`: resolve `provider/model` → lane, build payload, wire-id Kilo,
+      fingerprint OpenCode, `sseGuard` transport, stream + non-stream fold
+- [x] `gateway/response-stream.ts`: `deferStreamResponse` (heartbeat commit),
+      alias restore + DSML scrub trên SSE frame, `foldSseAnswer` → chat.completion
+- [x] `gateway/server.ts`: node:http, key fence, CORS, health, `/v1/models`,
+      `POST /v1/chat/completions`
+- [x] `server.ts`: standalone entry — `node pi-extension/dist/server.js
+      [--port N] [--host] [--key]`, env `OFM_GATEWAY_PORT/HOST/KEY`
+- [x] 17 unit check `gateway.test.ts` qua loopback stand-in (không tốn quota)
+- [ ] Tool hygiene: renumber `tool_calls[].index` từ 0, suppress fingerprint decoys
 
-### TUYỆT ĐỐI KHÔNG LÀM (đã phân loại — xem BAOCAO.md Phần C)
-- EAC co-pay (cần gateway server + seal HMAC do bên thứ 3 vận hành)
-- 10 kênh tài khoản (148 file TS + 2 wasm, OAuth/QR từng IDE)
-- Egress mihomo/Clash spawn (pi dùng `HTTPS_PROXY`/`NODE_USE_ENV_PROXY` sẵn)
-- Vỏ sản phẩm UI/updater/feed/push/sponsor (pi có settings + command riêng)
-- Subscription import OAuth codex/claude/gemini (vi phạm ToS)
-- Magpie engine (binary Go 68MB)
-- Aggregate 76 provider (pi tự quản key qua `/login` — thêm storage thứ 2 là rủi ro)
+### P1 — đa giao thức (mọi coding agent) ✅ ĐÃ XONG (2026-11-05)
+- [x] `gateway/anthropic.ts`: fromAnthropicRequest (system→message, text/image/tool_use/
+      tool_result, `thinking` + `redacted_thinking` bị drop), toAnthropicMessage,
+      countTokens estimate, toàn bộ frame renderer (message_start/content_block_*/
+      message_delta/message_stop/error)
+- [x] Route `POST /v1/messages` + `POST /v1/messages/count_tokens` → dispatchAnthropicChat
+- [x] 5 unit check Anthropic qua stand-in: message shape, tool_use round-trip, system,
+      stream frames, count_tokens không dispatch
+- [x] Sửa 1 lỗi thật tìm ra bằng test: `dispatchAnthropicChat` gọi `getReader()` hai lần
+      trên cùng body (rewrite + fold) → stream bị lock; fold giờ đọc stream đã rewrite
+- [x] `gemini.ts`: geminiRoute, geminiError, fromGeminiRequest (contents/systemInstruction/
+      tools/toolConfig, functionCall/functionResponse pairing, schema uppercase→lowercase),
+      toGeminiResponse (`candidates`/`usageMetadata`), geminiFrameStream
+- [x] Route `POST /v1beta/models/{model}:generateContent|streamGenerateContent` +
+      `GET /v1beta/models` + countTokens; 5 unit check qua stand-in
+- [x] Sửa 3 lỗi thật tìm ra bằng test: `functionResponse` không dùng `id` của chính nó khi
+      không có call trước đó; schema không đệ quy; biến `parts` trùng tên
+- [ ] Route `POST /v1/responses` → gọi qua adapter chung
+- [ ] Failure map `forwardFailure`: HTTP status + OpenAI/Anthropic error type (`failure.ts`)
 
-**Mốc A1 xong = đã có ~80% giá trị "làm full".** Còn lại là edge case.
----
+### P2 — adapter / turn orchestration ✅ ĐÃ XONG (2026-11-05)
+- [x] `gateway/chain.ts`: `runChain` + commit rule port từ `src/adapter.js` `runCombo`
+- [x] Commit rule: giữ frames đến frame mang đáp án; reasoning **KHÔNG** commit; candidate
+      không có đáp án bị bỏ nguyên khối, chuyển link trong suốt với caller
+- [x] `dispatchChainChat` + route `ofm-chain/<name>` trên cả HTTP; `GET /v1/models` liệt kê
+      chain đang bật; standalone entry nạp `chains.json` qua `readChains`
+- [x] `performUpstream` gom transport guard dùng chung cho cả 4 dialect
+- [x] 6 unit check chain qua stand-in: 404 chain lạ, chain chết không dispatch, failover 429,
+      reasoning-only bị bỏ, chain kiệt cùng 502 có lý do từng link
+- [x] Sửa 1 lỗi thật tìm ra bằng test: commit giữa buffer **mất phần đuôi** của body một-chunk
+      → frames còn lại trong buffer phải đi kèm
+- [x] Cycle detection + round-robin sticky: `smart`/`usage`/`pace` cần quota probe (P3) nên
+      tạm rơi về thứ tự fallback — ghi rõ trong `orderLinks`
+- [ ] `savingsFields` + token saver record trong usage response
 
+### P3 — recovery + classification ✅ ĐÃ XONG (2026-11-05)
+- [x] `gateway/recovery.ts` port đầy đủ `src/recovery.js`: RECOVERY_DEFAULTS, recoveryPolicy,
+      canRecover, canRecoverSilentStop, recoveryMessages, continuationMessages, checkpointFits,
+      addUsage, createBlockTracker, MIN_BUDGET
+- [x] `recoverTurn` trong dispatch: nhận diện (a) stream đứt không có finish frame,
+      (b) stop sạch chỉ có reasoning, (c) answer bị cắt ở `length` → tiếp một lần với
+      budget còn lại, ghép nội dung cho trường hợp (c)
+- [x] 22 unit check `recovery.test.ts` + 2 check end-to-end qua gateway (có replay + floor)
+- [x] Sửa 1 lỗi thật tìm ra bằng test: guard budget so `remaining` với `maxOutputTokens`
+      (8192) thay vì floor 512 → mọi lượt < 8192 token không bao giờ được recover
+- [x] Ghi chú: `checkpointTruncated` luôn false ở gateway (chưa cắt buffer reasoning) —
+      có thể siết sau bằng checkpointLimit
+- [x] `classify.ts` port đầy đủ `src/route/classify.js` (543 dòng): FAILURE_KIND/FAILURE_SCOPE,
+      ERROR_RULES (text trước status), MARKER_RULES (gRPC spelling), CODE_VERDICTS,
+      OVERLOAD_STATUSES, CONTEXT_WINDOW codes+markers, `backoffFor` (2s×2^(n-1), guard
+      `level-1`, cap 5 phút), `classifyFailure`, `shouldAdvance`, `describeVerdict`
+- [x] `runChain` dùng classify để quyết định advance: request-scoped 4xx và context
+      overflow **không** chuyển link mà trả nguyên lỗi thật cho caller
+- [x] 29 unit check `classify.test.ts` + 1 check chain end-to-end (400 không advance)
+- [x] Sửa 1 lỗi thật do chính việc móc nối: `exhausted()` trả 502 giả cho mọi link chết,
+      trong khi refusal request-scoped phải trả nguyên status + message của upstream
+- [ ] `failure.ts` port: `forwardFailure` map code → HTTP status + OpenAI/Anthropic error
+      type cho từng dialect (hiện gateway dùng `friendlyMessage` của transport.ts — 9 nhánh)
 
-Nguồn: đã **đọc/đối chiếu** code gốc nhóm lane-free (`src/http.js`, `src/upstream.js`, `src/effort.js`,
-`src/kilo.js`; `src/stream.js`/`catalog.js`/`probe`/`recovery`/`combos` ở mức mapping) và **inventory toàn
-bộ thư mục** (`src/**`, `index.js`, `client.js`, `adapter/`, `worker/`, `catalog/`, `feed/`, `locale/`,
-`scripts/` 184 file, `vendor/` [channel-pack 148 TS + dsh-std + magpie], `packages/` [standalone + desktop
-Tauri], `cordis.patch.yml`, `tsconfig.json`). Bản đồ 7 hệ thống: `docs/pi-extension-audit.md` §1.
+### P4 — hạ tầng ✅ ĐÃ XONG (2026-11-05)
+- [x] `gateway/store.ts` port `src/store.js`: `JsonStore` (coalesce 800ms, temp+rename 0600,
+      `restrictPermissions` cả Windows `icacls`, giữ file hỏng thay vì ghi đè),
+      `dataDir`, `dayKey`, `decodeWindow` + 2 bounds, `accumulateSavings`, `recordUsage`
+      (ngày/model/lifetime + ring 400 mẫu + marker `truncated`/`noUsage`), `pruneDays`
+- [x] `server.ts` entry dùng JsonStore cho `gateway.json` (key) thay vì ad-hoc
+- [x] 20 unit check `store.test.ts`: persist/reload, corrupt retained, flush retry không mất
+      thay đổi, 0600, `edit` trả giá trị, `dispose` khoá store, decode bounds, audit marker
+- [x] Sửa 1 lỗi thật tìm ra bằng smoke: `key = a ?? b ?? minted` giữ chuỗi rỗng (không mints)
+      → đổi sang `||`; smoke xác nhận key mints, `0600`, **tồn tại qua restart**
+- [x] `gateway/optimize.ts` port `src/local-optimize.js`: 5 detector (quota/prefix/title/
+      suggestion/filepath), `shellWords` (escape trong ngoặc kép khác ký ngoài),
+      `extractCommandPrefix` (chặn substitution), `extractFilepathsFromCommand`
+      (grep pattern≠path), `toMessagesResponse`, `localAnswerId`
+- [x] `localAnswerFor` móc vào `dispatchAnthropicChat`: quota probe / prefix / title /
+      suggestion / filepath trả lời **không tốn quota lane**; `OFM_LOCAL_OPTIMIZE=off` tắt
+- [x] 25 unit check `optimize.test.ts` + 2 check end-to-end (local không gọi lane, câu hỏi
+      thật vẫn qua lane)
+- [x] Sửa 1 lỗi thật tìm ra bằng test: escape `\n` ngoài ngoặc — `n` không nằm trong
+      ESCAPABLE nên backslash phải giữ nguyên, không phải `an\nb`
+- [x] `gateway/egress.ts`: loopback relay (key per start, 401 trước khi dial, hop-by-hop
+      strip, target qua URL không phải socket-writer), `isOfficialFreeLane` (chỉ lane
+      opencode.ai/inference được dùng Bun), `findBunExecutable`, `bunFetch` (Bun worker
+      inline qua `-e`, payload JSON trên stdin, body base64 trên stdout, abort kill child),
+      `egressRequestHeaders`
+- [x] 10 unit check `egress.test.ts`: lane gate, header strip, repeated header join,
+      relay 401 không key, outlet tắt không mở relay
+- [x] Sửa 2 lỗi thật tìm ra khi build: `generateKey` từ `node:crypto` cần 3 argument
+      (phải `randomBytes`); `bunFetch` spawn một file `fetch.mjs` không tồn tại → đổi
+      sang worker inline
+- [x] Ghi chú: **mihomo/Clash subscription spawn không port** (cần binary không ship) —
+      caller chạy mihomo riêng và trỏ `OFM_EGRESS_URL` vào mixed port
+- [x] `gateway/probe.ts` port `src/probe.js`: STATE, CODE, ROUTING_REFUSAL_STATUS, `stateOf`
+      (code → message → status, **5xx không đọc là refusal có tên**), `aggregate`,
+      `prefer`, `createProber` (cache theo verdict: healthy 15 phút, refused 5 phút),
+      `publicAvailability`
+- [x] 22 unit check `probe.test.ts`: verdict precedence, routing status, 5xx carve-out,
+      aggregate/prefer, cache, per-model session, persist, report change một lần
+- [x] Sửa 3 lỗi thật tìm ra bằng test: return `timeoutMs` không khai báo (build); regex
+      thiếu `unsupported`; test dùng `assert.equal` cho array → `deepEqual`
+- [x] Ghi chú: `probeModel` (dial 16 token + egress echo `detectEgress`) **chưa port** —
+      cần dial thật; `createProber` nhận `doProbe` nên test không tốn quota. `publicAvailability`
+      tách rõ "no measurement" (picker) khỏi "advance walker" (chain)
 
-### P0 — DRIFT roster 2026-11-02 ✅ ĐÃ XONG (`d411b4f`)
-Verify bắt được roster live đổi: OpenCode +`pulse-alpha-free`; Kilo +3
-(`thinkingmachines/inkling:free`, `thinkingmachines/inkling-small:free` — family **cấm tắt
-thinking** → `canDisable:false`; `google/gemma-4-31b-it:free`).
-Đã sửa `catalog.ts`: `FREE_ID_OVERRIDES['pulse-alpha-free']` (vision, 1M/131072, low|high|max);
-bù cả 4 id vào `STATIC_*` (wire là dạng **hai-chấm `:free`** — đã sửa lại từ nhầm gạch-nối);
-`KILO_REASONING_MANDATORY` đã có `/^thinkingmachines\//` nên off-rung `null` cả live+offline.
-Thêm 2 check `catalog.test.ts` (wire-id chính xác + off-rung family). **127/9 suite PASS**;
-`npm run verify:pi-extension-upstream` giờ **PASS** (snapshot khớp live 9 opencode + 18 kilo).
+### P5 — trình chạy + test
+- [ ] Entry: chạy được `node dist/server.js` (standalone) và `pi install ./pi-extension`
+- [ ] `/ofm` command thêm `provider on|off`, `provider status` (port/endpoint/models)
+- [ ] Unit test cho: server routes, anthropic codec, gemini codec, adapter commit rule,
+      recovery, classify, store, local-optimize, egress relay
+- [ ] Integration test qua loopback stand-in cho cả 3 giao thức (không tốn quota upstream)
+- [ ] Smoke: `pi -e ./pi-extension` vẫn chạy, `pi --list-models` vẫn thấy roster
 
-### P1 — Gap hành vi free-lane (từ đối chiếu code gốc; ảnh hưởng chất lượng lane)
-- [x] **G-a (trung bình)** `lane.sseGuard`/`transport`: trên path body **SSE bị gán nhãn sai** (content-type
-      JSON nhưng body là SSE) hiện `await response.text()` → **đệm toàn bộ** rồi mới phát lại, mất
-      streaming tăng dần (dsh `http.js` chỉ sniff 4KB rồi `replayStream`). Port `readHead`+`replayStream`.
-      **→ ĐÃ FIX (`0e2ca0a`)**: thêm `readHead`(4KB, có deadline+abort)/`replayStream`/`readRemainder`
-      vào `transport.ts`; `sseGuard` dùng chúng (không còn `response.text()` cho path SSE); `sseResponse`
-      nhận cả `ReadableStream`. Test: unit “readHead quyết SSE từ head, không đợi close”+“readRemainder
-      stitching”; integration kilo `sse-mislabelled` replayed. Suite **130/9 PASS**.
-- [x] **G-c (thấp)** `transportCause`: thêm lý do DNS/TLS (ENOTFOUND/ECONNRESET…) vào thông báo lỗi
-      transport (`fetch failed — getaddrinfo ENOTFOUND …`), như `http.js transportCause`.
-      **→ ĐÃ FIX (`3a78696`)**: port `transportCause` (đi tối đa 3 nhánh `cause`, dedupe) vào
-      `transport.ts`; `errorMessageOf` (`lane.ts`) ghép vào `errorMessage`; test 4 nhánh.
-- [ ] **G-b (thấp)** hint **empty-5xx + ảnh** (dsh issue #549): khi gateway trả 5xx body rỗng và request
-      mang ảnh, nói rõ “có thể model không nhận vision”; cần `carriesImageContent`.
-      **→ DEFERRED**: path empty-5xx do **pi-ai sở hữu** (extension trả nguyên response lỗi cho pi-ai); thêm
-      hint đòi canh sửa thông báo lỗi của pi-ai (rủi ro hồi quy) hoặc pre-check `init.body` lúc fetch rồi
-      rewrite lỗi. #549 là quirk gateway cũ — **chỉ làm nếu tái hiện được** trên lane OpenCode/Kilo hiện tại.
-- [x] **Kilo envelope (thấp)** `friendlyMessage`/kilo path chưa xử lý envelope Kilo riêng:
-      `PAID_MODEL_AUTH_REQUIRED` (id trả phí yêu cầu account → "không nằm ở free pool") và
-      `moderation|flagged|filtered` (chặn nội dung) — dsh `classifyKilo` đã tách.
-      **→ ĐÃ FIX (`6055c78`)**: thêm 2 nhánh vào `friendlyMessage` + test. (Không cần reshape
-      envelope `error_type`/`error.code` riêng vì pi-ai đã stringify body vào `errorMessage`,
-      nên regex trên text là đủ — khác cách dsh tự decode envelope.)
-- [x] **session xuyên restart — đã chốt, KHÔNG persist**: dsh lưu `session-map.json` (ổn định upstream-session qua restart,
-      nhận canonical id của caller); pi-extension giữ **in-process**. Hiện vẫn đúng (mint thời-gian-thật mỗi
-      lần, gate chấp nhận) — **KHÔNG persist** (2026-11-02): trong 1 tiến trình `sessionFor` giữ session ổn định theo hội thoại (tránh mint-mỗi-request gây 429); qua restart mint lại bằng thời-gian-thật → gate chấp nhận (200, đã đo); chỉ là một session-ID khác cho quota per-session/IP, không phải lỗi. Không ghi-đĩa.
-- [x] **(tuỳ chọn) rationale effort**: `src/effort.js` dùng **budget ladder** (gateway cũ bỏ qua
-      `reasoning_effort`, chỉ ép `max_tokens`); pi-extension dùng **menu `reasoning_effort` do model khai
-      báo** (đã đo lại: gateway hiện **honours** menu này + 400 nếu ngoài menu — audit §3 G4/G5). Ghi rationale vào
-      README/audit để khỏi tưởng bug khi đối chiếu `effort.js`. **→ ĐÃ GHI** vào README §“Thinking strength …”.
+## Không port (đã phân loại)
 
-### P2 — Hệ thống 2–7 (đã inventory; **out-of-scope v1** — chỉ port nếu chốt)
-Mỗi dòng: hệ thống → thư mục/module gốc → cần gì cho pi → khuyến nghị.
-- [ ] **EAC co-pay** (`src/eac*`, `worker/`) — kênh trả tiền, GitHub login+star, seal HMAC → pi không có;
-      khuyến nghị **KHÔNG**.
-- [ ] **10 kênh tài khoản** (`vendor/channel-pack/src/**` ~148 TS + 2 wasm) — OAuth/QR cho 10 IDE, gom
-      credential, check-in → **rất lớn**, không keyless; khuyến nghị **KHÔNG trong v1** (nếu cần: provider
-      per-IDE riêng, đòi login).
-- [ ] **Engine account-pool** (`src/magpie*` + `vendor/magpie` binary Go 68MB `yetone/magpie`) → local OpenAI
-      gateway 127.0.0.1:8326; pi tự chọn model; khuyến nghị **KHÔNG**.
-- [ ] **Local gateway 3 protocol** (`src/forward.js`, `anthropic.js`, `gemini.js`, `chan-relay.js`, `combos.js`
-      + LAN relay) — biến dsh thành server OpenAI/Anthropic/Gemini; **tuỳ chọn**: port nếu muốn dùng pi làm
-      gateway cho tool khác; nếu không → **KHÔNG**.
-- [ ] **Egress/proxy tự quản** (`src/egress.js`, `bun-fetch.js` — spawn mihomo/Clash, health-check) →
-      pi-extension hiểu chỉ cần `NODE_USE_ENV_PROXY` + `HTTPS_PROXY` (README §Notes); mihomo/Clash là quá mức;
-      khuyến nghị **KHÔNG**.
-- [ ] **Vỏ sản phẩm** (`index.js` host + `client.js` UI 11 trang; `store/updater/reload/feed/push/trust/sponsor/picks`)
-      → `/ofm` command + settings của pi đã đủ; khuyến nghị **KHÔNG** (trừ khi muốn dashboard usage trong pi).
-- [ ] **Token-saver** (`src/token-saver/**` ~17 file, nén tool-result git/ls/grep/tree/read…) → **xem xét**:
-      phù hợp để tiết kiệm token cho pi; cần thiết kế hook tool-result của pi (`registerToolRenderer`/
-      `tool_result` event). Để **quyết định**.
-- [ ] **Aggregate 76 provider** (`src/aggregate.js` + `src/providers/registry.json`) → thêm provider có-key;
-      pi quản key/đăng nhập riêng; khuyến nghị **KHÔNG/optional**.
-- [ ] **Phân phối/đóng gói** (`scripts/build-manifest*`, `catalog/*.json` ký, `packages/standalone+desktop+Tauri`,
-      `updater` Ed25519) → cài qua `pi install ./pi-extension`; khuyến nghị phát hành bằng **git tag** (không cần
-      manifest ký).
+EAC co-pay (cần gateway server + seal HMAC), 10 kênh tài khoản (148 file OAuth/QR + wasm),
+magpie binary Go 68MB, UI 11 trang React + client.js dictionary, updater Ed25519, self
+hot-reload, feed/push/sponsor, packages/standalone + packages/desktop Tauri, aggregate 76
+provider (pi/agent tự quản key qua login riêng — thêm storage thứ 2 là rủi ro).
 
-### P3 — Chất lượng mã
-- [x] Siết `strict:true` — **ĐÃ XONG**: giảm 165→0 theo module (kilo `8dea232`, opencode `a9a84e9`, chain-store+disclaimer `f99f2b1`, transport `1d9b2b9`, lane `80c8905`, catalog `432f082`, index `16c99e0`, fingerprint `d52ce37`, chains+lane `5837cf3`), mỗi cái build+suite xanh; rồi **bật strict ở build chính** (`tsconfig.json`: `strict:true`/`noImplicitAny:true`) và gỡ gate `typecheck:strict`/`tsconfig.strict.json` giờ thừa. Giờ `npm run build` **từ chối lỗi type** = cổng tương-thích với `pi-ai`/`pi-coding-agent` 1.4.0. Biên pi-API (opencode/kilo) type thật `Model`/`TranscriptContext`/`SimpleStreamOptions`; giữ `any` có chủ-đích ở payload/event gateway động + `matched!`/`check.error ?? ''` phòng-vệ.
-- [x] `npm audit` pi-extension: 3 vuln (2 mod, 1 high) — **dev-only, không ship** (extension chỉ ship `dist/`,
-      runtime do `pi` cấp pi-ai). Quyết định có `overrides` hay bỏ. **→ ĐÃ XONG (`0461cf4`)**: `overrides`
-      vá `undici^8.12.3`+`minimatch^11.0.3`, giữ pi 1.4.0; audit **0 vuln**, build+suite xanh.
+## Cảnh báo upstream (chạy verify 2026-11-05 — cần quyết định)
 
-> Cách tiếp cận: mọi mục P2 là “đã phân tích → cần chủ ý port”, không phải “còn nợ âm thầm”. P0/P1 là việc
-> thật, khả thi, có test.
+`npm run verify:pi-extension-upstream` báo **4 check fail vì lane free upstream đã drift**
+(không phải lỗi code — đúng việc script tồn tại để bắt):
+
+| Hiện tượng | Chi tiết |
+|---|---|
+| Row mới trên wire khác | `crouton-alpha-free` (OpenCode) đăng ký `wire: 'responses'` — gateway chỉ nói chat-completions, nên row này hiện **không phục vụ được** |
+| Id mới | `crouton-alpha-free` (OpenCode), `stealth-crouton-alpha` (Kilo) |
+| Id hết miễn phí | 5 id Kilo rời pool: `recursive-flint-v1.0-free`, `xingchen-agi-xing4.0-29b-a4b-free`, `liquid-lfm-2.5-2.6b-free`, `nvidia-nemotron-3.5-content-safety-free`, `inclusionai-lick-3.1-flash-1019-free`, `thinkingmachines-inkling-free`, `thinkingmachines-inkling-small-free`, `google-gemma-4-31b-it-free` |
+| Effort menu đổi | `crouton-alpha-free` giờ là `minimal\|low\|medium\|high\|xhigh\|max` |
+
+Quyết định cần chờ user (không tự đổi — là chính sách về dữ liệu phục vụ):
+1. Có thêm road Responses wire cho `crouton-alpha-free` không? (nếu không → để ngoài snapshot)
+2. Bỏ 5 id đã trả phí khỏi snapshot (`catalog.ts`) — để lại sẽ trả lỗi cho caller.
+3. Thêm 2 id chat-wired mới + cập nhật effort menu theo runbook §3.
+
+Tham khảo: `docs/pi-extension-drift-runbook.md`.
+
+## Lệnh dùng lại
+
+```bash
+npm --prefix pi-extension install        # dev deps
+npm --prefix pi-extension run build      # tsc strict → dist/
+npm run test:pi-extension                # unit + integration
+npm run verify:pi-extension-upstream     # live re-measure cả 2 lane
+node pi-extension/dist/server.js         # chạy api provider (khi xong P0)
+```

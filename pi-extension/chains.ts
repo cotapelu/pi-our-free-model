@@ -273,7 +273,7 @@ function supportsLevel(model: any, level: string) {
  */
 
 /** Pick the best member index for smart/usage/pace strategies. */
-function pickBestLink(chain: any, members: any[], request: any): number {
+export function pickBestLink(chain: any, members: any[], request: any): number {
   const now = Date.now()
   const quotaMap = (request?.quota ?? {}) as Record<string, any>
   const usageMap = (request?.usage ?? {}) as Record<string, any>

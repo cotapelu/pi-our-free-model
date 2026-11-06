@@ -3,6 +3,15 @@
 
 # dsh-our-free-model
 
+> ⚠️ **Project re-scoped (2026-11-05).** The dsh plugin half (host `index.js`, the
+> `client.js` UI, the EAC co-pay lane, the 10-account channel pack, the mihomo
+> egress, the magpie engine, the self-updater) is **no longer under development**.
+> The live directory is `pi-extension/`, and the new goal is to grow it into a
+> **full api provider** (an OpenAI/Anthropic/Gemini-compatible HTTP server) for
+> any coding agent — not just `pi`. See `AGENTS.md`, `docs/TODO.md` and
+> `BAOCAO.md` Part 7. The files under `src/` remain as **reference material** for
+> porting into `pi-extension/`.
+
 [简体中文](README.md) | **English**
 
   <img alt="license" src="https://img.shields.io/badge/license-MIT-263146?style=flat-square">

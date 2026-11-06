@@ -262,24 +262,19 @@ export const STATIC_KILO_MODELS = [
   { id: 'nvidia-nemotron-3.5-super-vl-free', wire: 'nvidia/nemotron-3.5-super-vl:free', name: 'Nemotron 3.5 Super VL', contextWindow: 1000000, maxTokens: 131072, vision: true },
   { id: 'reflection-beam-free', wire: 'reflection/beam-free', name: 'Beam Free', contextWindow: 1048576, maxTokens: 131072 },
   { id: 'stealth-glyph-cluster', wire: 'stealth/glyph-cluster', name: 'Glyph Cluster', contextWindow: 256000, maxTokens: 256000 },
-  { id: 'recursive-flint-v1.0-free', wire: 'recursive/flint-v1.0:free', name: 'Flint v1.0', contextWindow: 262144, maxTokens: 235929 },
-  { id: 'xingchen-agi-xing4.0-29b-a4b-free', wire: 'xingchen-agi/xing4.0-29b-a4b:free', name: 'Xing 4.0 29B A4B', contextWindow: 262144, maxTokens: 235929 },
   { id: 'dots-studio-dots-3-note-preview-free', wire: 'dots-studio/dots-3-note-preview:free', name: 'Dots 3 Note Preview', contextWindow: 512000, maxTokens: 460800, vision: true },
-  { id: 'liquid-lfm-2.5-2.6b-free', wire: 'liquid/lfm-2.5-2.6b:free', name: 'LFM 2.5 2.6B', contextWindow: 65536, maxTokens: 8192, canDisable: false },
   { id: 'nvidia-nemotron-3.5-lightning-free', wire: 'nvidia/nemotron-3.5-lightning:free', name: 'Nemotron 3.5 Lightning', contextWindow: 1000000, maxTokens: 65536 },
   { id: 'cohere-north-mini-code-free', wire: 'cohere/north-mini-code:free', name: 'North Mini Code', contextWindow: 256000, maxTokens: 64000 },
-  { id: 'nvidia-nemotron-3.5-content-safety-free', wire: 'nvidia/nemotron-3.5-content-safety:free', name: 'Nemotron 3.5 Content Safety', contextWindow: 128000, maxTokens: 8192, vision: true },
   { id: 'nvidia-nemotron-3-ultra-550b-a55b-free', wire: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nemotron 3 Ultra 550B', contextWindow: 1000000, maxTokens: 65536 },
   { id: 'nvidia-nemotron-3-nano-omni-30b-a3b-reasoning-free', wire: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', name: 'Nemotron 3 Nano Omni', contextWindow: 256000, maxTokens: 65536, vision: true },
   { id: 'openrouter-free', wire: 'openrouter/free', name: 'OpenRouter Free (router)', contextWindow: 200000, maxTokens: 32000, vision: true, canDisable: false },
-  { id: 'inclusionai-ling-3.1-flash-1019-free', wire: 'inclusionai/ling-3.1-flash-1019-free', name: 'Ling 3.1 Flash 1019', contextWindow: 1000000, maxTokens: 262144 },
-  // 2026-11-02 drift: three ids the free pool started serving. The two
-  // `thinkingmachines/` are a mandatory-thinking family (see
-  // KILO_REASONING_MANDATORY), so the snapshot marks them canDisable:false and
-  // the live path assigns them no off rung either.
-  { id: 'thinkingmachines-inkling-free', wire: 'thinkingmachines/inkling:free', name: 'Inkling', contextWindow: 1048576, maxTokens: 262144, vision: true, canDisable: false },
-  { id: 'thinkingmachines-inkling-small-free', wire: 'thinkingmachines/inkling-small:free', name: 'Inkling Small', contextWindow: 1048576, maxTokens: 262144, vision: true, canDisable: false },
-  { id: 'google-gemma-4-31b-it-free', wire: 'google/gemma-4-31b-it:free', name: 'Gemma 4 31B IT', contextWindow: 262144, maxTokens: 32768, vision: true },
+  // 2026-11-06 drift: ids the pool dropped (paid-only now, so a snapshot entry
+  // would answer an error on every turn) and one it started serving.
+  // Removed: recursive/flint-v1.0, xingchen-agi/xing4.0-29b-a4b, liquid/lfm-2.5-2.6b,
+  //          nvidia/nemotron-3.5-content-safety, inclusionai/ling-3.1-flash-1019,
+  //          thinkingmachines/inkling, thinkingmachines/inkling-small,
+  //          google/gemma-4-31b-it
+  { id: 'stealth-crouton-alpha', wire: 'stealth/crouton-alpha', name: 'Crouton Alpha', contextWindow: 1048576, maxTokens: 131072, efforts: ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'] },
 ]
 
 /**
@@ -317,20 +312,42 @@ export function staticOpencodeModels() {
 /** Kilo's menu with the off rung the auto-routers and mandatory-thinking families lack. */
 const KILO_DEFAULT_MAP = { off: 'off', minimal: null, low: 'low', medium: 'medium', high: 'high', xhigh: null, max: null }
 
+/**
+ * Kilo's menu from a row's own declared rungs, when the snapshot carries them.
+ *
+ * A row that names its effort menu declares exactly those rungs — the same
+ * validation the gateway applies to a live listing row — so a level the row does
+ * not name maps to `null` and pi refuses to send it rather than drawing a 400.
+ */
+function kiloMenuFor(row: any) {
+  const declared = Array.isArray(row.efforts) ? row.efforts : null
+  if (declared === null) return row.canDisable !== false ? { ...KILO_DEFAULT_MAP } : { ...KILO_DEFAULT_MAP, off: null }
+  const set = new Set(declared)
+  return {
+    off: set.has('none') || set.has('disabled') ? 'off' : null,
+    minimal: set.has('minimal') ? 'minimal' : null,
+    low: set.has('low') ? 'low' : null,
+    medium: set.has('medium') ? 'medium' : null,
+    high: set.has('high') ? 'high' : null,
+    xhigh: set.has('xhigh') ? 'xhigh' : null,
+    max: set.has('max') ? 'max' : null,
+  }
+}
+
 export function staticKiloModels() {
   return STATIC_KILO_MODELS.map((row) => {
+    const map = kiloMenuFor(row)
     const model: any = {
       id: row.id,
       name: row.name,
-      reasoning: true,
+      reasoning: Object.values(map).some((value) => value !== null),
       input: row.vision ? ['text', 'image'] : ['text'],
       cost: baseCost(),
       contextWindow: row.contextWindow,
       maxTokens: row.maxTokens,
       compat: { supportsStore: false, maxTokensField: 'max_tokens' },
+      thinkingLevelMap: map,
     }
-    if (row.canDisable !== false) model.thinkingLevelMap = { ...KILO_DEFAULT_MAP }
-    else model.thinkingLevelMap = { ...KILO_DEFAULT_MAP, off: null }
     return model
   })
 }

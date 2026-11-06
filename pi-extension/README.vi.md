@@ -4,6 +4,12 @@ Biến hai làn model miễn phí **không cần khoá** thành provider cho `pi
 chọn chúng như mọi provider built-in: **không đăng nhập, không đăng ký, không API
 key, không cần cấu hình gì.** Viết bằng TypeScript; `pi` chạy bản build `dist/`.
 
+> **Đang phát triển: full api provider** — bản tiếp theo sẽ thêm một HTTP server
+> OpenAI/Anthropic/Gemini-compatible (`/v1/chat/completions`, `/v1/messages`,
+> `/v1/responses`, `/v1/models`) để mọi coding agent (pi, Claude Code, Codex,
+> Continue, curl…) gọi được hai làn này qua base URL + key, không chỉ qua `pi`
+> extension. Kế hoạch port: `../docs/TODO.md`, phân tích: `../BAOCAO.md` Phần 7.
+
 | Provider | Upstream | Thông tin xác thực |
 |---|---|---|
 | `ofm-kilo` | Gateway công khai Kilo AI — `https://api.kilo.ai/api/gateway` | không — free pool trả lời request thật-sự không có credential |

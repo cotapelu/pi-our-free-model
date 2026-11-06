@@ -3,6 +3,23 @@
 
 # dsh-our-free-model
 
+> ⚠️ **Dự án đã chuyển hướng (2026-11-05).** Toàn bộ plugin dsh (vỏ host `index.js`,
+> UI `client.js`, EAC co-pay, 10 kênh tài khoản, egress mihomo, magpie, updater)
+> **không còn là mục tiêu phát triển**. Thư mục đang sống là `pi-extension/`, và
+> hướng mới là phát triển nó thành một **api provider đầy đủ** (HTTP server
+> OpenAI/Anthropic/Gemini-compatible) cho mọi coding agent — không chỉ `pi`.
+> Xem `AGENTS.md`, `docs/TODO.md` và `BAOCAO.md` Phần 7. Các file trong `src/` chỉ
+> còn là **tài liệu tham chiếu** để port sang `pi-extension/`.
+>
+> ⚠️ **Project re-scoped (2026-11-05).** The dsh plugin half (host `index.js`, the
+> `client.js` UI, the EAC co-pay lane, the 10-account channel pack, the mihomo
+> egress, the magpie engine, the self-updater) is **no longer under development**.
+> The live directory is `pi-extension/`, and the new goal is to grow it into a
+> **full api provider** (an OpenAI/Anthropic/Gemini-compatible HTTP server) for
+> any coding agent — not just `pi`. See `AGENTS.md`, `docs/TODO.md` and
+> `BAOCAO.md` Part 7. The files under `src/` remain as **reference material** for
+> porting into `pi-extension/`.
+
 **简体中文** | [English](README_EN.md)
 
   <img alt="许可证" src="https://img.shields.io/badge/license-MIT-263146?style=flat-square">

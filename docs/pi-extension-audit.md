@@ -48,20 +48,33 @@ qua `options.onPayload`, (c) đổi tên tool trùng gate và khôi phục ở r
 | G10 | DeepSeek v4 leak markup `<｜DSML｜…>` vào visible text | `src/stream.js` `createDsmlScrubber` | Trung bình | ✅ scrubber cho model deepseek |
 | G11 | Model free lane chỉ là **một phần** của lane: muse-spark/union-alpha trả trên `/responses`, `/messages`; một số id chỉ có base_url anthropic/google — gửi chat/completions sẽ sai | `src/upstream.js` `endpointFor`, listing `api.*` | Thấn (roster hiện tại toàn chat) | ✅ chỉ map row `chat-completions` |
 | G12 | Dịch lỗi: HTML page/WAF, `ModelError` "Model is unavailable", `INVALID_TOKEN` của Kilo | `src/http.js` `classifyFailure` | Trung bình | ✅ `friendlyMessage` |
-| G13 | Không có retry/fallback theo kiểu dsh (combo, continuation, recovery) | `src/adapter.js`, `src/combos.js`, `src/recovery.js` | Không cần — pi có retry/compaction riêng; ghi chú trong README | — |
-| G14 | Token-saver (nén tool result), local-optimize (5 câu local), aggregate (76 provider), EAC, 10 kênh tài khoản, settings UI, updater, feed | các module tương ứng | Ngoài phạm vi v1 (pi có cơ chế riêng; ghi ở README) | — |
+| G13 | Không có retry/fallback theo kiểu dsh (combo, continuation, recovery) | `src/adapter.js`, `src/combos.js`, `src/recovery.js` | Cần cho api provider đa giao thức | ⬜ TODO — port `adapter.ts` (2/5 strategy đã có; còn smart/usage/pace + recovery) |
+| G14 | Token-saver (nén tool result), local-optimize (5 câu local) | `src/token-saver/**`, `src/local-optimize.js` | Cần cho api provider full | 🟡 Token-saver đã port (A1/A2); local-optimize TODO |
+| G15 | Không có HTTP server / Anthropic / Gemini codec | `src/forward.js`, `src/anthropic.js`, `src/gemini.js`, `src/deferred-response.js` | Cần cho api provider đa giao thức | ⬜ TODO — P0/P1 |
+| G16 | Không có failure classification + probe/availability | `src/route/classify.js`, `src/probe.js`, `src/failure.js` | Cần cho gateway ổn định | ⬜ TODO — P3 |
+| G17 | Không có store/egress/bun-fetch | `src/store.js`, `src/egress.js`, `src/bun-fetch.js` | Cần cho api provider | ⬜ TODO — P4 |
 
 Không phát hiện vấn đề bảo mật trong extension: không hardcode credential (chỉ `Bearer public`
 và chuỗi sentinel cho Kilo bị wrapper fetch xóa trước khi ra wire), không ghi log secret,
 không mthể ghi log secret, listener loopback do pi quản.
 
-## 4) Còn hạn chế có chủ ý (ghi trong README)
+## 4) Hạn chế có chủ ý (phiên bản pi provider) — sẽ hết khi port api provider
 
 - Lane OpenCode cần egress không bị chặn vùng; region gate chỉ có thể đổi bằng proxy của user
   (`NODE_USE_ENV_PROXY=1` + `HTTPS_PROXY`).
 - Bun transport của dsh (chống proxy plugin rewrite body) chưa port; extension dùng Node fetch,
-  đã được xác minh pass gate tại thời điểm test.
-- Không có auto-continue khi bị cắt giữa lượt (dsh có); pi tự xử lý tiếp.
+  đã được xác minh pass gate tại thời điểm test. (TODO P4: port `bun-fetch.ts`)
+- Không có auto-continue khi bị cắt giữa lượt (dsh có); pi tự xử lý tiếp. (TODO P3)
+- Chỉ nói OpenAI Chat Completions wire. (TODO P1: `/v1/messages` + `/v1/responses` + `/v1/models`)
+
+## 4b) Hướng phát triển api provider (2026-11-05)
+
+pi-extension sẽ mở rộng khả năng thành **api provider đầy đủ** cho mọi coding agent. Kế hoạch
+port và lý do ở `BAOCAO.md` Phần 7 và `docs/TODO.md`. Không port: EAC co-pay (cần gateway
+Cloudflare Worker + GitHub login), 10 kênh tài khoản (148 file OAuth/QR + 2 wasm), magpie
+binary Go 68MB, UI 11 trang, updater Ed25519, self hot-reload, feed/push/sponsor, aggregate
+76 provider, packages/desktop Tauri — đều đòi login, vận hành bên thứ ba, hoặc ngoài phạm vi
+một keyless free-lane gateway.
 
 ## 5) Trạng thái sau khi sửa (2026-11-01)
 

@@ -19,6 +19,6 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["node"]
   },
-  "include": ["*.ts", "token-saver/**/*.ts"],
+  "include": ["*.ts", "gateway/**/*.ts", "token-saver/**/*.ts"],
   "exclude": ["test", "scripts", "dist", "node_modules"]
 }

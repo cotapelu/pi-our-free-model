@@ -4,6 +4,12 @@ Turns two **keyless** free-model lanes into pi model providers, so `pi` selects
 them like any built-in provider: **no login, no sign-up, no API key, nothing to
 configure.** Written in TypeScript; `pi` runs the compiled `dist/`.
 
+> **Đang phát triển: full api provider** — bản tiếp theo sẽ thêm một HTTP server
+> OpenAI/Anthropic/Gemini-compatible (`/v1/chat/completions`, `/v1/messages`,
+> `/v1/responses`, `/v1/models`) để mọi coding agent (pi, Claude Code, Codex,
+> Continue, curl…) gọi được hai lane này qua base URL + key, không chỉ qua `pi`
+> extension. Kế hoạch port: `../docs/TODO.md`, phân tích: `../BAOCAO.md` Phần 7.
+
 | Provider | Upstream | Credential |
 |---|---|---|
 | `ofm-kilo` | Kilo AI public gateway — `https://api.kilo.ai/api/gateway` | none — the free pool answers a genuinely credential-less request |
