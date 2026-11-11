@@ -1,0 +1,52 @@
+{
+  "name": "pi-our-free-model",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "description": "pi provider extension for the two keyless free-model lanes this repository documents: OpenCode's public free tier and Kilo AI's public gateway free pool. No login, no sign-up, no API key. TypeScript source; `npm run build` emits dist/.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "README.vi.md"
+  ],
+  "pi": {
+    "extensions": [
+      "./dist/index.js"
+    ]
+  },
+  "scripts": {
+    "prepare": "tsc -p tsconfig.json && node scripts/copy-registry.mjs",
+    "build": "tsc -p tsconfig.json && node scripts/copy-registry.mjs",
+    "install": "npm run build && node scripts/install-local.mjs",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+        "test:pi-extension": "npm run build && node test/run-all.mjs",
+    "verify:pi-extension-upstream": "node scripts/reverify-upstream.ts"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-ai": "^1.4.0",
+    "@earendil-works/pi-coding-agent": "^1.4.0",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.2"
+  },
+  "overrides": {
+    "undici": "^8.12.3",
+    "minimatch": "^11.0.3"
+  },
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "license": "MIT"
+}

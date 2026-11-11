@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "phases": [
+    {
+      "id": "phase-1",
+      "name": "G10-standalone",
+      "tasks": [
+        {
+          "id": "task-1",
+          "content": "Survey standalone/desktop source (done: read all backend modules + frontend shape)",
+          "status": "in_progress"
+        },
+        {
+          "id": "task-2",
+          "content": "Port standalone backend small modules (open-external, login-terminal, eac, routing, providers, desktop-update) + disclaimer exports",
+          "status": "pending"
+        },
+        {
+          "id": "task-3",
+          "content": "Port channels/ (6 modules) + business.mjs generator",
+          "status": "pending"
+        },
+        {
+          "id": "task-4",
+          "content": "Port missing core deps (FreeModelAdapter, catalog builders, detectEgress/probeCatalog, session helpers, lan-relay)",
+          "status": "pending"
+        },
+        {
+          "id": "task-5",
+          "content": "Port workbench + library + client-terminal + tests",
+          "status": "pending"
+        },
+        {
+          "id": "task-6",
+          "content": "Port management.mjs + tests",
+          "status": "pending"
+        },
+        {
+          "id": "task-7",
+          "content": "Port service.mjs + cli.mjs, wire gateway handleRequest/health hooks",
+          "status": "pending"
+        },
+        {
+          "id": "task-8",
+          "content": "Spawn child: desktop package port (service-host, titlebar, Rust boundary)",
+          "status": "pending"
+        },
+        {
+          "id": "task-9",
+          "content": "Spawn child: frontend source port + sponsor UI + vite/shared-ui",
+          "status": "pending"
+        },
+        {
+          "id": "task-10",
+          "content": "Build + run-all + smoke standalone service",
+          "status": "pending"
+        },
+        {
+          "id": "task-11",
+          "content": "Update docs + git commit",
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "nextTaskId": 12,
+  "nextPhaseId": 2,
+  "updatedAt": "2026-11-10T07:38:55.792Z"
+}

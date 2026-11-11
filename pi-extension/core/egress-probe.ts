@@ -1,0 +1,234 @@
+/**
+ * Availability probing, in the catalog-row vocabulary the service entries speak.
+ *
+ * The gateway does not disclose which models this egress may use: the model
+ * listing is a flat id list, and exclusion only appears when a request is
+ * refused with a `RegionError`. Availability is therefore established by asking,
+ * with the smallest request that can produce a verdict.
+ *
+ * Egress is watched alongside it because the answer is a property of the
+ * network path, not of the account: turning a VPN on changes which models exist
+ * for the user, and the picker has to follow without a restart. The cheapest
+ * reliable signal is the public address the gateway itself sees.
+ *
+ * This is the `src/probe.js` half the extension's own prober
+ * (`gateway/probe.ts`) does not cover: that one drives pi's turn loop and speaks
+ * the wire's verdict codes, while this one drives the *service* runtime and
+ * speaks the upstream classification vocabulary of `core/upstream.ts`. The
+ * verdict strings themselves (`STATE`) are shared, because they are what the
+ * picker reads in both entries.
+ *
+ * Ported from dsh's `src/probe.js`.
+ *
+ * @module pi-extension/core/egress-probe.js
+ */
+
+import { applyFingerprintWire } from '../fingerprint.js'
+import { CODE, UpstreamError, endpointFor, postStreamed, sessionForConversation, wireFor } from './upstream.js'
+import { STATE } from '../gateway/probe.js'
+
+export { STATE }
+
+/** Public-echo sources, tried in order; any one answering is enough. */
+const ECHO_SOURCES: Array<{ url: string; pick: (payload: any) => unknown; extra?: (payload: any) => unknown }> = [
+  { url: 'https://api.ipify.org?format=json', pick: (payload) => payload?.ip },
+  { url: 'https://ipinfo.io/json', pick: (payload) => payload?.ip, extra: (payload) => payload?.country },
+  { url: 'https://ipapi.co/json/', pick: (payload) => payload?.ip, extra: (payload) => payload?.country_code },
+]
+
+const PING_PROMPT = 'ping'
+
+/**
+ * Ask the gateway for one model, once.
+ *
+ * Each model gets its own upstream session: the quota is accounted per session,
+ * so one session for a whole round lets the first model eat the quota and every
+ * later model read as 429 (issue #561).
+ */
+export async function probeModel(model: any, { attributionUserAgent, signal, timeoutMs = 45000 }: {
+  attributionUserAgent?: string
+  signal?: AbortSignal
+  timeoutMs?: number
+} = {}): Promise<{ state: string; detail?: string; latencyMs: number; ttftMs?: number }> {
+  const started = Date.now()
+  const session = sessionForConversation('probe:our-free-model:' + model.id)
+  const wire = wireFor(model.id)
+  const body = buildPing(model.id, wire)
+  // 三条线各有自己的工具形状：Responses 是扁平项，Messages 是 Claude 的
+  // `input_schema`，Chat 是 `{function:{…}}`。传错形状会让注入的指纹工具不合规。
+  applyFingerprintWire(body, wire === 'responses' ? true : wire === 'messages' ? 'claude' : false)
+
+  let firstDelta: number | undefined
+  let streamError: string | undefined
+  try {
+    await postStreamed({
+      path: endpointFor(model.id),
+      body,
+      session,
+      attributionUserAgent,
+      signal,
+      timeoutMs,
+      onData: (payload: string) => {
+        // The lane answers some refusals inside a 200 stream — a `{"type":
+        // "error"}` or `{"error": …}` frame arrives where the deltas were
+        // expected (stream.ts classifies the same frames for real turns).
+        // Reading only "did a delta look like a delta" called such a stream
+        // available, and a model that fails every honest turn sat in the picker
+        // with a green badge.
+        if (streamError === undefined && /"(?:type"\s*:\s*"error"|"error"\s*:)/.test(payload)) {
+          try {
+            const parsed = JSON.parse(payload)
+            const failure = parsed?.error ?? (parsed?.type === 'error' ? parsed : undefined)
+            if (failure !== undefined && failure !== null) {
+              streamError = typeof failure.message === 'string' ? failure.message : 'upstream error'
+              return
+            }
+          } catch { /* not JSON the lane emits; the delta regex below still runs */ }
+        }
+        if (firstDelta !== undefined) return
+        if (/"(delta|content|text|output_item)"|response\.(output_item|output_text|function_call)/.test(payload)) firstDelta = Date.now()
+      },
+    })
+    if (streamError !== undefined) {
+      return { state: STATE.unknown, detail: streamError.slice(0, 200), latencyMs: Date.now() - started }
+    }
+    return { state: STATE.available, latencyMs: Date.now() - started, ttftMs: firstDelta === undefined ? undefined : firstDelta - started }
+  } catch (error) {
+    return {
+      state: stateOf(error),
+      detail: typeof (error as Error)?.message === 'string' ? (error as Error).message.slice(0, 200) : String(error),
+      latencyMs: Date.now() - started,
+    }
+  }
+}
+
+function buildPing(modelId: string, wire: string): any {
+  if (wire === 'responses') {
+    return {
+      model: modelId,
+      input: [{ type: 'message', role: 'user', content: [{ type: 'input_text', text: PING_PROMPT }] }],
+      stream: true,
+      store: false,
+      max_output_tokens: 16,
+    }
+  }
+  if (wire === 'messages') {
+    return {
+      model: modelId,
+      messages: [{ role: 'user', content: PING_PROMPT }],
+      stream: true,
+      max_tokens: 16,
+    }
+  }
+  return { model: modelId, messages: [{ role: 'user', content: PING_PROMPT }], stream: true, max_tokens: 16 }
+}
+
+/**
+ * Map one probe failure onto a verdict.
+ *
+ * The line that matters is whether the gateway *named this model as something it
+ * will not route*. Only those readings come from the answer itself: a refusal
+ * whose message is about the model (`Model is unavailable`, `not supported`,
+ * `no such model`), or a status whose whole meaning is the identifier in the body
+ * we sent — 400 for a model it rejects, 404 for one it no longer has, 422 for a
+ * route that refuses the pair. Those read as unavailable and the picker drops the
+ * model.
+ *
+ * Everything else says nothing about the model and must not move it:
+ * - 5xx, including 503, is the gateway's own trouble. It is the single most
+ *   common thing an overloaded pooled account says, and this lane's own history
+ *   has it returning 5xx for reasons that had nothing to do with the model.
+ *   Its *words* must not be read as a verdict either: a reverse proxy answers a
+ *   503 with the reason phrase "Service Unavailable", and matching that text
+ *   took a working model out of the picker.
+ * - 401/403/407 is the pooled credential, and 408/425/429 is capacity or
+ *   transport — the next window can answer.
+ * - no status at all (transport, abort, timeout, a stream that died before any
+ *   header) means no answer was received.
+ *
+ * The asymmetry is deliberate: a stale entry in the picker costs the user one
+ * failed turn they can retry, while a model that vanished on a hiccup costs the
+ * `reprobe`-then-wait cycle the user has no visibility into.
+ */
+const ROUTING_REFUSAL_STATUS = new Set([400, 404, 422])
+
+function stateOf(error: any): string {
+  switch (error?.code) {
+    case CODE.region: return STATE.regionBlocked
+    case CODE.quota: return STATE.throttled
+    // The free lane's client gate refuses the lane, not the model — but unlike a
+    // 5xx it does not clear on its own, so a model that can only fail reads with
+    // the same verdict the picker already treats as "the gateway will not route
+    // this". The whole-round guard in `computeMembership` still keeps every model
+    // visible when the lock takes the entire lane.
+    case CODE.laneLocked: return STATE.unavailable
+    default: break
+  }
+  const message = String(error?.message ?? '')
+  const gatewayTrouble = Number.isInteger(error?.status) && error.status >= 500
+  const named = error?.unavailable === true
+    || (!gatewayTrouble && /unavailable|unsupported|not supported|no such model|unknown model|invalid model/i.test(message))
+  if (named) return STATE.unavailable
+  if (Number.isInteger(error?.status) && ROUTING_REFUSAL_STATUS.has(error.status)) return STATE.unavailable
+  return STATE.unknown
+}
+
+/**
+ * Resolve the public address the gateway will see, plus its country when an echo
+ * discloses one. Fail-open: an absent answer simply means "no egress signal".
+ */
+export async function detectEgress({ signal, timeoutMs = 8000 }: { signal?: AbortSignal; timeoutMs?: number } = {}): Promise<{ ip: string; country?: string } | undefined> {
+  for (const source of ECHO_SOURCES) {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), timeoutMs)
+    timer.unref?.()
+    const relayAbort = () => controller.abort()
+    signal?.addEventListener('abort', relayAbort, { once: true })
+    try {
+      const response = await fetch(source.url, { signal: controller.signal, redirect: 'error', headers: { accept: 'application/json' } })
+      if (!response.ok) continue
+      const payload = await response.json() as Record<string, any>
+      const ip = source.pick(payload)
+      if (typeof ip !== 'string' || ip === '') continue
+      const country = source.extra?.(payload)
+      return { ip, ...country === undefined ? {} : { country: String(country) } }
+    } catch {
+      // try the next echo
+    } finally {
+      // The deadline has to outlive the response head: response.json() is where
+      // a slow echo used to stall past the 8s budget and freeze the probe loop.
+      // And the caller's signal only borrowed this listener for this attempt.
+      clearTimeout(timer)
+      signal?.removeEventListener('abort', relayAbort)
+    }
+  }
+  return undefined
+}
+
+/**
+ * Probe a whole catalog with a bounded fan-out.
+ *
+ * Concurrency stays low on purpose: this lane accounts quota per session and
+ * answers 429 with growing retry-after, so a wide burst would throttle the very
+ * user whose availability we are establishing. A round probes every model —
+ * partial rounds leave verdicts stale and the picker half-explained — and the
+ * periodic loop holds *whole rounds* off while a quota backoff window is open
+ * (the caller's concern) instead of truncating this one.
+ */
+export async function probeCatalog(models: any[], options: Record<string, any> = {}, onResult: (id: string, result: any) => void = () => {}, concurrency = 2): Promise<Record<string, any>> {
+  const results: Record<string, any> = {}
+  let cursor = 0
+  const workers = Array.from({ length: Math.max(1, Math.min(concurrency, models.length)) }, async () => {
+    while (cursor < models.length) {
+      const index = cursor++
+      const model = models[index]
+      // A late reply is still the sample that began before a newer manual test.
+      const startedAt = Date.now()
+      const result = { ...await probeModel(model, options), startedAt }
+      results[model.id] = result
+      onResult(model.id, result)
+    }
+  })
+  await Promise.all(workers)
+  return results
+}

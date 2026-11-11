@@ -1,0 +1,594 @@
+/**
+ * Our Free Model — pi provider extension.
+ *
+ * Turns the two keyless upstream lanes this repository already documents and
+ * drives into pi model providers, so `pi` can select them like any built-in
+ * provider: no login, no sign-up, no API key.
+ *
+ *   ofm-opencode  OpenCode's public free tier (`opencode.ai`) — free models
+ *                 behind a pooled public credential plus a client fingerprint.
+ *   ofm-kilo      Kilo AI's public gateway free pool (`api.kilo.ai`) — free
+ *                 models with no credential whatsoever.
+ *   ofm-chain     fallback chains over both lanes: one selectable name whose
+ *                 links are tried in order, the first one that answers wins.
+ *
+ * Both lanes fetch their roster live from the upstream listing on every load
+ * (an offline snapshot keeps the models present before the first refresh), and
+ * both stream through pi-ai's OpenAI-Completions implementation so tool calls,
+ * thinking, usage and cancellation behave exactly like a built-in provider.
+ *
+ * @module pi-extension/index.js
+ */
+import { CHAIN_PREFIX, CHAIN_PROVIDER, buildChainEdit, chainByName, chainId, decideLink, evaluateAdd, intersectCapabilities, normalizeChains, parseChainAdd, parseChainSetLinks, parseLinkList } from './chains.js'
+import { readChains, writeChains } from './chain-store.js'
+import { readSaver, writeSaver } from './saver-store.js'
+import { allSavings } from './saver-stats.js'
+import { describeSavings } from './token-saver/index.js'
+import { activePrompts, CAVEMAN_LEVELS, PONYTAIL_LEVELS, OFF } from './token-saver/prompts.js'
+import { noticeText, shouldNotice, writeAck } from './disclaimer.js'
+import { AnnouncementFeed, DEFAULT_FEED_SOURCES } from './feed.js'
+import { PICK_REPOS, createPickStats } from './picks.js'
+import { acknowledge, readAck } from './feed-ack.js'
+import crypto from 'node:crypto'
+import { directFetch } from './eac.js'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { kiloModels, kiloProvider, PROVIDER_ID as KILO_ID } from './kilo.js'
+import { opencodeModels, opencodeProvider, PROVIDER_ID as OPENECODE_ID } from './opencode.js'
+import { eacModels, eacProvider, PROVIDER_ID as EAC_ID } from './eac-lane.js'
+import { aggregateModels, aggregateProvider, PROVIDER_ID as AGGREGATE_ID } from './aggregate-lane.js'
+import { createEacLoginPoller } from './eac-login.js'
+import { clearEacUser, readEacUser, writeEacUser } from './eac-user.js'
+import { openExternal, externalUrl } from './open-external.js'
+import { sealedCredential } from './eac-lane.js'
+
+/** Resolve one `provider/model` address against the live registry. */
+function resolveLink(ctx: any, address: string) {
+  const slash = address.indexOf('/')
+  if (slash <= 0 || slash === address.length - 1) return undefined
+  return ctx.modelRegistry.find(address.slice(0, slash), address.slice(slash + 1))
+}
+
+/** Register (or re-register) one chain as a virtual model. */
+function registerChain(pi: any, chain: any, ctx?: any) {
+  // Limits come from the links that resolve right now; pi replaces them with the
+  // dispatched model's own after the first response either way.
+  const members = ctx === undefined ? [] : chain.models.map((address: string) => resolveLink(ctx, address)).filter(Boolean)
+  const limits = intersectCapabilities(members)
+  pi.registerVirtualModel({
+    provider: CHAIN_PROVIDER,
+    id: chain.id.slice(CHAIN_PREFIX.length),
+    name: chain.name,
+    thinkingLevels: limits.thinkingLevels ?? ['off'],
+    ...(limits.contextWindow === undefined ? {} : { contextWindow: limits.contextWindow }),
+    ...(limits.maxTokens === undefined ? {} : { maxTokens: limits.maxTokens }),
+    ...(limits.input === undefined ? {} : { input: limits.input }),
+    route: (request: any, routeCtx: any) => {
+      const links = chain.models.map((address: string) => resolveLink(routeCtx, address)).filter(Boolean)
+      if (links.length === 0) {
+        throw new Error(`the chain "${chain.name}" has no link that exists right now: ${chain.models.join(', ')}`)
+      }
+      const { index, state } = decideLink({ chain, members: links, request })
+      const model = links[index]
+      return { model, thinkingLevel: clampLevel(request.thinkingLevel, model), state }
+    },
+  })
+}
+
+/** The highest level the picked model actually accepts; `off` always is. */
+function clampLevel(level: any, model: any) {
+  const map = model.thinkingLevelMap
+  if (map === undefined) return 'off'
+  if (map[level] !== undefined && map[level] !== null) return level
+  const order = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']
+  const wanted = order.indexOf(level)
+  for (let step = wanted + 1; step < order.length; step += 1) {
+    if (map[order[step]] !== undefined && map[order[step]] !== null) return order[step]
+  }
+  for (let step = wanted - 1; step >= 0; step -= 1) {
+    if (map[order[step]] !== undefined && map[order[step]] !== null) return order[step]
+  }
+  return 'off'
+}
+
+/** Register every enabled chain, after the lanes exist to resolve links against. */
+function registerChains(pi: any, chains: any[], ctx?: any) {
+  for (const chain of chains) {
+    if (chain.enabled === false) continue
+    registerChain(pi, chain, ctx)
+  }
+}
+
+/** Describe the chains for the command's status output. */
+function describeChains(ctx: any, chains: any[]) {
+  if (chains.length === 0) return 'no chains yet — add one with /ofm chain add'
+  return chains
+    .map((chain) => {
+      const live = chain.models.filter((address: string) => resolveLink(ctx, address) !== undefined)
+      const links = chain.models
+        .map((address: string) => `${resolveLink(ctx, address) ? '' : '⚠ '}${address}`)
+        .join(' → ')
+      const strategy = chain.strategy + (chain.stickyLimit > 1 ? `:${chain.stickyLimit}` : '')
+      return `${chain.enabled === false ? '⏸ ' : '▶ '}${chain.id}  ${chain.name}  [${strategy}]  ${live.length}/${chain.models.length} live  ${links}`
+    })
+    .join('\n')
+}
+
+/**
+ * Register the free lanes and the chains. Async on purpose: pi waits for the
+ * factory, so the freshly fetched rosters are visible to `pi --list-models` and
+ * startup model selection, and the offline snapshot covers a machine with no
+ * route upstream.
+ */
+export default async function (pi: any) {
+  const [kilo, opencode, chains] = await Promise.all([kiloModels(), opencodeModels(), Promise.resolve(readChains())])
+
+  pi.registerProvider(KILO_ID, kiloProvider({ models: kilo }))
+  pi.registerProvider(OPENECODE_ID, opencodeProvider({ models: opencode }))
+  // The co-paid lane registers only on a host the seal opens on. Elsewhere the
+  // provider is `null` and the lane simply does not exist for this process.
+  const eac = eacProvider({ models: await eacModels() })
+  if (eac !== null) pi.registerProvider(EAC_ID, eac)
+  // The aggregate lane exists only when the user has pasted at least one key:
+  // a lane with no rows is a picker entry that can only answer an error.
+  const aggregate = aggregateProvider()
+  if (aggregate !== null) pi.registerProvider(AGGREGATE_ID, aggregate)
+  registerChains(pi, chains)
+
+  // The first time these lanes appear on this machine, say what they cost. A
+  // session_start handler rather than the factory: the factory cannot show UI,
+  // and marking the notice seen without showing it would swallow it in print
+  // mode — the next interactive session would stay silent about it.
+  pi.on('session_start', (_event: any, ctx: any) => {
+    if (ctx?.hasUI !== true || !shouldNotice()) return
+    writeAck()
+    ctx.ui.notify(noticeText(), 'warning')
+  })
+
+  // The prompt families shape how the model *writes*, so they ride the system
+  // prompt itself — the one place every lane and every turn observes. Appending
+  // rather than replacing is what keeps the user's own instructions intact.
+  pi.on('before_agent_start', (event: any) => {
+    const saver = readSaver()
+    const prompts = activePrompts(saver)
+    if (prompts.length === 0) return
+    return { systemPrompt: `${event.systemPrompt}\n\n${prompts.map((entry) => entry.text).join('\n\n')}` }
+  })
+
+  pi.registerCommand('ofm', {
+    description: 'Our Free Model: status | refresh | saver [on|off|stats] | chain [add|set|remove|enable|disable]',
+    handler: async (arg: string, ctx: any) => {
+      const words = String(arg ?? '').trim().split(/\s+/).filter(Boolean)
+      const head = (words[0] ?? 'status').toLowerCase()
+      const rest = words.slice(1).join(' ')
+      const notify = (message: string) => {
+        if (ctx.hasUI) ctx.ui.notify(message, 'info')
+      }
+
+      // The co-paid lane's GitHub gate: open a link, poll until the gateway
+      // mints a token, and report the login. A host with no lane says so rather
+      // than opening a browser that can only answer 401.
+      if (head === 'login' || head === 'logout') {
+        const logout = head === 'logout'
+        const credential = sealedCredential()
+        if (credential === null || credential.mode !== 'worker') {
+          notify('the co-paid lane is not available on this host — there is nothing to sign in to')
+          return
+        }
+        if (logout) {
+          clearEacUser()
+          notify('co-paid authorization forgotten on this machine (the gateway still holds its own record — revoke it there too)')
+          return
+        }
+        const current = readEacUser()
+        if (current !== null) {
+          notify(`already signed in as ${current.login || '(unknown user)'} — /ofm logout to clear it first`)
+          return
+        }
+        const link = crypto.randomBytes(24).toString('base64url')
+        const poller = createEacLoginPoller({
+          credentialOf: () => sealedCredential() as any,
+          fetch: directFetch as unknown as typeof fetch,
+          readUser: readEacUser,
+          writeUser: (user: any) => writeEacUser(user) as any,
+          onSaved: () => {},
+        })
+        const started = await poller.prepare(link)
+        if (started.error !== undefined) {
+          notify(`could not start the GitHub sign-in: ${started.error}`)
+          return
+        }
+        const root = String(credential.base).replace(/\/v1\/?$/, '')
+        const url = `${root}/auth/github/start?link=${encodeURIComponent(link)}`
+        const opened = await openExternal(url)
+        notify(
+          `${opened ? 'opened' : 'open'} this URL to authorise:\n${externalUrl(url) ?? url}\n\n` +
+          'then run /ofm login again to collect the token (authorise *and* star the repository — the gateway checks both).',
+        )
+        const result = await poller.poll(link)
+        if (result.status === 'ok') {
+          notify(`signed in as ${result.login || '(unknown user)'} — the co-paid lane is open for this process after a refresh`)
+          return
+        }
+        if (result.status === 'unstarred') {
+          notify(`signed in as ${result.login || '(unknown user)'} but the repository is not starred yet — star it, then /ofm login again`)
+          return
+        }
+        if (result.status === 'expired') {
+          notify('the sign-in link expired before it was used — /ofm login again for a fresh one')
+          return
+        }
+        notify(`sign-in did not complete: ${result.error ?? result.status ?? 'unknown'}`)
+        return
+      }
+
+      if (head === 'chain' && (words[1] ?? '').toLowerCase() === 'add') {
+        const parsed = parseChainAdd(rest.replace(/^add\s+/i, ''))
+        if (parsed.error !== undefined) {
+          notify(`${parsed.error}\ne.g. /ofm chain add My Chain | ofm-kilo/reflection-beam-free | ofm-opencode/beam-free | round-robin:2`)
+          return
+        }
+        // Check the links against the live registry before storing: a dead one is
+        // usually a typo, and the alternative is discovering it mid-turn.
+        const check = evaluateAdd(parsed, (address: string) => resolveLink(ctx, address) !== undefined)
+        if (!check.ok) {
+          notify(check.error ?? '')
+          return
+        }
+        const stored = writeChains([...chains, { id: chainId(parsed.name), name: parsed.name, models: parsed.models, strategy: parsed.strategy, stickyLimit: parsed.stickyLimit }])
+        chains.length = 0
+        chains.push(...stored)
+        registerChains(pi, stored, ctx)
+        const dead = check.dead.length > 0 ? ` — not resolving right now: ${check.dead.join(', ')}` : ''
+        notify(`chain ${chainId(parsed.name)} added with ${check.live.length}/${parsed.models.length} links live (${parsed.strategy}${parsed.stickyLimit > 1 ? `:${parsed.stickyLimit}` : ''})${dead}`)
+        return
+      }
+
+      if (head === 'chain' && (words[1] ?? '').toLowerCase() === 'edit') {
+        // A wizard over one chain: name, links, strategy, sticky. Pure headless
+        // callers get the same edits through the `set` forms or the file.
+        const target = chainByName(chains, words.slice(2).join(' '))
+        if (target === undefined) {
+          notify(`no chain named "${words.slice(2).join(' ')}"`)
+          return
+        }
+        if (!ctx.hasUI) {
+          notify('the chain editor needs an interactive session; use /ofm chain set <id> links|strategy|sticky, or edit ~/.our-free-model/chains.json')
+          return
+        }
+        const name = await ctx.ui.input('Chain name', target.name)
+        if (name === undefined) {
+          notify('edit cancelled — nothing changed')
+          return
+        }
+        const linksText = await ctx.ui.editor('One link per line (provider/model)', target.models.join('\n'))
+        if (linksText === undefined) {
+          notify('edit cancelled — nothing changed')
+          return
+        }
+        const parsedLinks = parseLinkList(linksText)
+        if (parsedLinks.bad !== undefined) {
+          notify(`"${parsedLinks.bad}" is not a provider/model link — nothing changed`)
+          return
+        }
+        const strategy = await ctx.ui.select('Strategy for this chain', ['fallback', 'round-robin'])
+        if (strategy === undefined) {
+          notify('edit cancelled — nothing changed')
+          return
+        }
+        let sticky = target.stickyLimit
+        if (strategy === 'round-robin') {
+          const answer = await ctx.ui.input('Sticky turns per link (1-16)', String(sticky))
+          if (answer === undefined) {
+            notify('edit cancelled — nothing changed')
+            return
+          }
+          sticky = Number(answer.trim())
+        }
+        const built = buildChainEdit({ current: target, name, links: parsedLinks.links, strategy, stickyLimit: sticky })
+        if (built.error !== undefined) {
+          notify(built.error)
+          return
+        }
+        const check = evaluateAdd({ models: built.chain.models }, (address: string) => resolveLink(ctx, address) !== undefined)
+        if (!check.ok) {
+          notify(check.error ?? '')
+          return
+        }
+        const stored = writeChains(chains.map((chain) => (chain.id === target.id ? built.chain : chain)))
+        chains.length = 0
+        chains.push(...stored)
+        const updated = stored.find((chain) => chain.id === target.id)
+        if (updated?.enabled !== false) registerChain(pi, updated, ctx)
+        const dead = check.dead.length > 0 ? ` — not resolving right now: ${check.dead.join(', ')}` : ''
+        notify(`chain ${target.id} updated: ${check.live.length}/${built.chain.models.length} links live (${built.chain.strategy}${built.chain.stickyLimit > 1 ? `:${built.chain.stickyLimit}` : ''})${dead}`)
+        return
+      }
+
+      if (head === 'chain' && (words[1] ?? '').toLowerCase() === 'set') {
+        const setInput = rest.replace(/^set\s+/i, '').trim()
+        // `/ofm chain set <id|name> links <a> | <b>` replaces the chain's links.
+        if (/^\S+\s+links\s+/i.test(setInput)) {
+          const parsed = parseChainSetLinks(setInput)
+          if (parsed.error === undefined) {
+            const named = chainByName(chains, parsed.target)
+            if (named !== undefined) {
+              const check = evaluateAdd(parsed, (address: string) => resolveLink(ctx, address) !== undefined)
+              if (check.ok) {
+                const stored = writeChains(chains.map((chain) => (chain.id === named.id ? { ...chain, models: parsed.models } : chain)))
+                chains.length = 0
+                chains.push(...stored)
+                const updated = stored.find((chain) => chain.id === named.id)
+                if (updated?.enabled !== false) registerChain(pi, updated, ctx)
+                const dead = check.dead.length > 0 ? ` — not resolving right now: ${check.dead.join(', ')}` : ''
+                notify(`chain ${named.id} now links ${check.live.length}/${parsed.models.length} live${dead}`)
+                return
+              }
+              notify(check.error ?? '')
+              return
+            }
+          }
+        }
+        // `/ofm chain set <id|name> strategy fallback|round-robin[:sticky]` or
+        // `/ofm chain set <id|name> sticky <n>` — the edit that spares the user
+        // the chains file.
+        const match = /^([^\s]+)\s+(strategy|sticky)\s+(.+)$/i.exec(setInput)
+        const named = match !== null ? chainByName(chains, match[1]) : undefined
+        if (match === null || named === undefined) {
+          notify('usage: /ofm chain set <id|name> links <a> | <b>\n       /ofm chain set <id|name> strategy fallback|round-robin[:sticky]\n       /ofm chain set <id|name> sticky <n>')
+          return
+        }
+        let patch
+        if (match[2].toLowerCase() === 'strategy') {
+          const parsed = /^(fallback|round-robin)(?::([1-9][0-9]{0,3}))?$/i.exec(match[3].trim())
+          if (parsed === null) {
+            notify('strategy must be fallback or round-robin, optionally round-robin:<sticky>')
+            return
+          }
+          patch = {
+            strategy: parsed[1].toLowerCase(),
+            stickyLimit: parsed[2] === undefined ? named.stickyLimit : Math.min(16, Number(parsed[2])),
+          }
+        } else {
+          const sticky = Number(match[3].trim())
+          if (!Number.isInteger(sticky) || sticky < 1 || sticky > 16) {
+            notify('sticky must be 1..16')
+            return
+          }
+          patch = { stickyLimit: sticky }
+        }
+        const stored = writeChains(chains.map((chain) => (chain.id === named.id ? { ...chain, ...patch } : chain)))
+        chains.length = 0
+        chains.push(...stored)
+        const updated = stored.find((chain) => chain.id === named.id)
+        if (updated?.enabled !== false) registerChain(pi, updated, ctx)
+        const shown = patch.strategy ?? updated?.strategy ?? named.strategy
+        const sticky = patch.stickyLimit ?? updated?.stickyLimit ?? named.stickyLimit
+        notify(`chain ${named.id} updated (${shown}${sticky > 1 ? `:${sticky}` : ''})`)
+        return
+      }
+
+      if (head === 'chain' && (words[1] ?? '').toLowerCase() === 'remove') {
+        const target = chainByName(chains, words.slice(2).join(' '))
+        if (target === undefined) {
+          notify(`no chain named "${words.slice(2).join(' ')}"`)
+          return
+        }
+        const stored = writeChains(chains.filter((chain) => chain.id !== target.id))
+        chains.length = 0
+        chains.push(...stored)
+        pi.unregisterVirtualModel(CHAIN_PROVIDER, target.id.slice(CHAIN_PREFIX.length))
+        notify(`chain ${target.id} removed`)
+        return
+      }
+
+      if (head === 'chain' && ['enable', 'disable'].includes((words[1] ?? '').toLowerCase())) {
+        const enable = words[1].toLowerCase() === 'enable'
+        const target = chainByName(chains, words.slice(2).join(' '))
+        if (target === undefined) {
+          notify(`no chain named "${words.slice(2).join(' ')}"`)
+          return
+        }
+        const stored = writeChains(chains.map((chain) => (chain.id === target.id ? { ...chain, enabled: enable } : chain)))
+        chains.length = 0
+        chains.push(...stored)
+        if (enable) registerChain(pi, stored.find((chain) => chain.id === target.id), ctx)
+        else pi.unregisterVirtualModel(CHAIN_PROVIDER, target.id.slice(CHAIN_PREFIX.length))
+        notify(`chain ${target.id} ${enable ? 'enabled' : 'disabled'}`)
+        return
+      }
+
+      if (head === 'chain') {
+        notify(describeChains(ctx, chains))
+        return
+      }
+
+      if (head === 'feed') {
+        // `feed` with no verb reports the last poll and the unread count, so the
+        // answer to "did anything happen lately" needs no second command. The
+        // ack set is passed in from outside — the feed never owns it.
+        const verb = (words[1] ?? 'list').toLowerCase()
+        const settings = readSaver() as any
+        const feed = new AnnouncementFeed({
+          settings: () => settings,
+          cacheFile: path.join(os.homedir(), '.our-free-model', 'feed.json'),
+          defaultSources: DEFAULT_FEED_SOURCES,
+        })
+        feed.load()
+        if (verb === 'poll') {
+          try {
+            const { total, source } = await feed.poll()
+            notify(`feed: ${total} announcement(s) from ${source}`)
+          } catch (error: any) {
+            notify(`feed: poll failed (${error?.message ?? error})`)
+          }
+          return
+        }
+        if (verb === 'ack') {
+          const target = (words[2] ?? '').toLowerCase()
+          if (target === '' || target === 'all') {
+            const ids = feed.view().items.map((item: any) => item.id)
+            const acked = acknowledge(ids)
+            notify(ids.length === 0 ? 'feed: nothing to acknowledge (no announcements yet)' : `feed: acknowledged ${acked.size} announcement(s)`)
+            return
+          }
+          const found = feed.view().items.find((item: any) => item.id === target)
+          if (found === undefined) {
+            notify(`feed: no announcement with id "${target}"`)
+            return
+          }
+          acknowledge([target])
+          notify(`feed: acknowledged "${found.title}"`)
+          return
+        }
+        const acked = readAck()
+        const view = feed.view({ ackedIds: acked })
+        if (view.items.length === 0) {
+          notify('feed: no announcements (never fetched, or the source is unreachable)')
+          return
+        }
+        const lines = view.items.map((item: any) => `${item.acked ? '  ' : 'un'} ${item.level.padEnd(6)} ${item.title}`)
+        notify(`feed: ${view.items.length} announcement(s), ${view.unread} unread\n${lines.join('\n')}`)
+        return
+      }
+
+      if (head === 'refresh') {
+        const [nextKilo, nextOpencode, nextEac, nextAggregate] = await Promise.all([
+          kiloModels(), opencodeModels(), eacModels(), Promise.resolve(aggregateModels()),
+        ])
+        // All four lanes are dropped and re-registered so a model that left the
+        // upstream roster disappears from the picker instead of lingering.
+        for (const id of [KILO_ID, OPENECODE_ID, EAC_ID, AGGREGATE_ID]) pi.unregisterProvider(id)
+        pi.registerProvider(KILO_ID, kiloProvider({ models: nextKilo }))
+        pi.registerProvider(OPENECODE_ID, opencodeProvider({ models: nextOpencode }))
+        const nextEacProvider = eacProvider({ models: nextEac })
+        if (nextEacProvider !== null) pi.registerProvider(EAC_ID, nextEacProvider)
+        const nextAggregateProvider = aggregateProvider()
+        if (nextAggregateProvider !== null) pi.registerProvider(AGGREGATE_ID, nextAggregateProvider)
+        const lines = [
+          `ofm-kilo ${nextKilo.length} models`,
+          `ofm-opencode ${nextOpencode.length} models`,
+          nextEac.length > 0 ? `ofm-eac ${nextEac.length} models` : 'ofm-eac no lane on this host',
+          nextAggregate.length > 0 ? `ofm-aggregate ${nextAggregate.length} models` : 'ofm-aggregate no key configured',
+        ]
+        // The chains resolve their links against the freshly registered lanes.
+        const stored = readChains()
+        chains.length = 0
+        chains.push(...stored)
+        registerChains(pi, stored, ctx)
+        notify(`refreshed: ${lines.join(' · ')}`)
+        return
+      }
+
+      if (head === 'picks') {
+        // The recommended-projects numbers, read through the same module the
+        // gateway route uses so there is one cache and one freshness policy.
+        const stats = createPickStats({ repos: PICK_REPOS })
+        const view = await stats.view()
+        if (view.repos.length === 0) {
+          notify('picks: no numbers yet (GitHub unreachable, nothing cached)')
+          return
+        }
+        const lines = view.repos.map((row: any) =>
+          `${row.stale ? 'stale' : '     '} ${String(row.stars).padStart(6)}★ ${row.repo}`
+        )
+        notify(`picks (${view.ok ? 'live' : 'stale'}):\n${lines.join('\n')}`)
+        return
+      }
+
+      if (head === 'saver') {
+        // `saver` with no verb reports every switch and the last reading, so the
+        // answer to "is it doing anything" does not need a second command.
+        const verb = (words[1] ?? '').toLowerCase()
+        if (verb === '') {
+          const saver = readSaver()
+          const readings = allSavings()
+          const measured = readings.length === 0
+            ? 'no request measured yet'
+            : readings.map(({ provider, reading }) => `${provider}: ${describeSavings(reading.stats) ?? 'switched off'}`).join('\n')
+          notify(`token saver: ${saver.rtk ? 'ON' : 'OFF'} · caveman: ${saver.caveman} · ponytail: ${saver.ponytail}\n${measured}`)
+          return
+        }
+        if (verb === 'on' || verb === 'off') {
+          const stored = writeSaver({ rtk: verb === 'on' })
+          notify(stored.rtk
+            ? 'token saver on — tool output (ls / grep / git diff / logs / find / tree) is compacted before it leaves this machine. The transcript keeps the full result; only the request changes.'
+            : 'token saver off — every request ships the tool output as it was returned')
+          return
+        }
+        // The two prompt families take a level, not a switch: `off` disables
+        // one, and an unrecognised level is refused rather than coerced, so a
+        // typo never silently becomes "no prompt".
+        if (verb === 'caveman' || verb === 'ponytail') {
+          const levels = verb === 'caveman' ? CAVEMAN_LEVELS : PONYTAIL_LEVELS
+          const level = (words[2] ?? '').toLowerCase()
+          if (!levels.includes(level as any)) {
+            notify(`usage: /ofm saver ${verb} ${levels.join('|')}`)
+            return
+          }
+          const stored = writeSaver({ [verb]: level } as any)
+          notify(level === OFF
+            ? `${verb} off — the prompt family is no longer added to the system prompt`
+            : `${verb} ${level} — its prompt is added to the system prompt from the next turn. It changes how the model writes; your own instructions are left intact.`)
+          return
+        }
+        if (verb === 'stats') {
+          // The savings for the lanes that have answered a turn since load.
+          const readings = allSavings()
+          if (readings.length === 0) {
+            notify('no request measured yet — run a turn with the saver on')
+            return
+          }
+          notify(readings.map(({ provider, reading }) => `${provider}: ${describeSavings(reading.stats) ?? 'nothing compacted'}`).join('\n'))
+          return
+        }
+        notify('usage: /ofm saver on|off\n       /ofm saver caveman off|lite|full|ultra|wenyan-lite|wenyan|wenyan-ultra\n       /ofm saver ponytail off|lite|full|ultra\n       /ofm saver stats')
+        return
+      }
+
+      if (head === 'provider') {
+        const verb = (words[1] ?? 'status').toLowerCase()
+        const dataDir = process.env.OFM_DATA_DIR ?? path.join(os.homedir(), '.our-free-model')
+        const settingsFile = path.join(dataDir, 'gateway.json')
+        let settings: { version?: number; key?: string; port?: number; host?: string; enabled?: boolean } = {}
+        try {
+          settings = JSON.parse(fs.readFileSync(settingsFile, 'utf8'))
+        } catch {
+          /* no gateway settings file yet — defaults apply */
+        }
+        if (verb === 'on') {
+          fs.mkdirSync(dataDir, { recursive: true })
+          fs.writeFileSync(settingsFile, JSON.stringify({ ...settings, enabled: true }, null, 2), { mode: 0o600 })
+          notify('gateway enabled — `node dist/server.js` will serve the API on start')
+          return
+        }
+        if (verb === 'off') {
+          fs.mkdirSync(dataDir, { recursive: true })
+          fs.writeFileSync(settingsFile, JSON.stringify({ ...settings, enabled: false }, null, 2), { mode: 0o600 })
+          notify('gateway disabled — `node dist/server.js` will refuse connections until re-enabled')
+          return
+        }
+        // `provider status`
+        const kiloCount = ctx.modelRegistry.getModelsOfType('chat', KILO_ID).length
+        const opencodeCount = ctx.modelRegistry.getModelsOfType('chat', OPENECODE_ID).length
+        const enabled = settings.enabled === undefined ? true : settings.enabled
+        const lines = [
+          `gateway: ${enabled ? 'enabled' : 'disabled'}`,
+          `host: ${settings.host ?? '127.0.0.1'}`,
+          `port: ${settings.port ?? 18900}`,
+          `ofm-kilo: ${kiloCount} free models`,
+          `ofm-opencode: ${opencodeCount} free models`,
+          `data dir: ${dataDir}`,
+        ]
+        notify(lines.join('\n'))
+        return
+      }
+
+      notify(`ofm-kilo: ${ctx.modelRegistry.getModelsOfType('chat', KILO_ID).length} free models · ofm-opencode: ${ctx.modelRegistry.getModelsOfType('chat', OPENECODE_ID).length} free models · chains: ${chains.length}`)
+    },
+  })
+}
+
+/** Exported for the chain tests, which drive the same routing decision. */
+export const internals = { registerChain, clampLevel, intersectCapabilities, normalizeChains }
