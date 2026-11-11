@@ -280,9 +280,15 @@ async function main() {
     // read is a fingerprint decoy, so it is suppressed on the way back
     assert.doesNotMatch(text, /"name":"read"/, `read decoy was not suppressed: ${text.slice(0, 400)}`)
     const sentNames = (opencodeSeen[0].body.tools ?? []).map((tool: any) => tool?.function?.name ?? tool?.name)
-    assert.ok(sentNames.includes('read_ofm1'), `the caller's read was not renamed out of the gate slot: ${sentNames.join(', ')}`)
-    assert.ok(sentNames.includes('read'), `the gate's own verbatim read is missing: ${sentNames.join(', ')}`)
-    assert.ok(sentNames.includes('shell'), `the gate's own verbatim shell is missing: ${sentNames.join(', ')}`)
+    // The caller's `read` folds onto the official name, so it is *bound* rather
+    // than renamed out of the slot: its own definition rides the wire under the
+    // official name and the official set is not duplicated (v1.4.7 BindOfficial).
+    assert.ok(sentNames.filter((name: string) => name === 'read').length === 1, `the official set was duplicated: ${sentNames.join(', ')}`)
+    // …and the bound row still carries the caller's own definition, which is
+    // what makes this a binding rather than a silent replacement.
+    const read = (opencodeSeen[0].body.tools ?? []).find((tool: any) => (tool?.function?.name ?? tool?.name) === 'read')
+    assert.equal(read.function.description, 'the caller own read', 'the caller definition was replaced')
+    assert.equal(read.function.parameters.properties.path.type, 'string')
   })
 
   check("fingerprint decoy tools (read, shell) are suppressed on the way back", async () => {

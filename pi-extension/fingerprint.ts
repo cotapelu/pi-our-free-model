@@ -14,149 +14,155 @@
  * @module pi-extension/fingerprint.js
  */
 
+// The 2.8.3 shaping pipeline itself lives in `o2a/` — a file-by-file port of
+// opencode2api's gateway. It used to be ported and then left unimported while
+// this file kept its own older shaping (caller tools renamed to `<name>_client`
+// and the official pair appended). That older pass satisfies the tool gate but
+// never sends the official system prompt the gate also checks, and it leaves a
+// caller's foreign vocabulary on the wire, which the free tier answers with a
+// 403/429. So the pipeline is wired in here rather than kept as a second
+// implementation.
+import { ToolRenameMap } from './o2a/tool-renames.js'
+import { injectOfficialPrompt, carriesOpenCodePrompt } from './o2a/official-prompt.js'
+import { renameAndCompleteTools } from './o2a/toolshape.js'
+import { renamableToolName } from './o2a/official-tools.js'
+import { officialToolDefinition } from './o2a/official-tools.js'
+import { ensureChatUsage, ensureV2CompletionLimit } from './o2a/gateway-body.js'
+
 /** The client the v2 gate fingerprints. Shape `opencode/<channel>/<version>/<client>`; major >= 2. */
 export const CLIENT_UA = 'opencode/latest/2.0.26/cli'
 
 const BASE62 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 
 /** The two tools the v2 gate requires. Verbatim from OpenCode v2.0.26 — never reword. */
-export const FINGERPRINT_TOOL_DEFINITIONS = {
-  read: {
-    description:
-      'Read the contents of a file or directory. Supports text files, images, and PDFs. Images and PDFs are presented directly to the model. Each text line is prefixed by its 1-based line number as <line>: <content>. The prefix is for reference and is not part of the file content. Directory entries are returned one per line. Use offset and limit to read large files or directories in sections. Prefer one larger read over many small slices, and use grep to find specific content in large files.',
-    parameters: {
-      type: 'object',
-      properties: {
-        path: { type: 'string', description: 'File or directory to read' },
-        offset: {
-          type: 'integer',
-          minimum: 0,
-          description: 'The line or directory entry to start reading from (1-based)',
-        },
-        limit: {
-          type: 'integer',
-          minimum: 0,
-          description:
-            'The maximum number of lines or directory entries to read (defaults to and capped at 2000)',
-        },
-      },
-      required: ['path'],
-      additionalProperties: false,
-    },
-  },
-  shell: {
-    description:
-      'Execute a shell command and return its output. Commands run on Linux using bash. Quote file paths containing spaces or special characters. Prefer dedicated tools over shell commands when possible. When output is large, the full result is saved to a file and a truncated preview is returned. Rely on automatic truncation unless filtering the output is more useful. Commands accept an optional timeout, background commands have no timeout by default. Background commands return immediately, and you will be notified when they complete.',
-    parameters: {
-      type: 'object',
-      properties: {
-        command: { type: 'string', description: 'Shell command string to execute' },
-        workdir: {
-          type: 'string',
-          description:
-            'Working directory to execute the command in. Defaults to the current working directory. When possible, avoid changing directories and use this working directory argument instead.',
-        },
-        timeout: {
-          type: 'integer',
-          minimum: 0,
-          description:
-            'Timeout in milliseconds. Set to 0 to disable the timeout. Defaults to 120000 for foreground commands. Background commands have no timeout by default.',
-        },
-        background: {
-          type: 'boolean',
-          description:
-            'Run the command in the background (useful for dev servers). Avoid using this for blocking commands; run those synchronously.',
-        },
-      },
-      required: ['command'],
-      additionalProperties: false,
-    },
-  },
-}
-
 /**
  * Satisfy the v2 free-tier fingerprint gate on a body in **any** wire shape.
  *
- * `applyFingerprint` above is the chat-shape entry the pi extension drives (its
- * lanes speak Chat Completions only). The service entries — the standalone
- * runtime and the probe — send Responses items and Anthropic messages too, and
- * the gate compares the declared *definitions*, so the injected pair has to be
- * spelled in the wire's own shape: flat `{type, name, description, parameters}`
- * for Responses, `{name, description, input_schema}` for Messages, and the
- * `{function:{…}}` wrapper for Chat. Same rules otherwise: the caller's tools
- * stay byte-identical (including `Read`/`Bash` case variants), a caller tool
- * that exactly collides with a gate name is renamed and its history and
- * `tool_choice` follow, duplicates keep the first, `tool_choice: 'none'` is
- * never emitted, and only Responses gets `auto` when the caller sent none.
+ * The shaping itself is `o2a/`'s, exactly as `src/upstream.js` drives it in
+ * 2.8.3: the official system prompt first (the gate checks it, not only the
+ * tools), then every caller tool renamed to an opaque `clint_` wire name with
+ * the official tool set appended and every reference following it, then the two
+ * chat-body constants. The three-wire adaptation this port owns is the shape
+ * vocabulary — `true` is Responses' flat items, `'claude'` is Anthropic
+ * messages, `false` is Chat — and the environment block, which rides inside
+ * the official prompt so a gateway serving another workspace can name that
+ * workspace's directory rather than this process's cwd.
+ *
+ * A caller's tools are never edited in place: touched rows are replaced with
+ * shallow copies, because those objects are shared with the host harness.
  *
  * Ported from dsh's `src/upstream.js` applyFingerprint (the three-wire half).
  */
-export function applyFingerprintWire(body: any, style: true | 'claude' | false, environment: { directory?: string; platform?: string } = {}): Map<string, string> {
-  const shape = { flat: style === true, claude: style === 'claude' }
-  const map = new Map<string, string>()
-  const tools = Array.isArray(body.tools) ? body.tools : []
-  const taken = new Set(tools.map(toolNameOf).filter((name: string) => name !== ''))
-  // 两个集合分工不同：`seen` 只用于「同名重复留第一个」（含被改名的那个名字），
-  // `present` 记录**真正带官方定义留下来**的门禁名 —— 注入判据必须看后者，
-  // 否则「调用方的 read 被改成 read_client」会被误判成「read 已经声明」，
-  // 官方定义反而不会补上（门禁仍然 403）。
-  const seen = new Set<string>()
-  const present = new Set<string>()
-  const out: any[] = []
-  const compatibilityAliases: Array<{ alias: string; original: string }> = []
+export function applyFingerprintWire(body: any, style: true | 'claude' | false, environment: { directory?: string; platform?: string } = {}): ToolRenameMap {
+  const shape = style === true ? 'flat' : style === 'claude' ? 'claude' : 'chat'
+  if (!body || typeof body !== 'object') return new ToolRenameMap()
 
-  for (const tool of tools) {
-    const name = toolNameOf(tool)
-    const compatibilityBase = Object.hasOwn(FREE_LANE_TOOL_ALIASES, name) ? (FREE_LANE_TOOL_ALIASES as any)[name] : undefined
-    if (compatibilityBase !== undefined) {
-      let alias: string = compatibilityBase
-      for (let i = 2; taken.has(alias); i += 1) alias = `${compatibilityBase}${i}`
-      taken.add(alias)
-      map.set(alias, name)
-      compatibilityAliases.push({ alias, original: name })
-      out.push(withToolName(tool, alias))
-      continue
-    }
-    const key = fingerprintKey(name)
-    if (key === '') { out.push(tool); continue }
-    // 同名重复声明：上游按重复拒，留第一个。
-    if (seen.has(key)) continue
-    seen.add(key)
-    if (carriesWireDefinition(tool, key, shape)) {
-      out.push(tool)
-      present.add(key)
-      continue
-    }
-    let alias = `${key}_client`
-    for (let i = 2; taken.has(alias); i += 1) alias = `${key}_client${i}`
-    taken.add(alias)
-    map.set(alias, name)
-    out.push(withToolName(tool, alias))
+  // 0. Title requests ship unshaped: an agent-shaped tool list on a toolless
+  // title call is a 403/429 the reference measured (see isTitleRequest). The
+  // harness's title round-trip used to hit exactly that whenever the local
+  // title answer was switched off, because this lane injects the full official
+  // prompt and tool set on every body.
+  if (isTitleRequest(body, style)) return new ToolRenameMap()
+
+  // 1. The official system prompt. Its `<env>` block is the one this port keeps
+  // as a seam: the caller names the workspace directory, where the CLI's own
+  // block can only name the process's cwd. A body that already carries the
+  // marker is left alone, so repeated shaping cannot duplicate it.
+  injectOfficialPrompt(body, shape, { workDir: environment.directory })
+
+  // 2+3+4. The tool pass. `keep` is the set of declarations that are already
+  // the verbatim official definition: those are officials already on the wire,
+  // so they are neither renamed nor appended a second time.
+  const declared = Array.isArray(body.tools) ? body.tools : []
+  const keep = new Set<string>()
+  for (const tool of declared) {
+    const name = renamableToolName(shape, tool)
+    if (name === null) continue
+    if (carriesOfficialDefinition(tool, name, shape)) keep.add(name)
   }
-
-  const injected: string[] = []
-  for (const name of FINGERPRINT_TOOLS) {
-    if (present.has(name)) continue
-    out.push(fingerprintTool(name, shape))
-    injected.push(name)
-  }
-
-  body.tools = out
-  retargetToolChoiceFor(body, map)
-  aliasHistoryToolCalls(body, map)
-  ensureFreeLaneEnvironmentWire(body, style, environment)
+  const { renames, injected } = renameAndCompleteTools(body, shape, { keep })
   if (injected.length > 0) noteInjectedTools(body, shape, injected)
-  if (compatibilityAliases.length > 0) {
-    appendSystemContext(body, shape, `Tool name mapping for this request: ${compatibilityAliases.map(({ alias, original }) => `use \`${alias}\` for \`${original}\``).join('; ')}. These tools retain their original behavior and parameters.`)
-  }
-  // ⚠️ v2 见到 `tool_choice: 'none'` 就回 403（v1 允许，旧代码甚至主动补过它）。
-  // 兜底清除：调用方（续写路径等）留下的 `none` 会让整轮失败。
+
+  // 5. Never ship `tool_choice: 'none'` — v2 answers it with 403. Only the
+  // Responses wire defaults an absent choice to `auto`, which is the official
+  // behaviour.
   if (body.tool_choice === 'none'
     || (body.tool_choice !== null && typeof body.tool_choice === 'object' && body.tool_choice.type === 'none')) {
     delete body.tool_choice
   }
-  if (shape.flat && !body.tool_choice) body.tool_choice = 'auto'
-  return map
+  if (shape === 'flat' && !body.tool_choice) body.tool_choice = 'auto'
+
+  // 6. The chat body's own two constants.
+  ensureChatUsage(body, shape)
+  ensureV2CompletionLimit(body, shape)
+  return renames
+}
+
+/** Wire-shape names the o2a shaper speaks. */
+function shapeOf(style: true | 'claude' | false): 'flat' | 'claude' | 'chat' {
+  return style === true ? 'flat' : style === 'claude' ? 'claude' : 'chat'
+}
+
+/**
+ * Does this declaration already carry the official definition of `name`
+ * (`carriesOfficialDefinition`)?
+ *
+ * The official JSON is the comparison: a caller that pasted the CLI's own
+ * `read` declaration has already satisfied that half of the gate, and renaming
+ * it would only re-append the same thing under a second name. The comparison
+ * ignores key order, because JSON object order is not meaningful and a caller's
+ * serializer does not owe anyone one.
+ */
+function carriesOfficialDefinition(tool: any, name: string, shape: 'flat' | 'claude' | 'chat'): boolean {
+  const official = officialToolDefinition(name)
+  if (official === undefined) return false
+  const declared = shape === 'chat' ? tool?.function : tool
+  if (!declared || typeof declared !== 'object') return false
+  const schema = shape === 'claude' ? declared.input_schema : declared.parameters
+  const expected = shape === 'claude' ? official.input_schema : official.parameters
+  if (schema === undefined || expected === undefined) return false
+  const stable = (value: any): string => JSON.stringify(value, (_key, inner) =>
+    inner && typeof inner === 'object' && !Array.isArray(inner)
+      ? Object.fromEntries(Object.entries(inner).sort(([a], [b]) => a.localeCompare(b)))
+      : inner)
+  return stable(schema) === stable(expected)
+}
+
+/**
+ * The request shapes the free tier reads as a conversation-title generator
+ * (`title.IsTitleRequest`, opencode2api v1.4.7): no tools declared, one to
+ * three turns, no assistant/tool/function turn, and a title marker in the
+ * system or leading text.
+ *
+ * The reference stopped shaping these bodies in v1.4.7 with a measured reason:
+ * the free tier answers an agent-shaped tool list on a toolless title call
+ * with 403/429. A title request now ships as the caller wrote it — no prompt
+ * injection, no tool append, no renames.
+ */
+const TITLE_MARKERS = /generate a title|write a title|create a title|come up with a title|title (?:for|of) (?:this|the) (?:conversation|chat|session|exchange|request)|conversation title|summarize (?:this|the) conversation/i
+
+/** Is this body a conversation-title round-trip? */
+export function isTitleRequest(body: any, style: true | 'claude' | false): boolean {
+  if (!body || typeof body !== 'object') return false
+  if ((Array.isArray(body.tools) && body.tools.length > 0) || (Array.isArray(body.functions) && body.functions.length > 0)) return false
+  if (body.tool_choice !== undefined) return false
+  const shape = shapeOf(style)
+  const textOf = (value: any) => typeof value === 'string' ? value
+    : Array.isArray(value) ? value.map((part: any) => part?.text ?? '').join('\n') : ''
+  let turns: any[]
+  let leading = ''
+  if (shape === 'flat') {
+    turns = (Array.isArray(body.input) ? body.input : []).filter((item: any) => item !== null && typeof item === 'object' && typeof item.role === 'string')
+    leading = textOf(body.instructions)
+  } else {
+    turns = (Array.isArray(body.messages) ? body.messages : []).filter((message: any) => message !== null && typeof message === 'object')
+    leading = shape === 'claude' ? textOf(body.system) : ''
+  }
+  if (turns.length === 0 || turns.length > 3) return false
+  for (const turn of turns) {
+    if (!['user', 'system', 'developer'].includes(String(turn.role ?? ''))) return false
+  }
+  return TITLE_MARKERS.test(`${leading}\n${turns.map(turn => textOf(turn.content)).join('\n')}`)
 }
 
 function fingerprintKey(name: string): string {
@@ -168,149 +174,68 @@ function functionOf(tool: any) {
   return tool.function && typeof tool.function === 'object' && !Array.isArray(tool.function) ? tool.function : null
 }
 
-/** Where a tool's description and parameter schema sit for one wire shape. */
-function definitionOf(tool: any, shape: { claude: boolean; flat: boolean }) {
-  const wrapper = shape.claude || shape.flat ? tool : functionOf(tool)
-  if (wrapper === null || wrapper === undefined) return null
-  return { description: wrapper.description, schema: shape.claude ? wrapper.input_schema : wrapper.parameters }
-}
-
-function carriesWireDefinition(tool: any, name: string, shape: { claude: boolean; flat: boolean }): boolean {
-  const own = definitionOf(tool, shape)
-  if (own === null) return false
-  const want = (FINGERPRINT_TOOL_DEFINITIONS as any)[name]
-  return own.description === want.description && JSON.stringify(own.schema) === JSON.stringify(want.parameters)
-}
-
-function withToolName(tool: any, name: string) {
-  const fn = functionOf(tool)
-  return fn ? { ...tool, function: { ...fn, name } } : { ...tool, name }
-}
-
-/** The gate's own declaration, in the shape the wire expects. */
-function fingerprintTool(name: string, shape: { claude: boolean; flat: boolean }) {
-  const { description, parameters } = (FINGERPRINT_TOOL_DEFINITIONS as any)[name]
-  if (shape.claude) return { name, description, input_schema: parameters }
-  if (shape.flat) return { type: 'function', name, description, parameters }
-  return { type: 'function', function: { name, description, parameters } }
-}
-
-function aliasesByOriginal(map: Map<string, string>): Map<string, string> {
-  return new Map([...map].map(([alias, original]) => [original, alias]))
-}
-
-/**
- * Point an explicit `tool_choice` at the alias of a tool that was renamed.
- *
- * Only an alias is retargeted: a choice naming a tool we left alone must stay
- * byte-identical, and `none` is never emitted.
- */
-function retargetToolChoiceFor(body: any, map: Map<string, string>) {
-  if (!body || typeof body !== 'object' || map.size === 0) return
-  const choice = body.tool_choice
-  if (!choice || typeof choice !== 'object' || Array.isArray(choice)) return
-  const aliases = aliasesByOriginal(map)
-  if (typeof choice.name === 'string') {
-    const alias = aliases.get(choice.name.trim())
-    if (alias !== undefined) body.tool_choice = { ...choice, name: alias }
-    return
-  }
-  const fn = choice.function
-  if (fn && typeof fn === 'object' && !Array.isArray(fn) && typeof fn.name === 'string') {
-    const alias = aliases.get(fn.name.trim())
-    if (alias !== undefined) body.tool_choice = { ...choice, function: { ...fn, name: alias } }
-  }
-}
-
-/**
- * Rename prior-turn calls to a renamed tool in the history we are about to send.
- *
- * Without this the model reads its own earlier `read` calls as calls to
- * OpenCode's injected tool of that name, and the two definitions disagree.
- */
-function aliasHistoryToolCalls(body: any, map: Map<string, string>) {
-  if (!body || typeof body !== 'object' || map.size === 0) return
-  const aliases = aliasesByOriginal(map)
-  const rename = (name: unknown) => (typeof name === 'string' && aliases.has(name) ? aliases.get(name) : name)
-
-  if (Array.isArray(body.input)) {
-    body.input = body.input.map((item: any) => item?.type === 'function_call' && aliases.has(item.name)
-      ? { ...item, name: aliases.get(item.name) }
-      : item)
-  }
-  if (Array.isArray(body.messages)) {
-    body.messages = body.messages.map((message: any) => {
-      if (message === null || typeof message !== 'object') return message
-      let next = message
-      if (Array.isArray(message.content)) {
-        const content = message.content.map((block: any) => block?.type === 'tool_use' && aliases.has(block.name)
-          ? { ...block, name: aliases.get(block.name) }
-          : block)
-        next = { ...next, content }
-      }
-      if (Array.isArray(message.tool_calls)) {
-        next = {
-          ...next,
-          tool_calls: message.tool_calls.map((call: any) => aliases.has(call?.function?.name)
-            ? { ...call, function: { ...call.function, name: aliases.get(call.function.name) } }
-            : call),
-        }
-      }
-      return next
-    })
-  }
-}
-
 /** Append a note where the wire keeps its instructions, never replacing caller blocks. */
-function appendSystemContext(body: any, shape: { claude: boolean; flat: boolean }, note: string) {
-  if (shape.flat) {
+function appendSystemContext(body: any, shape: 'flat' | 'claude' | 'chat', note: string) {
+  if (shape === 'flat') {
     body.instructions = typeof body.instructions === 'string' && body.instructions.trim() !== ''
       ? `${body.instructions}\n\n${note}`
       : note
     return
   }
-  if (shape.claude) {
+  if (shape === 'claude') {
     body.system = Array.isArray(body.system)
       ? [...body.system, { type: 'text', text: note }]
       : typeof body.system === 'string' && body.system !== '' ? `${body.system}\n\n${note}` : note
     return
   }
-  const messages = Array.isArray(body.messages) ? body.messages : []
-  const first = messages[0]
-  if (first?.role === 'system' && typeof first.content === 'string') {
-    body.messages = [{ ...first, content: `${first.content}\n\n${note}` }, ...messages.slice(1)]
+  if (!Array.isArray(body.messages)) body.messages = []
+  const first = body.messages.find((message: any) => message?.role === 'system' || message?.role === 'developer')
+  if (first === undefined) {
+    body.messages.unshift({ role: 'system', content: note })
     return
   }
-  if (first?.role === 'system' && Array.isArray(first.content)) {
-    body.messages = [{ ...first, content: [...first.content, { type: 'text', text: note }] }, ...messages.slice(1)]
-    return
-  }
-  body.messages = [{ role: 'system', content: note }, ...messages]
+  if (typeof first.content === 'string') first.content = `${first.content}\n\n${note}`
+  else if (Array.isArray(first.content)) first.content = [...first.content, { type: 'text', text: note }]
 }
 
 /** Tell the model injected tools are placeholders; never replace caller blocks. */
-function noteInjectedTools(body: any, shape: { claude: boolean; flat: boolean }, names: string[]) {
+function noteInjectedTools(body: any, shape: 'flat' | 'claude' | 'chat', names: string[]) {
   appendSystemContext(body, shape, placeholderNote(names))
 }
 
 /**
- * Current free-lane requests need environment context as well as tool definitions.
- * Reversible live controls (2026-10-28) returned 429 without it and PONG with it.
- * Use truthful process metadata, not a copied OC persona or a user workspace guess.
- * A caller's existing environment block takes precedence and is kept unchanged.
+ * The environment block the free lane requires alongside the tool fingerprint.
+ *
+ * dsh's reversible live controls (2026-10-28) returned 429 *without* it and
+ * answered with it, so a free-lane request that omits this block is refused
+ * before any model runs — it is part of the gate, not decoration. A caller that
+ * already carries an `<env>` block keeps its own.
+ *
+ * Now folded into `o2a`'s official prompt (whose `<env>` block is a superset:
+ * the model id and today's date ride along), so this entry stays for the
+ * Chat-only half that still builds its own body: the adapter's own lanes and
+ * the probe. It is not called from `applyFingerprintWire` any more, and calling
+ * it there would produce a second `<env>` block.
  */
-function ensureFreeLaneEnvironmentWire(body: any, style: true | 'claude' | false, environment: { directory?: string; platform?: string } = {}) {
-  const shape = { flat: style === true, claude: style === 'claude' }
-  const textOf = (value: unknown) => typeof value === 'string' ? value
-    : Array.isArray(value) ? value.map((part: any) => part?.text ?? '').join('\n') : ''
-  const existing = shape.flat ? textOf(body.instructions)
-    : shape.claude ? textOf(body.system)
-      : (Array.isArray(body.messages) ? body.messages : []).filter((message: any) => message?.role === 'system' || message?.role === 'developer').map((message: any) => textOf(message.content)).join('\n')
-  if (/<env>[\s\S]*?<\/env>/i.test(existing)) return
-  const line = (value: unknown) => String(value).replace(/[\r\n<>]/g, ' ')
+export function ensureFreeLaneEnvironment(params: any, environment: { directory?: string; platform?: string } = {}) {
+  const messages = Array.isArray(params?.messages) ? params.messages : []
+  const existing = messages
+    .filter((message: any) => message?.role === 'system' || message?.role === 'developer')
+    .map((message: any) => textOfContent(message.content))
+    .join('\n')
+  if (/<env>[\s\S]*?<\/env>/i.test(existing)) return params
+  const line = (value: any) => String(value).replace(/[\r\n<>]/g, ' ')
   const cwd = environment.directory ?? process.cwd()
   const platform = environment.platform ?? process.platform
-  appendSystemContext(body, shape, `Here is some useful information about the environment you are running in:\n<env>\n  Working directory: ${line(cwd)}\n  Platform: ${line(platform)}\n</env>`)
+  const note = `Here is some useful information about the environment you are running in:\n<env>\n  Working directory: ${line(cwd)}\n  Platform: ${line(platform)}\n</env>`
+  appendSystemContext(params, 'chat', note)
+  return params
+}
+
+function textOfContent(content: any) {
+  if (typeof content === 'string') return content
+  if (Array.isArray(content)) return content.map((part) => part?.text ?? '').join('\n')
+  return ''
 }
 
 /** Session-scoped identity used to pick a decoy out of a real tool call. */
@@ -335,11 +260,6 @@ export const FINGERPRINT_TOOLS = ['read', 'shell']
  * restored the full 80-tool request. The caller's schema and behaviour are
  * kept, and the model is told the mapping so it can still ask for them.
  */
-export const FREE_LANE_TOOL_ALIASES = Object.freeze({
-  subagent_fork: 'conversation_delegate',
-  working_directory: 'workspace_directory',
-})
-
 /**
  * `ses_` + 12 minted hex digits + 14 base62 chars. The 12 hex digits must be the
  * descending `~(ts_ms << 12 | counter)` value with counter 1–63, i.e. the low
@@ -427,23 +347,6 @@ function toolNameOf(tool: any) {
   if (fn && typeof fn === 'object' && typeof fn.name === 'string' && fn.name.trim()) return fn.name.trim()
   return ''
 }
-
-/** Does this tool already carry OpenCode's own definition for `name`? */
-function carriesFingerprintDefinition(tool: any, name: string) {
-  const body = toolBodyOf(tool)
-  const own =
-    body && typeof body === 'object'
-      ? { description: body.description, schema: body.parameters ?? body.input_schema }
-      : null
-  if (own === null) return false
-  const want = (FINGERPRINT_TOOL_DEFINITIONS as any)[name]
-  return own.description === want.description && JSON.stringify(own.schema) === JSON.stringify(want.parameters)
-}
-
-function toolBodyOf(tool: any) {
-  return tool.function && typeof tool.function === 'object' ? tool.function : tool
-}
-
 /**
  * Append a note that the injected tools are placeholders.
  *
@@ -474,146 +377,21 @@ function placeholderNote(names: string[]) {
  * @param {{aliases?: Map<string,string>, environment?: object}} [collect]
  * @returns {object} the same payload, fingerprinted
  */
-export function applyFingerprint(params: any, collect: any) {
-  if (!params || typeof params !== 'object') return params
-  const aliases = collect?.aliases ?? new Map()
-  const messages = Array.isArray(params.messages) ? params.messages : []
-  const taken = new Set((Array.isArray(params.tools) ? params.tools : []).map(toolNameOf).filter((name: string) => name !== ''))
-
-  // 1. The two names the lane meters by identity (429 without the rename),
-  //    then the gate slots: every caller tool that collides with `read`/`shell`
-  //    moves out under a deterministic alias, so the verbatim declaration owns
-  //    the slot. Case variants (`Read`, `BASH`) are not gate names and pass as-is.
-  let serial = 0
-  /** caller name -> alias sent on this request, for history and tool_choice. */
-  const renameOf = new Map()
-  const compatibilityNotes = []
-  if (Array.isArray(params.tools)) {
-    for (const tool of params.tools) {
-      const name = toolNameOf(tool)
-      const compatibilityBase = Object.hasOwn(FREE_LANE_TOOL_ALIASES, name) ? (FREE_LANE_TOOL_ALIASES as any)[name] : undefined
-      if (compatibilityBase !== undefined) {
-        let alias: string = compatibilityBase
-        for (let i = 2; taken.has(alias); i += 1) alias = `${compatibilityBase}${i}`
-        taken.add(alias)
-        renameToolInPlace(tool, alias)
-        aliases.set(alias, name)
-        renameOf.set(name, alias)
-        compatibilityNotes.push(`use \`${alias}\` for \`${name}\``)
-        continue
-      }
-      if (!FINGERPRINT_TOOLS.includes(name)) continue
-      serial += 1
-      let alias: string = `${name}_ofm${serial}`
-      for (let i = 2; taken.has(alias); i += 1) alias = `${name}_ofm${i}`
-      taken.add(alias)
-      renameToolInPlace(tool, alias)
-      aliases.set(alias, name)
-      renameOf.set(name, alias)
-    }
-  }
-
-  // 2. Inject the verbatim declarations when the gate slots are not already
-  //    carried with OpenCode's own definitions.
-  if (!Array.isArray(params.tools)) params.tools = []
-  for (const name of FINGERPRINT_TOOLS) {
-    const present = params.tools.some((tool: any) => toolNameOf(tool) === name && carriesFingerprintDefinition(tool, name))
-    if (present) continue
-    params.tools.push({ type: 'function', function: { name, ...(FINGERPRINT_TOOL_DEFINITIONS as any)[name] } })
-  }
-
-  // 3. Prior-turn calls were recorded under the caller's names; rename them to
-  //    the aliases used in this request's declarations, or the model reads its
-  //    own earlier calls as calls to the injected placeholder tools.
-  if (renameOf.size > 0) {
-    for (const message of messages) {
-      if (!message || typeof message !== 'object' || !Array.isArray(message.tool_calls)) continue
-      for (const call of message.tool_calls) {
-        const fn = call?.function
-        const name = typeof fn?.name === 'string' ? fn.name : ''
-        if (name !== '' && renameOf.has(name)) fn.name = renameOf.get(name)
-      }
-    }
-  }
-
-  // 4. An explicit `tool_choice` naming a renamed tool must follow the alias.
-  retargetToolChoice(params, renameOf)
-
-  // 5. v2 refuses `tool_choice: 'none'` outright; never emit it.
-  if (params.tool_choice === 'none') delete params.tool_choice
-
-  // 6. The lane's environment block: a request without it is refused (429).
-  ensureFreeLaneEnvironment(params, collect?.environment)
-
-  // 7. Tell the model the injected tools are placeholders, and name the mapping
-  //    for the two identity-metered renames.
-  appendSystemNote(params, placeholderNote(FINGERPRINT_TOOLS))
-  if (compatibilityNotes.length > 0) {
-    appendSystemNote(params, `Tool name mapping for this request: ${compatibilityNotes.join('; ')}. These tools retain their original behavior and parameters.`)
-  }
-  return params
-}
-
-/** Rename a tool declaration in place, whichever shape it arrived in. */
-function renameToolInPlace(tool: any, alias: string) {
-  const body = toolBodyOf(tool)
-  if (body && typeof body === 'object') body.name = alias
-}
-
-/** Point an explicit `tool_choice` at the alias of a tool that was renamed. */
-function retargetToolChoice(params: any, renameOf: Map<string, string>) {
-  if (!renameOf || renameOf.size === 0) return
-  const choice = params.tool_choice
-  if (!choice || typeof choice !== 'object' || Array.isArray(choice)) return
-  const fn = choice.function
-  if (typeof choice.name === 'string' && renameOf.has(choice.name.trim())) {
-    params.tool_choice = { ...choice, name: renameOf.get(choice.name.trim()) }
-    return
-  }
-  if (fn && typeof fn === 'object' && typeof fn.name === 'string' && renameOf.has(fn.name.trim())) {
-    params.tool_choice = { ...choice, function: { ...fn, name: renameOf.get(fn.name.trim()) } }
-  }
-}
-
-/** Append `note` to the leading system message, creating one when there is none. */
-function appendSystemNote(params: any, note: string) {
-  const messages = params.messages
-  if (!Array.isArray(messages)) return
-  const first = messages.find((message) => message?.role === 'system')
-  if (first === undefined) {
-    messages.unshift({ role: 'system', content: note })
-    return
-  }
-  if (typeof first.content === 'string') first.content = `${first.content}\n\n${note}`
-  else if (Array.isArray(first.content)) first.content = [...first.content, { type: 'text', text: note }]
-}
-
 /**
- * The environment block the free lane requires alongside the tool fingerprint.
+ * The Chat-wire entry the pi extension drives (`applyFingerprint`).
  *
- * dsh's reversible live controls (2026-10-28) returned 429 *without* it and
- * answered with it, so a free-lane request that omits this block is refused
- * before any model runs — it is part of the gate, not decoration. A caller that
- * already carries an `<env>` block keeps its own.
+ * Thin on purpose: the shaping is `applyFingerprintWire`'s, shared with the
+ * service entries, so there is one gate path rather than one per caller. What
+ * this entry still owns is the caller's contract — `collect.aliases` is the map
+ * the stream rewriter reads to restore the caller's tool spelling, so the rename
+ * set produced by the pass is copied into it. Returning `params` keeps the
+ * in-place contract the call sites rely on.
  */
-export function ensureFreeLaneEnvironment(params: any, environment: { directory?: string; platform?: string } = {}) {
-  const messages = Array.isArray(params?.messages) ? params.messages : []
-  const existing = messages
-    .filter((message: any) => message?.role === 'system' || message?.role === 'developer')
-    .map((message: any) => textOfContent(message.content))
-    .join('\n')
-  if (/<env>[\s\S]*?<\/env>/i.test(existing)) return params
-  const line = (value: any) => String(value).replace(/[\r\n<>]/g, ' ')
-  const cwd = environment.directory ?? process.cwd()
-  const platform = environment.platform ?? process.platform
-  const note = `Here is some useful information about the environment you are running in:\n<env>\n  Working directory: ${line(cwd)}\n  Platform: ${line(platform)}\n</env>`
-  appendSystemNote(params, note)
+export function applyFingerprint(params: any, collect?: any) {
+  if (!params || typeof params !== 'object') return params
+  const aliases: Map<string, string> = collect?.aliases ?? new Map()
+  const renames = applyFingerprintWire(params, false, collect?.environment ?? {})
+  for (const [wire, caller] of renames) aliases.set(wire, caller)
+  if (collect !== undefined && collect !== null) collect.aliases = aliases
   return params
 }
-
-function textOfContent(content: any) {
-  if (typeof content === 'string') return content
-  if (Array.isArray(content)) return content.map((part) => part?.text ?? '').join('\n')
-  return ''
-}
-

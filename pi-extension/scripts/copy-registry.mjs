@@ -45,6 +45,16 @@ const ASSETS = [
   ['vendor/channel-pack/LICENSE', 'dist/vendor/channel-pack/LICENSE'],
   ['vendor/channel-pack/NOTICE.md', 'dist/vendor/channel-pack/NOTICE.md'],
   ['packages/standalone/channels/business.mjs', 'dist/packages/standalone/channels/business.mjs'],
+  // The free lane's two captured official assets. `o2a/asset-source.ts` reads
+  // them with `node:fs` from a URL resolved next to its *compiled* file, so the
+  // same rule `registry.json` already follows applies to them: without the copy
+  // the shipped `dist/` silently degrades the whole fingerprint — no official
+  // prompt, no official tool definitions, and every caller tool renamed to an
+  // opaque `clint_` name with nothing official appended. Nothing throws, which
+  // is what makes it the worst shape of the same bug (dsh pins the identical
+  // hazard for `registry.json` in AGENTS.md §7).
+  ['o2a/assets/opencode_prompt_v2.txt', 'dist/o2a/assets/opencode_prompt_v2.txt'],
+  ['o2a/assets/opencode_tools.json', 'dist/o2a/assets/opencode_tools.json'],
   // The service reads its own version from beside itself, exactly as dsh's does.
   ['packages/standalone/package.json', 'dist/packages/standalone/package.json'],
 ]

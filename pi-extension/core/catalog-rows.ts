@@ -407,6 +407,32 @@ function eacCapabilitiesFor(modelId: any) {
 }
 
 /**
+ * The card's small line for the two ids the OpenCode lane relays through its
+ * highspeed NVIDIA Build channel.
+ *
+ * The catalog `id` keeps the raw upstream spelling (that is what the adapter
+ * matches on), so only the label moves: the `-free` suffix is routing detail
+ * the line must not show, and the channel actually named here is highspeed.
+ * Listing any other id here would be a display lie, so the fallback below is
+ * the only other spelling a row may carry.
+ */
+const EAC_LABELS: Record<string, string> = {
+  'opencode/deepseek-v4.1-flash-free': 'deepseek-v4.1-flash-highspeed 1017',
+  'opencode/glm-5.3-flash-free': 'glm-5.3-flash-highspeed',
+}
+
+/** The label line for one EAC id: the known spelling, else its own id with the
+ *  remaining `-free` suffix shown as the channel's highspeed mark. */
+function eacLabel(modelId: string): string {
+  const known = EAC_LABELS[modelId]
+  if (known !== undefined) return known
+  const bare = modelId.includes('/') ? modelId.slice(modelId.indexOf('/') + 1) : modelId
+  // Any remaining `-free` suffix is the same upstream detail; it is shown as
+  // the channel's highspeed mark rather than leaked into the card.
+  return bare.replace(/(?:^|[-_])free(?:$|[-_.])/, match => match.replace('free', 'highspeed'))
+}
+
+/**
  * Build the co-paid lane's catalog rows from its raw listing ids.
  *
  * Every row is one chat-wire model that always thinks (the relay streams
@@ -427,8 +453,7 @@ export function buildEacCatalog(ids: any[]) {
       // that is what keeps this row distinct from the free lane's same-named
       // model during the merge — but the prefix is routing detail, so the line
       // shows the model's own id, with a display-only version marker where needed.
-      label: id === 'opencode/deepseek-v4.1-flash-free' ? 'deepseek-v4.1-flash-free 1017'
-        : id.includes('/') ? id.slice(id.indexOf('/') + 1) : id,
+      label: eacLabel(id),
       channel: EAC_CHANNEL,
       wire: 'chat',
       vision: caps.vision === true,
@@ -621,4 +646,114 @@ export function reviveKiloCatalog(stored: any) {
 /** Is this catalog row from the Kilo channel? */
 export function isKiloEntry(entry: any) {
   return entry?.channel === KILO_CHANNEL
+}
+
+// ── the extension channel ─────────────────────────────────────────────────────
+//
+// A fourth producer, and the only one that is not this repository's: an
+// installed extension that declares a channel contributes its own `listModels`
+// rows. Extension models are namespaced (`ext:<plugin>/<model>`) so a
+// third-party roster can never shadow a built-in id by accident — unless the
+// extension declares `replaces`, in which case its models keep the lane's own
+// ids and the built-in rows stand down (the kilo-free official extension is
+// exactly that shape).
+
+/** Catalog tag for models an installed extension serves. */
+export const EXTENSION_CHANNEL = 'extension'
+
+/**
+ * The built-in lanes an extension may take over (`replaces`).
+ *
+ * Kept in step with the marketplace's policy and with the runtime's takeover:
+ * only `kilo` is actually stood down (`laneStandsDown`), and the validator
+ * refuses any other claim — listing a lane here that nothing implements would
+ * hand an extension the built-in ids and then lose its rows to the built-in
+ * they collide with.
+ */
+const REPLACEABLE_LANES = new Set(['kilo'])
+
+/** Wire spellings an extension channel may speak. */
+const EXTENSION_WIRES = new Set(['chat', 'responses', 'messages'])
+
+/**
+ * The catalog id one extension model answers to.
+ *
+ * Namespaced by default; a lane-replacing extension keeps the lane's own ids,
+ * because its rows are the lane's rows while the built-ins stand down.
+ */
+export function extensionModelId(manifestId: string, modelId: string, replaces?: string): string {
+  const clean = String(modelId ?? '').trim()
+  if (replaces !== undefined && REPLACEABLE_LANES.has(replaces)) return clean
+  return `ext:${String(manifestId ?? '').trim()}/${clean}`
+}
+
+/** Is this catalog row served by an installed extension? */
+export function isExtensionEntry(entry: any): boolean {
+  return entry?.channel === EXTENSION_CHANNEL
+}
+
+/** Normalize one `listModels`/manifest model row into a catalog entry, or null. */
+function extensionEntryOf(manifest: any, row: any): any {
+  if (row === null || typeof row !== 'object' || Array.isArray(row)) return null
+  const modelId = typeof row.id === 'string' ? row.id.trim() : ''
+  if (modelId === '' || modelId.length > 128) return null
+  const wire = EXTENSION_WIRES.has(row.wire) ? row.wire : 'chat'
+  const contextWindow = number(row.contextWindow) ?? 131072
+  const entry: any = {
+    id: extensionModelId(manifest.id, modelId, manifest.replaces),
+    name: typeof row.name === 'string' && row.name.trim() !== '' ? row.name.trim() : displayModelName(modelId),
+    channel: EXTENSION_CHANNEL,
+    extensionId: manifest.id,
+    extensionName: typeof manifest.name === 'string' ? manifest.name : manifest.id,
+    modelId,
+    wire,
+    vision: row.vision === true,
+    reasoning: row.reasoning !== false,
+    contextWindow,
+    maxOutput: number(row.maxOutput) ?? Math.min(32768, contextWindow),
+    canDisableThinking: true,
+    regionSensitive: false,
+    source: 'manifest',
+  }
+  if (Array.isArray(row.efforts) && row.efforts.length > 0) {
+    const efforts = row.efforts.filter((level: any) => typeof level === 'string' && level !== '').slice(0, 8)
+    if (efforts.length > 0) {
+      entry.efforts = efforts
+      entry.effortDefault = efforts.includes(row.effortDefault) ? row.effortDefault : efforts[efforts.length - 1]
+      // The declared level rides the wire as the model's own effort field — the
+      // extension names its own spelling via `effortKey` when it is not the
+      // common `reasoning_effort`/`reasoning.effort` shapes.
+      const key = typeof row.effortKey === 'string' && row.effortKey.trim() !== '' ? row.effortKey.trim() : null
+      entry.effortPatch = key !== null ? { [key]: '$effort' } : { reasoning_effort: '$effort' }
+      entry.canDisableThinking = efforts.includes('disabled') || efforts.includes('none')
+    }
+  }
+  return entry
+}
+
+/**
+ * Build the extension lane's catalog rows from one installed channel
+ * extension's model list. Rows that repeat an id are dropped.
+ */
+export function buildExtensionCatalog(manifest: any, rows: any): any[] {
+  if (!manifest || typeof manifest !== 'object' || typeof manifest.id !== 'string') return []
+  const seen = new Set<string>()
+  const entries: any[] = []
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const entry = extensionEntryOf(manifest, row)
+    if (entry === null || seen.has(entry.id)) continue
+    seen.add(entry.id)
+    entries.push(entry)
+  }
+  return entries
+}
+
+/**
+ * Which built-in lane an enabled extension takes over, or null. Only one
+ * extension may replace a lane; the first enabled claim wins and the rest are
+ * ignored until the conflict is resolved.
+ */
+export function extensionReplaces(manifest: any): string | null {
+  const replaces = typeof manifest?.replaces === 'string' ? manifest.replaces : ''
+  return REPLACEABLE_LANES.has(replaces) ? replaces : null
 }

@@ -1,24 +1,31 @@
 /**
  * Unit checks for the free lane's client fingerprint — the part a 403 hinges on.
  *
- * The gate compares the *declared definitions*, not the tool names: a stub with
- * a placeholder property was refused the moment the upstream started comparing
- * descriptions and schemas. So the checks here are byte-level:
+ * 2.8.3 moved the shaping out of this file and into `o2a/`, a file-by-file port
+ * of opencode2api's gateway. That is the behaviour these checks pin, because it
+ * is what the live gate sees:
  *
- * - the two gate definitions are carried verbatim (`applyFingerprint` for the
- *   chat wire, `applyFingerprintWire` for Responses' flat items and Messages'
- *   `input_schema`);
- * - a caller tool that collides with a gate name is renamed out of the slot and
- *   its history and `tool_choice` follow the rename — otherwise the model reads
- *   its own earlier calls as calls to the injected placeholder;
- * - `tool_choice: 'none'` never reaches the wire;
- * - only Responses gets `auto` when the caller sent none.
+ * - the official CLI system prompt is prepended, not just the tools — the gate
+ *   reads the prompt too, and a body that carried only the tool set was refused;
+ * - every caller tool that is *not* an official name rides the wire under an
+ *   opaque `clint_<sha256[:12]>` name, because the free tier answers a body
+ *   carrying another client's vocabulary with 403/429;
+ * - a caller tool that folds onto an official name is *bound* to that official
+ *   name and the official set is not appended a second time (v1.4.7
+ *   `BindOfficial`) — that is the shape the official CLI's own clients send;
+ * - every reference follows the rename: `tool_choice`, the legacy
+ *   `function_call`, and the tool-call history each wire keeps;
+ * - `tool_choice: 'none'` never reaches the wire, and only Responses gets `auto`;
+ * - a conversation-title round-trip ships **unshaped**, which is the shape the
+ *   reference measured as safe.
  *
  * Runs on plain node:  node test/fingerprint-shapes.test.ts
  */
 import assert from 'node:assert/strict'
 import { applyFingerprint, applyFingerprintWire, FINGERPRINT_TOOLS } from '../dist/fingerprint.js'
 import { restoreToolName } from '../dist/upstream.js'
+import { OFFICIAL_PROMPT_MARKER } from '../dist/o2a/official-prompt.js'
+import { V2_OFFICIAL_TOOL_ORDER } from '../dist/o2a/official-tools.js'
 
 let failures = 0
 let running = Promise.resolve()
@@ -38,42 +45,76 @@ const flatTool = (name: string) => ({ type: 'function', name, description: `the 
 const claudeTool = (name: string) => ({ name, description: `the ${name} tool`, input_schema: { type: 'object', properties: { command: { type: 'string' } } } })
 const declared = (body: any) => (body.tools ?? []).map((tool: any) => tool.function?.name ?? tool.name)
 
-check('the chat wire carries both gate definitions verbatim', () => {
+check('the chat wire carries the full official tool set', () => {
   const body: any = { messages: [], tools: [] }
   applyFingerprint(body, {})
   const names = declared(body)
-  for (const gate of FINGERPRINT_TOOLS) assert.ok(names.includes(gate), `${gate} was not declared`)
+  for (const official of V2_OFFICIAL_TOOL_ORDER) assert.ok(names.includes(official), `${official} was not declared`)
   const read = body.tools.find((tool: any) => tool.function?.name === 'read')
   assert.ok(read.function.description.length > 100, 'the description was shortened')
   assert.equal(read.function.parameters.required[0], 'path')
 })
 
-check('a caller tool that collides with a gate name is renamed, and its history follows', () => {
+check('the official system prompt rides along', () => {
+  // The gate reads the prompt as well as the tool list; a body that carried only
+  // the tools was refused. Marker-guarded, so shaping twice cannot duplicate it.
+  const body: any = { messages: [{ role: 'user', content: 'x' }], tools: [] }
+  applyFingerprint(body, {})
+  applyFingerprint(body, {})
+  const prompts = body.messages.filter((message: any) => typeof message.content === 'string' && message.content.includes(OFFICIAL_PROMPT_MARKER))
+  assert.equal(prompts.length, 1, 'the prompt was missing or was injected twice')
+  assert.match(body.messages[0].content, /Working directory:/)
+})
+
+check('a foreign tool name becomes an opaque clint_ name, and its history follows', () => {
   const body: any = {
     messages: [
       { role: 'user', content: 'x' },
-      { role: 'assistant', tool_calls: [{ id: 'c1', function: { name: 'read', arguments: '{}' } }] },
+      { role: 'assistant', tool_calls: [{ id: 'c1', function: { name: 'ReportFindings', arguments: '{}' } }] },
     ],
-    tools: [chatTool('read')],
+    tools: [chatTool('ReportFindings')],
+    tool_choice: { type: 'function', function: { name: 'ReportFindings' } },
   }
   const aliases = new Map<string, string>()
   applyFingerprint(body, { aliases })
-  // The caller's `read` moved out of the slot; the gate's own took its place.
-  assert.ok(!declared(body).filter((name: string) => name === 'read').length === false)
   const names = declared(body)
-  assert.equal(names.filter((name: string) => name === 'read').length, 1, 'two tools answered to `read`')
-  const renamed = names.find((name: string) => name.startsWith('read_'))
-  assert.ok(renamed !== undefined, 'the caller tool was not renamed')
-  // The history call was renamed too, so the model does not read it as a call to
-  // the injected placeholder. (A system note is prepended, so the assistant's
-  // turn is found by role, not by a fixed index.)
+  const wire = names.find((name: string) => name.startsWith('clint_'))
+  assert.ok(wire !== undefined, 'the caller tool was not renamed')
+  assert.ok(!names.includes('ReportFindings'), 'the foreign vocabulary stayed on the wire')
+  assert.equal(wire.length, 'clint_'.length + 12, 'the wire name is not the 12-hex digest the lane meters')
   const assistant = body.messages.find((message: any) => message.role === 'assistant')
-  assert.equal(assistant.tool_calls[0].function.name, renamed)
-  // And the response side can restore it.
-  assert.equal(restoreToolName(renamed, aliases), 'read')
+  assert.equal(assistant.tool_calls[0].function.name, wire)
+  assert.equal(body.tool_choice.function.name, wire)
+  assert.equal(restoreToolName(wire, aliases), 'ReportFindings')
+  // The paired tool result row follows its call's id, so it is never orphaned.
+  assert.equal(assistant.tool_calls[0].id, 'c1')
 })
 
-check('the flat Responses wire declares the gate in its own shape', () => {
+check('a caller tool folding onto an official name is bound, not duplicated', () => {
+  // v1.4.7 BindOfficial: the caller's own definition rides the wire under the
+  // official name, and the official set is not appended a second time. This is
+  // the shape the official CLI's own clients send.
+  const body: any = { messages: [], tools: [chatTool('Read')] }
+  applyFingerprint(body, {})
+  const names = declared(body)
+  assert.equal(names.filter((name: string) => name === 'read').length, 1, 'the official definition was duplicated')
+  assert.ok(!names.includes('Read'), 'the caller spelling leaked onto the wire')
+  // Every other official still arrives.
+  assert.ok(names.includes('shell'))
+})
+
+check('a caller tool already carrying the official definition is left alone', async () => {
+  const { officialToolDefinition } = await import('../dist/o2a/official-tools.js')
+  const definition = officialToolDefinition('read')
+  const gate = { type: 'function', function: { name: 'read', ...definition } }
+  const body: any = { messages: [], tools: [gate] }
+  applyFingerprint(body, {})
+  const rows = body.tools.filter((tool: any) => tool.function?.name === 'read')
+  assert.equal(rows.length, 1, 'the official definition was duplicated')
+  assert.equal(rows[0].function.description, definition.description)
+})
+
+check('the flat Responses wire declares the official set in its own shape', () => {
   const body: any = { input: [], tools: [] }
   applyFingerprintWire(body, true)
   const read = body.tools.find((tool: any) => tool.name === 'read')
@@ -84,7 +125,7 @@ check('the flat Responses wire declares the gate in its own shape', () => {
   assert.equal(body.tool_choice, 'auto')
 })
 
-check('the Anthropic wire declares the gate with input_schema', () => {
+check('the Anthropic wire declares the official set with input_schema', () => {
   const body: any = { messages: [], tools: [] }
   applyFingerprintWire(body, 'claude')
   const read = body.tools.find((tool: any) => tool.name === 'read')
@@ -99,12 +140,52 @@ check('tool_choice: none never reaches the wire', () => {
   assert.ok(body.tool_choice !== 'none', 'a 403 was handed to the gateway')
 })
 
-check('a caller tool already carrying the official definition is left alone', async () => {
-  const { FINGERPRINT_TOOL_DEFINITIONS } = await import('../dist/fingerprint.js')
-  const gate = { type: 'function', function: { name: 'read', ...FINGERPRINT_TOOL_DEFINITIONS.read } }
-  const body: any = { messages: [], tools: [gate] }
+check('the chat wire carries its two constant body fields', () => {
+  const body: any = { messages: [], tools: [], stream: true }
   applyFingerprint(body, {})
-  assert.equal(declared(body).filter((name: string) => name === 'read').length, 1, 'the official definition was duplicated')
+  assert.equal(body.stream_options?.include_usage, true)
+  assert.equal(body.max_completion_tokens, 32000)
+})
+
+check('a title round-trip ships unshaped', () => {
+  // The reference measured a 403/429 when the full agent shape rode a toolless
+  // title call, which is what the harness's title generator sends whenever the
+  // local title answer is switched off.
+  const body: any = {
+    messages: [
+      { role: 'system', content: 'You write titles.' },
+      { role: 'user', content: 'Generate a title for this conversation.' },
+    ],
+    tools: [],
+  }
+  const aliases = new Map<string, string>()
+  applyFingerprint(body, { aliases })
+  assert.equal(aliases.size, 0, 'a title request was shaped')
+  assert.deepEqual(body.tools ?? [], [])
+  assert.equal(body.messages[1].content, 'Generate a title for this conversation.')
+  assert.equal('max_completion_tokens' in body, false)
+})
+
+check('a four-turn conversation is not a title request', () => {
+  // The turn ceiling is what keeps a real conversation from being mistaken for a
+  // title round-trip and shipped without its fingerprint.
+  const body: any = { messages: [
+    { role: 'user', content: 'a' }, { role: 'assistant', content: 'b' },
+    { role: 'user', content: 'c' }, { role: 'user', content: 'Generate a title for this conversation.' },
+  ], tools: [] }
+  const aliases = new Map<string, string>()
+  applyFingerprint(body, { aliases })
+  assert.ok(aliases.size > 0 || (body.tools ?? []).length > 0, 'a real conversation shipped unshaped')
+})
+
+check('shaping is idempotent', () => {
+  // A retried turn re-shapes an already-shaped body; the marker and the clint_
+  // prefix are what keep that a no-op.
+  const body: any = { messages: [{ role: 'user', content: 'x' }], tools: [chatTool('ReportFindings')] }
+  applyFingerprint(body, {})
+  const once = JSON.stringify(body)
+  applyFingerprint(body, {})
+  assert.equal(JSON.stringify(body), once, 'a second pass changed the body')
 })
 
 Promise.allSettled([running]).then(() => {
