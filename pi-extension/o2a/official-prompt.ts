@@ -57,7 +57,7 @@ const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 // The working directory is resolved once per process (`opencodeEnvOnce`); a
 // platform without one falls back to the official container path.
-let cachedWorkDir: any[]
+let cachedWorkDir: string | undefined
 
 function workDir() {
   if (cachedWorkDir !== undefined) return cachedWorkDir

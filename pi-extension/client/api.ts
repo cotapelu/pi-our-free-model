@@ -17,7 +17,7 @@
 export let apiBase = '/api/management'
 export function setApiBase(value: string) { apiBase = value }
 
-export async function api(path, options) {
+export async function api(path: string, options: Record<string, any> = {}) {
   // 8 秒超时兜底：后端路由未注册/挂起时 fetch 不再永久挂起——此前全部 api 调用
   // （onboarding /announcement、设置页 /announcements /update/status、面板 /summary /stats
   // /forward/key 等）无任何超时，一个不响应端点即可阻塞 settings.onboarding 协调流程
@@ -30,7 +30,7 @@ export async function api(path, options) {
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), timeout)
   try {
-    const response = await fetch(`${API}${path}`, { ...fetchOptions, redirect: 'error', signal: ctrl.signal })
+    const response = await fetch(`${apiBase}${path}`, { ...fetchOptions, redirect: 'error', signal: ctrl.signal })
     const text = await response.text()
     let payload
     try { payload = text === '' ? {} : JSON.parse(text) } catch { payload = { error: text.slice(0, 200) } }
@@ -42,7 +42,7 @@ export async function api(path, options) {
 }
 
 /** 1.2K / 3.4M, and nothing else: a count the console shows is rounded once. */
-export function kilo(value) {
+export function kilo(value: unknown): string {
   const n = Math.round(Number(value) || 0)
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}M`
   if (n >= 1000) return `${(n / 1000).toFixed(n >= 10_000 ? 0 : 1)}K`
@@ -50,9 +50,9 @@ export function kilo(value) {
 }
 
 /** "3 分钟前" / "3m ago", from the shell's own locale tag. */
-export function ago(ts, locale) {
+export function ago(ts: unknown, locale?: string): string {
   if (!ts) return '—'
-  const seconds = Math.max(1, Math.round((Date.now() - ts) / 1000))
+  const seconds = Math.max(1, Math.round((Date.now() - Number(ts || 0)) / 1000))
   const zh = String(locale ?? '').toLowerCase().startsWith('zh')
   if (seconds < 60) return zh ? `${seconds} 秒前` : `${seconds}s ago`
   const minutes = Math.round(seconds / 60)
@@ -63,15 +63,15 @@ export function ago(ts, locale) {
 }
 
 /** Clipboard, with the execCommand fallback a non-secure context still needs. */
-export function copy(text, done) {
-  const finish = ok => done(ok)
+export function copy(text: string, done: (ok: boolean) => void): void {
+  const finish = (ok: boolean) => done(ok)
   if (navigator?.clipboard?.writeText !== undefined) {
     navigator.clipboard.writeText(text).then(() => finish(true), () => finish(legacy(text)))
     return
   }
   finish(legacy(text))
 }
-function legacy(text) {
+function legacy(text: string): boolean {
   try {
     const area = document.createElement('textarea')
     area.value = text

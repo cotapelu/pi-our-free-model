@@ -12,10 +12,25 @@
  * @module pi-extension/client/toast.js
  */
 
-import { htmlToDom, parseSafeHtml } from './sanitizer.js'
+import { parseSafeHtml } from './sanitizer.js'
+import { htmlToDom } from './sanitizer-materialize.js'
 
-export function toastHost() {
-  let host = document.querySelector('.ofm_toasts')
+export interface ToastAction {
+  label?: string
+  onClick?: () => void
+}
+
+export interface ToastInput {
+  title?: string
+  body?: unknown
+  html?: string
+  tone?: string
+  actions?: ToastAction[]
+  holdMs?: number
+}
+
+export function toastHost(): HTMLElement {
+  let host = document.querySelector<HTMLElement>('.ofm_toasts')
   if (host === null) {
     host = document.createElement('div')
     host.className = 'ofm_toasts'
@@ -24,10 +39,19 @@ export function toastHost() {
   return host
 }
 
-      for (const node of htmlToDom(parseSafeHtml(html))) area.appendChild(node)
-      card.appendChild(area)
+/** Body text, given either a plain string or the sanitized HTML the announcement parser returns. */
+function toastBody(area: HTMLElement, input: ToastInput): void {
+  if (input.body !== undefined && input.body !== '') {
+    area.textContent = String(input.body)
+    return
+  }
+  if (input.html !== undefined) {
+    for (const node of htmlToDom(parseSafeHtml(input.html))) area.appendChild(node)
+  }
+}
 
-export function showToast({ title, body, html, tone, actions = [], holdMs = 10000 }) {
+export function showToast(input: ToastInput): HTMLElement | undefined {
+  const { title, body, html, tone, actions = [], holdMs = 10000 } = input
   try {
     const host = toastHost()
     const card = document.createElement('div')
@@ -47,15 +71,10 @@ export function showToast({ title, body, html, tone, actions = [], holdMs = 1000
     close.addEventListener('click', () => card.remove())
     head.appendChild(close)
     card.appendChild(head)
-    if (body !== undefined && body !== '') {
+    if (body !== undefined && body !== '' || html !== undefined) {
       const area = document.createElement('div')
       area.className = 'ofm_toastbody'
-      area.textContent = String(body)
-      card.appendChild(area)
-    } else if (html !== undefined) {
-      const area = document.createElement('div')
-      area.className = 'ofm_toastbody'
-      for (const node of htmlToDom(parseSafeHtml(html))) area.appendChild(node)
+      toastBody(area, input)
       card.appendChild(area)
     }
     if (actions.length > 0) {
@@ -65,7 +84,7 @@ export function showToast({ title, body, html, tone, actions = [], holdMs = 1000
         const btn = document.createElement('button')
         btn.type = 'button'
         btn.className = 'ofm_btn'
-        btn.textContent = action.label
+        btn.textContent = action.label ?? ''
         btn.addEventListener('click', () => { card.remove(); action.onClick?.() })
         row.appendChild(btn)
       }
@@ -75,13 +94,34 @@ export function showToast({ title, body, html, tone, actions = [], holdMs = 1000
     while (host.children.length > 4) host.firstElementChild?.remove()
     if (holdMs > 0) {
       const timer = setTimeout(() => card.remove(), holdMs)
-      timer.unref?.()
+      ;(timer as unknown as { unref?: () => void }).unref?.()
     }
     return card
   } catch { /* a toast must never break its caller */ }
   return undefined
 }
-export function showUrgentModal({ title, html, confirmLabel, onClose }) {
+
+/** Urgent announcement ids already shown on this page. Both the arrival
+ *  push and the boot re-check consult it, so one announcement opens one
+ *  modal per page load — a replace, never a stack. */
+export const urgentShownIds = new Set<string>()
+
+/** Modal surface for `urgent` announcements; dismiss runs the ack callback.
+ *
+ *  `holdMs` keeps the close control locked for that long with a visible
+ *  countdown: an announcement that must be read should not be dismissible
+ *  by reflex. The timer is one-shot and cleared with the modal. The hint
+ *  text travels in from the caller like `confirmLabel` — this function
+ *  predates any `t` binding and must not grow one (same rule as
+ *  showToast's comment above). */
+export function showUrgentModal(input: {
+  title?: string
+  html?: string
+  confirmLabel?: string
+  onClose?: () => void
+  holdMs?: number
+  holdHint?: string
+}): void {
   try {
     document.querySelector('.ofm_scrim[data-ofm-urgent]')?.remove()
     const scrim = document.createElement('div')
@@ -93,18 +133,45 @@ export function showUrgentModal({ title, html, confirmLabel, onClose }) {
     modal.setAttribute('aria-modal', 'true')
     const head = document.createElement('div')
     head.className = 'ofm_modalhead'
-    head.textContent = title ?? ''
+    head.textContent = input.title ?? ''
     const body = document.createElement('div')
     body.className = 'ofm_modalbody'
-    for (const node of htmlToDom(parseSafeHtml(html ?? ''))) body.appendChild(node)
+    for (const node of htmlToDom(parseSafeHtml(input.html ?? ''))) body.appendChild(node)
     const foot = document.createElement('div')
     foot.className = 'ofm_modalfoot'
     const ok = document.createElement('button')
     ok.type = 'button'
     ok.className = 'ofm_btn primary'
-    ok.textContent = confirmLabel ?? 'OK'
-    ok.addEventListener('click', () => { scrim.remove(); onClose?.() })
+    ok.textContent = input.confirmLabel ?? 'OK'
+    let remaining = Math.max(0, Math.round(Number(input.holdMs) || 0))
+    let holdTimer: ReturnType<typeof setTimeout> | undefined
+    let hint: HTMLSpanElement | undefined
+    const settle = () => {
+      ok.disabled = false
+      ok.textContent = input.confirmLabel ?? 'OK'
+      hint?.remove()
+      hint = undefined
+    }
+    hint = remaining > 0 ? document.createElement('span') : undefined
+    if (hint !== undefined) {
+      hint.className = 'ofm_holdhint'
+      hint.setAttribute('aria-live', 'polite')
+      foot.appendChild(hint)
+    }
+    const tick = () => {
+      if (remaining <= 0) { settle(); return }
+      ok.disabled = true
+      if (hint !== null && hint !== undefined) hint.textContent = String(input.holdHint ?? '').replace('{s}', String(Math.ceil(remaining / 1000)))
+      holdTimer = setTimeout(() => { remaining = Math.max(0, remaining - 250); tick() }, 250)
+    }
+    ok.addEventListener('click', () => {
+      if (ok.disabled === true) return
+      scrim.remove()
+      if (holdTimer !== undefined) { clearTimeout(holdTimer); holdTimer = undefined }
+      input.onClose?.()
+    })
     foot.appendChild(ok)
+    tick()
     modal.appendChild(head)
     modal.appendChild(body)
     modal.appendChild(foot)
@@ -113,7 +180,8 @@ export function showUrgentModal({ title, html, confirmLabel, onClose }) {
   } catch { /* a modal must never break its caller */ }
 }
 
-export function osNotify(title, body) {
+/** OS-level notification, only when the user both opted in and granted. */
+export function osNotify(title: string, body?: unknown): void {
   try {
     if (typeof Notification !== 'function' || Notification.permission !== 'granted') return
     new Notification(title, { body: String(body ?? '').slice(0, 200) })

@@ -3,67 +3,52 @@
   "phases": [
     {
       "id": "phase-1",
-      "name": "G10-standalone",
+      "name": "phase-1",
       "tasks": [
         {
           "id": "task-1",
-          "content": "Survey standalone/desktop source (done: read all backend modules + frontend shape)",
-          "status": "in_progress"
+          "content": "Fix build: tsc strict 0 errors + client tsconfig split + real bugs (API typo, htmlToDom, stray code)",
+          "status": "completed"
         },
         {
           "id": "task-2",
-          "content": "Port standalone backend small modules (open-external, login-terminal, eac, routing, providers, desktop-update) + disclaimer exports",
-          "status": "pending"
+          "content": "Port src/semver.ts (41 dòng)",
+          "status": "in_progress"
         },
         {
           "id": "task-3",
-          "content": "Port channels/ (6 modules) + business.mjs generator",
+          "content": "Diff engine-payload.ts vs 2.8.3 and align",
           "status": "pending"
         },
         {
           "id": "task-4",
-          "content": "Port missing core deps (FreeModelAdapter, catalog builders, detectEgress/probeCatalog, session helpers, lan-relay)",
+          "content": "Port src/o2a.ts (994 dòng)",
           "status": "pending"
         },
         {
           "id": "task-5",
-          "content": "Port workbench + library + client-terminal + tests",
+          "content": "Port src/core.ts (839 dòng)",
           "status": "pending"
         },
         {
           "id": "task-6",
-          "content": "Port management.mjs + tests",
+          "content": "Port src/plugins.ts (1.241 dòng)",
           "status": "pending"
         },
         {
           "id": "task-7",
-          "content": "Port service.mjs + cli.mjs, wire gateway handleRequest/health hooks",
+          "content": "Port src/extensions.ts (1.889 dòng)",
           "status": "pending"
         },
         {
           "id": "task-8",
-          "content": "Spawn child: desktop package port (service-host, titlebar, Rust boundary)",
-          "status": "pending"
-        },
-        {
-          "id": "task-9",
-          "content": "Spawn child: frontend source port + sponsor UI + vite/shared-ui",
-          "status": "pending"
-        },
-        {
-          "id": "task-10",
-          "content": "Build + run-all + smoke standalone service",
-          "status": "pending"
-        },
-        {
-          "id": "task-11",
-          "content": "Update docs + git commit",
+          "content": "Write test suites for new modules",
           "status": "pending"
         }
       ]
     }
   ],
-  "nextTaskId": 12,
+  "nextTaskId": 9,
   "nextPhaseId": 2,
-  "updatedAt": "2026-11-10T07:38:55.792Z"
+  "updatedAt": "2026-11-11T04:44:20.164Z"
 }

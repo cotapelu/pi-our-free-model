@@ -1,0 +1,348 @@
+# Kiểm kê port — sinh tự động bởi `scripts/audit-ports.mjs`
+
+> Nguồn: `/home/quangtynu/Qcoder/pi-our-free-model/dsh-our-free-model`. Chạy `node scripts/audit-ports.mjs [--verbose]` để tạo lại.
+> Con số này trả lời "có tên không", không trả lời "đúng hành vi không".
+
+- File code: **581**
+- Đã map: **349** · thiếu: **226**
+- Export quét: **1681** · không thấy ở đâu: **73**
+- File đã map nhưng có drift: **259**
+
+## 1. File chưa có
+- `.github/workflows/build-macos.yml` → `.github/workflows/build-macos.yml`
+- `.github/workflows/build-windows.yml` → `.github/workflows/build-windows.yml`
+- `.github/workflows/prepare-release.yml` → `.github/workflows/prepare-release.yml`
+- `.github/workflows/release-sign.yml` → `.github/workflows/release-sign.yml`
+- `.github/workflows/test.yml` → `.github/workflows/test.yml`
+- `packages/desktop/ui/titlebar.js` → `packages/desktop/ui/titlebar.js`
+- `packages/standalone/channels/business.mjs` → `packages/standalone/channels/business.ts`
+- `packages/standalone/frontend/channels.mjs` → `packages/standalone/frontend/channels.ts`
+- `packages/standalone/frontend/models-data.mjs` → `packages/standalone/frontend/models-data.ts`
+- `packages/standalone/frontend/plugin-page.css` → `packages/standalone/frontend/plugin-page.css`
+- `packages/standalone/frontend/plugin-page.tsx` → `packages/standalone/frontend/plugin-page.tsx`
+- `packages/standalone/frontend/plugins.css` → `packages/standalone/frontend/plugins.css`
+- `packages/standalone/frontend/plugins.tsx` → `packages/standalone/frontend/plugins.tsx`
+- `packages/standalone/frontend/settings-data.mjs` → `packages/standalone/frontend/settings-data.ts`
+- `packages/standalone/frontend/theme.mjs` → `packages/standalone/frontend/theme.ts`
+- `packages/standalone/frontend/usage-data.mjs` → `packages/standalone/frontend/usage-data.ts`
+- `packages/standalone/frontend/visibility-data.mjs` → `packages/standalone/frontend/visibility-data.ts`
+- `packages/standalone/package-lock.json` → `packages/standalone/package-lock.json`
+- `packages/standalone/vite.config.mjs` → `packages/standalone/vite.config.ts`
+- `packages/standalone/web/channels-CqFHCMz8.js` → `packages/standalone/web/channels-CqFHCMz8.js`
+- `packages/standalone/web/models-ChmCQDPX.js` → `packages/standalone/web/models-ChmCQDPX.js`
+- `packages/standalone/web/settings-pl214s3V.js` → `packages/standalone/web/settings-pl214s3V.js`
+- `packages/standalone/web/usage-DiusNYSE.js` → `packages/standalone/web/usage-DiusNYSE.js`
+- `packages/standalone/web/visibility-data-BTNpyYn8.js` → `packages/standalone/web/visibility-data-BTNpyYn8.js`
+- `scripts/_render-probe.mjs` → `scripts/_render-probe.mjs`
+- `scripts/aggregate-test.mjs` → `scripts/aggregate-test.mjs`
+- `scripts/aggregate-wiring-test.mjs` → `scripts/aggregate-wiring-test.mjs`
+- `scripts/anthropic-test.mjs` → `scripts/anthropic-test.mjs`
+- `scripts/auto-checkin-tick-test.mjs` → `scripts/auto-checkin-tick-test.mjs`
+- `scripts/bench-integration-test.mjs` → `scripts/bench-integration-test.mjs`
+- `scripts/bun-fetch-test.mjs` → `scripts/bun-fetch-test.mjs`
+- `scripts/catalog-test.mjs` → `scripts/catalog-test.mjs`
+- `scripts/chan-relay-test.mjs` → `scripts/chan-relay-test.mjs`
+- `scripts/channel-credits-rpc-test.mjs` → `scripts/channel-credits-rpc-test.mjs`
+- `scripts/channel-credits-ui-test.mjs` → `scripts/channel-credits-ui-test.mjs`
+- `scripts/channel-image-pricing-test.mjs` → `scripts/channel-image-pricing-test.mjs`
+- `scripts/channel-login-test.mjs` → `scripts/channel-login-test.mjs`
+- `scripts/channel-model-actions-test.mjs` → `scripts/channel-model-actions-test.mjs`
+- `scripts/channel-network-test.mjs` → `scripts/channel-network-test.mjs`
+- `scripts/channel-pack-gate-test.mjs` → `scripts/channel-pack-gate-test.mjs`
+- `scripts/channel-pack-test.mjs` → `scripts/channel-pack-test.mjs`
+- `scripts/channel-pr-fixes-test.mjs` → `scripts/channel-pr-fixes-test.mjs`
+- `scripts/channel-queue-policy-test.mjs` → `scripts/channel-queue-policy-test.mjs`
+- `scripts/channel-queue-rotation-test.mjs` → `scripts/channel-queue-rotation-test.mjs`
+- `scripts/channel-storage-compat-test.mjs` → `scripts/channel-storage-compat-test.mjs`
+- `scripts/client-terminal-test.mjs` → `scripts/client-terminal-test.mjs`
+- `scripts/combo-advance-test.mjs` → `scripts/combo-advance-test.mjs`
+- `scripts/desktop-test.mjs` → `scripts/desktop-test.mjs`
+- `scripts/desktop-update-test.mjs` → `scripts/desktop-update-test.mjs`
+- `scripts/eac-abort-test.mjs` → `scripts/eac-abort-test.mjs`
+- `scripts/eac-auth-test.mjs` → `scripts/eac-auth-test.mjs`
+- `scripts/eac-login-test.mjs` → `scripts/eac-login-test.mjs`
+- `scripts/eac-router-ui-test.mjs` → `scripts/eac-router-ui-test.mjs`
+- `scripts/effort-test.mjs` → `scripts/effort-test.mjs`
+- `scripts/egress-availability-test.mjs` → `scripts/egress-availability-test.mjs`
+- `scripts/egress-test.mjs` → `scripts/egress-test.mjs`
+- `scripts/engine-appearance-test.mjs` → `scripts/engine-appearance-test.mjs`
+- `scripts/engine-payload-test.mjs` → `scripts/engine-payload-test.mjs`
+- `scripts/engine-transport-test.mjs` → `scripts/engine-transport-test.mjs`
+- `scripts/extensions-live-verify.mjs` → `scripts/extensions-live-verify.mjs`
+- `scripts/extensions-test.mjs` → `scripts/extensions-test.mjs`
+- `scripts/feed-test.mjs` → `scripts/feed-test.mjs`
+- `scripts/fingerprint-test.mjs` → `scripts/fingerprint-test.mjs`
+- `scripts/fixtures/README.md` → `scripts/fixtures/README.md`
+- `scripts/fixtures/updater-1.3.1.mjs` → `scripts/fixtures/updater-1.3.1.mjs`
+- `scripts/fixtures/updater-2.5.9.mjs` → `scripts/fixtures/updater-2.5.9.mjs`
+- `scripts/forward-boot-test.mjs` → `scripts/forward-boot-test.mjs`
+- `scripts/forward-test.mjs` → `scripts/forward-test.mjs`
+- `scripts/free-lane-compat-test.mjs` → `scripts/free-lane-compat-test.mjs`
+- `scripts/free-lane-quota-test.mjs` → `scripts/free-lane-quota-test.mjs`
+- `scripts/free-lane-wire-test.mjs` → `scripts/free-lane-wire-test.mjs`
+- `scripts/free-pool-test.mjs` → `scripts/free-pool-test.mjs`
+- `scripts/freetier-gate-test.mjs` → `scripts/freetier-gate-test.mjs`
+- `scripts/gateway-disconnect-test.mjs` → `scripts/gateway-disconnect-test.mjs`
+- `scripts/gateway-source-test.mjs` → `scripts/gateway-source-test.mjs`
+- `scripts/gemini-gateway-test.mjs` → `scripts/gemini-gateway-test.mjs`
+- `scripts/heatmap-test.mjs` → `scripts/heatmap-test.mjs`
+- `scripts/host-selftest.mjs` → `scripts/host-selftest.mjs`
+- `scripts/image-pricing-host-test.mjs` → `scripts/image-pricing-host-test.mjs`
+- `scripts/kilo-test.mjs` → `scripts/kilo-test.mjs`
+- `scripts/legacy-upgrade-test.mjs` → `scripts/legacy-upgrade-test.mjs`
+- `scripts/lib/fake-kernel.mjs` → `scripts/lib/fake-kernel.mjs`
+- `scripts/lib/plugin-e2e-server.mjs` → `scripts/lib/plugin-e2e-server.mjs`
+- `scripts/live-audit.mjs` → `scripts/live-audit.mjs`
+- `scripts/live-feature-verify.mjs` → `scripts/live-feature-verify.mjs`
+- `scripts/local-optimize-test.mjs` → `scripts/local-optimize-test.mjs`
+- `scripts/magpie-engine-patches/README.md` → `scripts/magpie-engine-patches/README.md`
+- `scripts/magpie-engine-soak.mjs` → `scripts/magpie-engine-soak.mjs`
+- `scripts/magpie-engine-test.mjs` → `scripts/magpie-engine-test.mjs`
+- `scripts/magpie-live-test.mjs` → `scripts/magpie-live-test.mjs`
+- `scripts/magpie-models-test.mjs` → `scripts/magpie-models-test.mjs`
+- `scripts/magpie-native-ui-test.mjs` → `scripts/magpie-native-ui-test.mjs`
+- `scripts/magpie-plugin-test.mjs` → `scripts/magpie-plugin-test.mjs`
+- `scripts/magpie-policy-test.mjs` → `scripts/magpie-policy-test.mjs`
+- `scripts/magpie-sandbox-test.mjs` → `scripts/magpie-sandbox-test.mjs`
+- `scripts/managed-upgrade-ui-test.mjs` → `scripts/managed-upgrade-ui-test.mjs`
+- `scripts/measure-standalone-ui.mjs` → `scripts/measure-standalone-ui.mjs`
+- `scripts/mint-eac-seal-test.mjs` → `scripts/mint-eac-seal-test.mjs`
+- `scripts/model-test-finish-integration-test.mjs` → `scripts/model-test-finish-integration-test.mjs`
+- `scripts/model-test-probe-race-test.mjs` → `scripts/model-test-probe-race-test.mjs`
+- `scripts/model-test-test.mjs` → `scripts/model-test-test.mjs`
+- `scripts/oc-free-live-test.mjs` → `scripts/oc-free-live-test.mjs`
+- `scripts/offline-test.mjs` → `scripts/offline-test.mjs`
+- `scripts/open-external-test.mjs` → `scripts/open-external-test.mjs`
+- `scripts/opencode-parity-test.mjs` → `scripts/opencode-parity-test.mjs`
+- `scripts/picker-test.mjs` → `scripts/picker-test.mjs`
+- `scripts/picks-test.mjs` → `scripts/picks-test.mjs`
+- `scripts/picks-ui-test.mjs` → `scripts/picks-ui-test.mjs`
+- `scripts/plugin-bench-ui-test.mjs` → `scripts/plugin-bench-ui-test.mjs`
+- `scripts/plugins-test.mjs` → `scripts/plugins-test.mjs`
+- `scripts/plugins-ui-test.mjs` → `scripts/plugins-ui-test.mjs`
+- `scripts/private-file-permissions-test.mjs` → `scripts/private-file-permissions-test.mjs`
+- `scripts/probes/availability-matrix.mjs` → `scripts/probes/availability-matrix.mjs`
+- `scripts/probes/batch-delivery.mjs` → `scripts/probes/batch-delivery.mjs`
+- `scripts/probes/budget-and-vision.mjs` → `scripts/probes/budget-and-vision.mjs`
+- `scripts/probes/budget-dialects.mjs` → `scripts/probes/budget-dialects.mjs`
+- `scripts/probes/dangling-tool-call.mjs` → `scripts/probes/dangling-tool-call.mjs`
+- `scripts/probes/decode-window.mjs` → `scripts/probes/decode-window.mjs`
+- `scripts/probes/effort-repeat-sampling.mjs` → `scripts/probes/effort-repeat-sampling.mjs`
+- `scripts/probes/free-lane-survey.mjs` → `scripts/probes/free-lane-survey.mjs`
+- `scripts/probes/long-answer.mjs` → `scripts/probes/long-answer.mjs`
+- `scripts/probes/long-think-truncation.mjs` → `scripts/probes/long-think-truncation.mjs`
+- `scripts/probes/mint-ids.mjs` → `scripts/probes/mint-ids.mjs`
+- `scripts/probes/pairing-repair.mjs` → `scripts/probes/pairing-repair.mjs`
+- `scripts/probes/reasoning-effort-probe.mjs` → `scripts/probes/reasoning-effort-probe.mjs`
+- `scripts/probes/shell-slot-promotion.mjs` → `scripts/probes/shell-slot-promotion.mjs`
+- `scripts/probes/stream-terminal-frames.mjs` → `scripts/probes/stream-terminal-frames.mjs`
+- `scripts/probes/tool-calling.mjs` → `scripts/probes/tool-calling.mjs`
+- `scripts/probes/tool-name-charset.mjs` → `scripts/probes/tool-name-charset.mjs`
+- `scripts/projection-test.mjs` → `scripts/projection-test.mjs`
+- `scripts/prompt-saver-test.mjs` → `scripts/prompt-saver-test.mjs`
+- `scripts/qoder-effort-order-test.mjs` → `scripts/qoder-effort-order-test.mjs`
+- `scripts/quota-routing-test.mjs` → `scripts/quota-routing-test.mjs`
+- `scripts/recovery-test.mjs` → `scripts/recovery-test.mjs`
+- `scripts/registry-test.mjs` → `scripts/registry-test.mjs`
+- `scripts/release-e2e.mjs` → `scripts/release-e2e.mjs`
+- `scripts/release-preparation-test.mjs` → `scripts/release-preparation-test.mjs`
+- `scripts/reload-notice-test.mjs` → `scripts/reload-notice-test.mjs`
+- `scripts/reload-test.mjs` → `scripts/reload-test.mjs`
+- `scripts/retry-safety-test.mjs` → `scripts/retry-safety-test.mjs`
+- `scripts/route-test.mjs` → `scripts/route-test.mjs`
+- `scripts/rtk-shape-test.mjs` → `scripts/rtk-shape-test.mjs`
+- `scripts/rtk-test.mjs` → `scripts/rtk-test.mjs`
+- `scripts/sanitize-test.mjs` → `scripts/sanitize-test.mjs`
+- `scripts/sniff-test.mjs` → `scripts/sniff-test.mjs`
+- `scripts/speed-stat-test.mjs` → `scripts/speed-stat-test.mjs`
+- `scripts/sponsor-test.mjs` → `scripts/sponsor-test.mjs`
+- `scripts/sponsor-ui-test.mjs` → `scripts/sponsor-ui-test.mjs`
+- `scripts/stable-session-test.mjs` → `scripts/stable-session-test.mjs`
+- `scripts/standalone-channel-filter-test.mjs` → `scripts/standalone-channel-filter-test.mjs`
+- `scripts/standalone-channels-test.mjs` → `scripts/standalone-channels-test.mjs`
+- `scripts/standalone-client-regression-test.mjs` → `scripts/standalone-client-regression-test.mjs`
+- `scripts/standalone-desktop-regression-test.mjs` → `scripts/standalone-desktop-regression-test.mjs`
+- `scripts/standalone-frontend-test.mjs` → `scripts/standalone-frontend-test.mjs`
+- `scripts/standalone-lan-test.mjs` → `scripts/standalone-lan-test.mjs`
+- `scripts/standalone-login-terminal-test.mjs` → `scripts/standalone-login-terminal-test.mjs`
+- `scripts/standalone-login-ui-test.mjs` → `scripts/standalone-login-ui-test.mjs`
+- `scripts/standalone-management-test.mjs` → `scripts/standalone-management-test.mjs`
+- `scripts/standalone-model-operation-test.mjs` → `scripts/standalone-model-operation-test.mjs`
+- `scripts/standalone-model-row-test.mjs` → `scripts/standalone-model-row-test.mjs`
+- `scripts/standalone-nav-test.mjs` → `scripts/standalone-nav-test.mjs`
+- `scripts/standalone-package-design.md` → `scripts/standalone-package-design.md`
+- `scripts/standalone-package-test.mjs` → `scripts/standalone-package-test.mjs`
+- `scripts/standalone-page-lifecycle-test.mjs` → `scripts/standalone-page-lifecycle-test.mjs`
+- `scripts/standalone-react-ui-test.mjs` → `scripts/standalone-react-ui-test.mjs`
+- `scripts/standalone-settings-host-test.mjs` → `scripts/standalone-settings-host-test.mjs`
+- `scripts/standalone-test.mjs` → `scripts/standalone-test.mjs`
+- `scripts/standalone-ui-preview.mjs` → `scripts/standalone-ui-preview.mjs`
+- `scripts/stat-bucket-ui-test.mjs` → `scripts/stat-bucket-ui-test.mjs`
+- `scripts/stream-failure-test.mjs` → `scripts/stream-failure-test.mjs`
+- `scripts/subscription-completion-test.mjs` → `scripts/subscription-completion-test.mjs`
+- `scripts/subscription-ui-test.mjs` → `scripts/subscription-ui-test.mjs`
+- `scripts/subscription-wiring-test.mjs` → `scripts/subscription-wiring-test.mjs`
+- `scripts/subscriptions-test.mjs` → `scripts/subscriptions-test.mjs`
+- `scripts/test-all.mjs` → `scripts/test-all.mjs`
+- `scripts/truncation-test.mjs` → `scripts/truncation-test.mjs`
+- `scripts/trust-test.mjs` → `scripts/trust-test.mjs`
+- `scripts/tui-test.mjs` → `scripts/tui-test.mjs`
+- `scripts/turn-accounting-test.mjs` → `scripts/turn-accounting-test.mjs`
+- `scripts/ui-preview.mjs` → `scripts/ui-preview.mjs`
+- `scripts/update-magpie-engine.mjs` → `scripts/update-magpie-engine.mjs`
+- `scripts/updater-test.mjs` → `scripts/updater-test.mjs`
+- `scripts/upgrade-ui-test.mjs` → `scripts/upgrade-ui-test.mjs`
+- `scripts/usage-sanitize-test.mjs` → `scripts/usage-sanitize-test.mjs`
+- `scripts/vault-test.mjs` → `scripts/vault-test.mjs`
+- `scripts/wire-tool-alias-test.mjs` → `scripts/wire-tool-alias-test.mjs`
+- `scripts/workbench-library-test.mjs` → `scripts/workbench-library-test.mjs`
+- `scripts/workbench-management-test.mjs` → `scripts/workbench-management-test.mjs`
+- `scripts/workbench-native-agents-test.mjs` → `scripts/workbench-native-agents-test.mjs`
+- `scripts/workbench-native-desktop-test.mjs` → `scripts/workbench-native-desktop-test.mjs`
+- `scripts/workbench-native-test.mjs` → `scripts/workbench-native-test.mjs`
+- `scripts/workbench-tauri-test.mjs` → `scripts/workbench-tauri-test.mjs`
+- `scripts/workbench-test.mjs` → `scripts/workbench-test.mjs`
+- `scripts/workbench-ui-test.mjs` → `scripts/workbench-ui-test.mjs`
+- `scripts/workspace-appearance-ui-test.mjs` → `scripts/workspace-appearance-ui-test.mjs`
+- `src/anthropic.js` → `anthropic.ts`
+- `src/deferred-response.js` → `deferred-response.ts`
+- `src/egress.js` → `egress.ts`
+- `src/extensions.js` → `extensions.ts`
+- `src/gemini.js` → `gemini.ts`
+- `src/local-optimize.js` → `local-optimize.ts`
+- `src/plugins.js` → `plugins.ts`
+- `src/probe.js` → `probe.ts`
+- `src/recovery.js` → `recovery.ts`
+- `src/store.js` → `store.ts`
+- `src/token-saver/rtk/applyFilter.js` → `token-saver/rtk/applyFilter.ts`
+- `src/token-saver/rtk/autodetect.js` → `token-saver/rtk/autodetect.ts`
+- `src/token-saver/rtk/constants.js` → `token-saver/rtk/constants.ts`
+- `src/token-saver/rtk/filters/buildOutput.js` → `token-saver/rtk/filters/buildOutput.ts`
+- `src/token-saver/rtk/filters/dedupLog.js` → `token-saver/rtk/filters/dedupLog.ts`
+- `src/token-saver/rtk/filters/find.js` → `token-saver/rtk/filters/find.ts`
+- `src/token-saver/rtk/filters/gitDiff.js` → `token-saver/rtk/filters/gitDiff.ts`
+- `src/token-saver/rtk/filters/gitLog.js` → `token-saver/rtk/filters/gitLog.ts`
+- `src/token-saver/rtk/filters/gitStatus.js` → `token-saver/rtk/filters/gitStatus.ts`
+- `src/token-saver/rtk/filters/grep.js` → `token-saver/rtk/filters/grep.ts`
+- `src/token-saver/rtk/filters/ls.js` → `token-saver/rtk/filters/ls.ts`
+- `src/token-saver/rtk/filters/readNumbered.js` → `token-saver/rtk/filters/readNumbered.ts`
+- `src/token-saver/rtk/filters/searchList.js` → `token-saver/rtk/filters/searchList.ts`
+- `src/token-saver/rtk/filters/smartTruncate.js` → `token-saver/rtk/filters/smartTruncate.ts`
+- `src/token-saver/rtk/filters/tree.js` → `token-saver/rtk/filters/tree.ts`
+- `src/token-saver/rtk/hitLine.js` → `token-saver/rtk/hitLine.ts`
+- `src/token-saver/rtk/index.js` → `token-saver/rtk-index.ts`
+- `src/token-saver/rtk/registry.js` → `token-saver/rtk/registry.ts`
+- `worker/gateway-node.mjs` → `worker/gateway-node.ts`
+- `worker/verify-deployment.mjs` → `worker/verify-deployment.ts`
+- `worker/worker.js` → `worker/worker.js`
+
+## 2. Export không xuất hiện trong toàn bộ bản port
+- `ANNOUNCEMENT_VERSION` — index.js
+- `createApiRoutes` — index.js
+- `pageIcon` — packages/standalone/frontend/components/shell.tsx
+- `pageIdsFor` — packages/standalone/frontend/components/shell.tsx
+- `pageLabel` — packages/standalone/frontend/components/shell.tsx
+- `PluginPage` — packages/standalone/frontend/plugin-page.tsx
+- `verifyChannelCreditsRpc` — scripts/channel-credits-rpc-test.mjs
+- `verifyChannelCreditsUi` — scripts/channel-credits-ui-test.mjs
+- `verifyChannelImagePricing` — scripts/channel-image-pricing-test.mjs
+- `verifyChannelModelActions` — scripts/channel-model-actions-test.mjs
+- `verifyChannelPrFixes` — scripts/channel-pr-fixes-test.mjs
+- `verifyChannelQueuePolicies` — scripts/channel-queue-policy-test.mjs
+- `verifyChannelQueueRotation` — scripts/channel-queue-rotation-test.mjs
+- `verifyChannelStorageCompatibility` — scripts/channel-storage-compat-test.mjs
+- `fakeContext` — scripts/lib/fake-kernel.mjs
+- `FakeRequest` — scripts/lib/fake-kernel.mjs
+- `callRoute` — scripts/lib/fake-kernel.mjs
+- `verifyQoderEffortOrder` — scripts/qoder-effort-order-test.mjs
+- `verifyChannelFilters` — scripts/standalone-channel-filter-test.mjs
+- `verifyLoginLaunchers` — scripts/standalone-login-terminal-test.mjs
+- `verifyLoginTerminal` — scripts/standalone-login-terminal-test.mjs
+- `verifyModelOperation` — scripts/standalone-model-operation-test.mjs
+- `verifySettingsHost` — scripts/standalone-settings-host-test.mjs
+- `postCompatibleStreamed` — src/aggregate.js
+- `EXTENSION_CHANNEL` — src/catalog.js
+- `extensionModelId` — src/catalog.js
+- `isExtensionEntry` — src/catalog.js
+- `buildExtensionCatalog` — src/catalog.js
+- `extensionReplaces` — src/catalog.js
+- `freeLaneProxyActive` — src/egress.js
+- `setFreeLaneProxy` — src/egress.js
+- `envProxyFor` — src/egress.js
+- `laneProxyEcho` — src/egress.js
+- `renderMihomoConfig` — src/egress.js
+- `findMihomoBinary` — src/egress.js
+- `outletLabel` — src/egress.js
+- `readOutletSelection` — src/egress.js
+- `PINNED_EXTENSIONS_PUBLIC_KEY` — src/extensions.js
+- `registrySources` — src/extensions.js
+- `verifyRegistrySignature` — src/extensions.js
+- `parseRegistry` — src/extensions.js
+- `createExtensionRuntime` — src/extensions.js
+- `parseExtensionManifest` — src/extensions.js
+- `scanExtensionSource` — src/extensions.js
+- `findAgentCli` — src/magpie-engine.js
+- `PLUGIN_API_VERSION` — src/plugins.js
+- `PLUGIN_KINDS` — src/plugins.js
+- `PAGE_ICONS` — src/plugins.js
+- `PLUGIN_CAPABILITIES` — src/plugins.js
+- `safePluginPath` — src/plugins.js
+- `satisfiesApiVersion` — src/plugins.js
+- `parsePluginManifest` — src/plugins.js
+- `manifestHasChannel` — src/plugins.js
+- `manifestHasEnhancement` — src/plugins.js
+- `manifestHasPage` — src/plugins.js
+- `scanPageAsset` — src/plugins.js
+- `scanPageHtml` — src/plugins.js
+- `scanPageScript` — src/plugins.js
+- `scanPageStyle` — src/plugins.js
+- `stripStringsAndComments` — src/plugins.js
+- `CHANNEL_PACK_CHANNELS` — src/plugins.js
+- `CHANNEL_PACK_DISABLED` — src/plugins.js
+- `WORKBENCH_CLIENTS` — src/plugins.js
+- `LIBRARY_FORMATS` — src/plugins.js
+- `providerContributions` — src/plugins.js
+- `builtinDescriptors` — src/plugins.js
+- `REGISTRY_FALLBACK` — src/plugins.js
+- `pageBridgeSource` — src/plugins.js
+- `profileDirOf` — src/updater.js
+- `isTitleRequest` — src/upstream.js
+- `randomProjectId` — src/upstream.js
+- `AUTO_CHECKIN_TICK_MS` — vendor/channel-pack/src/auto-checkin.ts
+- `AUTO_CHECKIN_RETRY_MS` — vendor/channel-pack/src/auto-checkin.ts
+
+## 3. Definition thiếu trong đúng file port
+- `adapter/dsh-llm.d.ts` → `packages/standalone/frontend/types.ts`: attributionHeaders
+- `adapter/kernel.js` → `adapter.ts`: resolveAttributionUserAgent, headers, agent
+- `client.js` → `client`: sameChannelTransport, channelTransport, closeLoginPopup, expiryText, ChannelCard, ChannelsPage, todayKey, ToggleRow, SubscriptionImport, SubscriptionWindow, SubscriptionAccount, SubscriptionsPage, ModelPicker, ChainCapacity, WorkspaceIcon, ModelWorkspace, WorkspacePage, ExtensionsPage, extensionAvatar, ExtensionCover, ExtensionDetail, announcementPortalHost, PageBody, localeTag, reloadNoticePlan, announceReloadNotice, AnnouncementGate, ReactDOM, NS, inject, SPONSOR_CARD_URL, SPONSOR_LOGO, idx, EAC_LOGIN_KEY, avg, sequence, raf, CHANNEL_ICONS, BRAND_ICON, CHANNEL_PROVIDERS, CHANNEL_CREDITS, ctxRef, readTransport, ZCODE_PROVIDER_KEY, modelBatchPending, balancePending, balanceGeneration, claimPending, creditCapability, loginAttempt, chooseZcodeProvider, balanceLabel, accountsCount, modelsTotal, modelsOff, chanState, stateText, loadAccounts, loadModels, loadCredits, loadBalances, balanceOf, balancesTotal, balancesKnown, balanceFailures, onEvent, toggle, startLogin, accountAction, setAllModels, removeAccount, successText, failureText, creditFor, loadAuto, toggleAuto, statusGeneration, statusRetry, statusRequest, statusApplied, loadStatus, transport, onError, stateOf, LEDGER_EMPTY, ttftSum, pslot, aslot, byModel, AGG_AUTH, SAVER_LEVEL, LANE_LABEL, AGG_UNUSABLE, parseModelIds, miniBtn, auths, matched, clearKey, SUBSCRIPTION_PROVIDERS, fileRef, readEpoch, clearCredentials, readFile, epoch, contents, submit, sameWindow, modelIds, mutate, labels, strategyLabels, byId, EFFECTS_KEY, TAB_KEY, TABS, WORKSPACE_CSS, anchor, closeButton, syncTheme, themed, colorScheme, wasInert, focused, frameEscape, bindFrame, doc, frameTimer, engineAction, toolbar, sections, toggleEffects, shellRef, inViewport, tabRefs, catalogPending, runCatalog, searchRef, onKey, patchRegistryRow, installFromDetail, registryById, indexRows, channelCount, installedSorted, ua, updatesById, soakHint, auditLabel, sourceLabel, updateAll, toggleAutoUpdate, exportShelf, shelf, importShelf, runSelfTest, cardFor, hasCover, blurb, hostGate, hostHint, tagRow, acquire, selfTest, initial, dialogRef, origins, repositoryHost, canAcquire, PAGES, seen, osEnabled, disposed, retries, errCount, view
+- `index.js` → `index.ts`: readPackageVersion, distributionOf, fetchPoolSnapshot, eacAuthStatus, feedView, pushUpdate, settleOutletWatch, syncForward, syncForwardOnce, forwardKey, relayKey, lanAddresses, syncRelay, syncRelayOnce, chanRelayKey, rotateChanRelayKey, chanGatewayTarget, syncChanRelay, syncChanRelayOnce, chanRelayStatus, measureGatewayLatency, readOutletStatus, syncEgress, syncFreeLaneProxy, syncEgressOnce, scheduleOutletRestart, reloadFromDisk, applyUpgrade, syncWatcher, eventsRoute, helloPayload, emitTopology, httpError, sanitizeSettings, imageResolver, createApiRoutes, ackedSet, pick, readJson, publicTokenSaver, publicAggregate, publicProviderRegistry, publicLocalOptimize, optimizeConfig, clientSnippets, publicCombo, publicSettings, buildSummary, PKG_URL, PKG_DIR, ENTRY_URL, inject, ANNOUNCEMENT_VERSION, MANAGED_MESSAGE, logger, home, packageVersion, bunAvailable, generation, stores, distribution, managed, forward, forwardError, forwardNotice, relay, relayError, outletRelay, outletError, outletNode, profileNameOf, context, sealedCredentialOf, poolError, POOL_STALE_MS, poolCache, gatewayRoot, controller, timer, eacAuthCache, eacAuthRootOf, local, eacLoginPoller, eacAuth, prepared, cleared, MANAGED_FEED_VIEW, updater, updateNotifiedFor, refreshUpdatePush, disposed, pendingUpgrade, magpieEngine, extensionHookRuntime, magpieModels, extensions, modelRuntime, runForwarded, routes, registration, advertised, later, forwardSyncInFlight, desired, closing, minted, relaySyncInFlight, lan, currentLan, settledForward, chanRelay, chanRelayError, chanRelaySyncInFlight, targetNow, settled, latencyMeasureInFlight, outletSyncInFlight, outletFingerprint, mihomoPath, OUTLET_STABLE_MS, outletUpSince, outletRestartAttempts, outletRestartTimer, delay, pendingKey, watcher, safeReload, optional, fenceConnection, channelPack, stopped, logAdmissionRejection, section, previous, providerId, entries, catalog, hotReloadAvailable, rejection, registryTimer, period, handle, hours, egressWarned, positive, value, incoming, merged, proxyUrl, MAX_IMAGE_BYTES, attachments, hostPath, media, POOL_REASONS, marker, markerAt, apiPrefix, routePath, method, send, body, pluginAsset, upstreamPath, action, mutations, abort, polled, reason, visibility, egressPatch, egress, outcome, echo, image, responseStatus, out, MAX_API_BODY_BYTES, chunks, config, OPTIMIZATION_KINDS, publicView, running, lanAddress, shownKey, shownLanKey, sample, snippets, forwardInfo, update, defaultMaxTokens, unprobed
+- `packages/standalone/frontend/app.tsx` → `packages/standalone/frontend/app.tsx`: pluginPages, pageIds, pluginPage
+- `packages/standalone/frontend/components/shell.tsx` → `packages/standalone/frontend/components/shell.tsx`: pageIdsFor, pageLabel, pageIcon
+- `packages/standalone/management.mjs` → `packages/standalone/management.ts`: injectPluginBridge, servePluginAsset, PLUGIN_ASSET_RE, pluginAssetPath, pluginPageAsset, pluginBase, pageAsset
+- `packages/standalone/service.mjs` → `packages/standalone/service.ts`: extensionHookRuntime, registryTimer
+- `scripts/build-legacy-payload.mjs` → `scripts/build-legacy-payload.mjs`: exportedNames, bundleToFile, o2aInlineAssets, keepParentExternals, source, names, segment, aliased, barrel, built, o2aModules, seenExports, o2aSpecs, coreSpecs, partBudget, mod, gzipAsync
+- `scripts/build-magpie-engine.mjs` → `scripts/build-magpie-engine.mjs`: patchDir, patches, patchDigests
+- `scripts/build-manifest.mjs` → `scripts/build-manifest.mjs`: desktopRoot, desktopVersions, lock
+- `scripts/pack-standalone.mjs` → `scripts/pack-standalone.mjs`: sourceFiles
+- `src/adapter.js` → `adapter.ts`: freeLane, sessionSeed
+- `src/aggregate.js` → `aggregate.ts`: postCompatibleStreamed, USER_AGENT
+- `src/bun-fetch.js` → `loopback-fetch.ts`: WORKER_SOURCE, receivedHeaders, webBody
+- `src/catalog.js` → `catalog.ts`: eacLabel, extensionModelId, isExtensionEntry, extensionEntryOf, buildExtensionCatalog, extensionReplaces, EAC_LABELS, EXTENSION_CHANNEL, REPLACEABLE_LANES, EXTENSION_WIRES
+- `src/core/runtime.js` → `core/runtime.ts`: laneRow, setLaneState, laneGate, clearLaneBreaker, recordPassiveResult, noteFreeLaneOutcome, LANE_QUOTA_DEFAULT_MS, extensionCatalog, replacedLane, laneStandsDown, LISTING_MIN_INTERVAL_MS, lastListingAt
+- `src/core/stats.js` → `core/stats.ts`: empty
+- `src/core.js` → `core/runtime.ts`: laneRow, setLaneState, laneGate, clearLaneBreaker, recordPassiveResult, noteFreeLaneOutcome, LANE_QUOTA_DEFAULT_MS, extensionCatalog, replacedLane, laneStandsDown, LISTING_MIN_INTERVAL_MS, lastListingAt
+- `src/feed.js` → `feed.ts`: holdSeconds, hold
+- `src/http.js` → `gateway/forward-server.ts`: deadlineFor, headRead, rawHtml, isHtmlPage, completeData, valueText
+- `src/kilo.js` → `kilo.ts`: kiloFetch, KILO_ATTRIBUTION, listingCache, listingETag, rawMeta, rawDetail, providerName, providerSuffix
+- `src/magpie-engine.js` → `magpie-engine.ts`: engineAppearanceBridge, engineProductCopy, engineDisplayControls, findAgentCli, gatewayURL, runController, webPort, ownedID, savedKey, webKey, agentHome, agentRoaming, agentLocal, revisionFile, previousRevision, spawnFailed, nominated
+- `src/magpie-models.js` → `magpie-models.ts`: defaultInferenceTransport, catalogFetch, inferenceTransport
+- `src/o2a.js` → `o2a.ts`: OFFICIAL_PROMPT_V2, OFFICIAL_TOOLS_V2, messages2, droppedCalls2, changed2, choice2
+- `src/open-external.js` → `open-external.ts`: currentUserGrantee, grantee
+- `src/stream.js` → `stream.ts`: toolNameFragment
+- `src/token-saver/inject.js` → `token-saver/inject.ts`: result
+- `src/updater.js` → `updater.ts`: profileDirOf, RESTART_MARKER, UPGRADE_LOCKS, escaped
+- `src/upstream.js` → `upstream.ts`: plausibleSession, isMuseSpark, shapeOf, carriesOfficialDefinition, isTitleRequest, randomProjectId, O2A_PORTED_VERSION, MAX_SESSION_LENGTH, SESSION_PLAUSIBILITY_MS, TITLE_MARKERS
+- `vendor/channel-pack/pack.js` → `vendor/channel-pack/pack.js`: setHeader, isUndiciFormData, dealloc, hasDebug, isAutodetect, isRequest, shouldManageUnconsumed, shouldSuspendAfterHeaders, getMaxStartLineLength, getMaxHeaderLength, getMaxBodyPayload, shouldContinueWithoutData, isConnect, isDebug, shouldSkipBody, getState, getPosition, getParsed, getErrorCode, getMethod, getStatus, hasConnectionClose, hasConnectionUpgrade, getContentLength, getChunkSize, getRemainingContentLength, getRemainingChunkSize, hasContentLength, hasTransferEncoding, hasChunkedTransferEncoding, hasUpgrade, hasTrailers, getErrorDescription, setShouldAutodetect, setShouldContinueWithoutData, setIsRequest, setIsConnect, setDebug, setShouldManageUnconsumed, setShouldSuspendAfterHeaders, setMaxStartLineLength, setMaxHeaderLength, setMaxBodyPayload, setShouldSkipBody, setActiveCallbacks, setActiveEvents, simpleCreate, simpleDestroy, setup, simple, getMilo, setMiloEnabled, getMiloEnabled, pauseResponseStream, resumeResponseStream, closeClients, isReplacedHeader, buildResumeHeaders, getContentType, isCompressibleContentType, defaultScheduleTick, kWebAssemblyNotSupportedError, WebAssemblyNotSupportedError, kMaxRedirectsError, MaxRedirectsError, defaultWebSocketMaxFragments, defaultWebSocketMaxPayloadSize, evicted, require_simd, wasmModule, Errors, Callbacks, CallbackActives, EventActives, States, ParserFields, milo, spans, require_no_simd, require_parser_h1, kPausedByHandler, BUFFER_PAGE_SIZE, INITIAL_BUFFER_SIZE, BODY_KIND_CONTENT_LENGTH, EVENT_RANGE_SIZE, EVENT_HEADERS_SIZE, miloEnabled, miloInstance, H1Parser, parseLen, headersEnd, parseData, consumedTotal, errorName, errorDescription, firstEvent, eventLen, shouldUpgrade, bodyKind, charsetSeparator, languageSeparator, isContinuation, localMaxConcurrentStreams, remoteMaxConcurrentStreams, kRetireClient, kRetiring, ret2, CacheController, finalUrl, redirectCacheControl, hopDirectives, finish304, targetSize, targetCount, abortReason, COMPRESS_THRESHOLD, hasZstd, storedBody, expiresMs, maxTimeValue, minParserItems, maxParserItems, bytesPerParserItem, parserItemLimit, dataSize, eventSize, maxReconnectionTime, AUTO_CHECKIN_TICK_MS, AUTO_CHECKIN_RETRY_MS, lastAttemptAt, tickMs, attemptedToday, setEventFieldSize
+- `vendor/channel-pack/src/auto-checkin.ts` → `vendor/channel-pack/src/auto-checkin.ts`: defaultScheduleTick, AUTO_CHECKIN_TICK_MS, AUTO_CHECKIN_RETRY_MS, lastAttemptAt, tickMs, attemptedToday
+- `worker/auth-github.mjs` → `worker/auth-github.ts`: chunks, abort
+

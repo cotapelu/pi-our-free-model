@@ -1,5 +1,6 @@
 # MỤC TIÊU DỰ ÁN — API provider đa coding agent, đa LLM provider
 
+đọc các file md sau: 
 > File này nói **đích đến**. Trạng thái thực ở `BAOCAO.md`, việc còn làm ở
 > `docs/TODO.md`, luật làm việc ở `AGENTS.md`.
 

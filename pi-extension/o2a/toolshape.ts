@@ -49,7 +49,7 @@ import { V2_OFFICIAL_TOOL_ORDER, officialTool, officialToolDefinition, renamable
  *   name the shaped body considers valid (bound and appended officials plus
  *   the `clint_` renames) — the history sanitizer's whitelist
  */
-export function renameAndCompleteTools(payload: any, shape: any, { keep } = {}) {
+export function renameAndCompleteTools(payload: any, shape: any, { keep }: { keep?: Set<string> } = {}) {
   if (shape !== 'chat' && shape !== 'flat' && shape !== 'claude') {
     return { renames: new ToolRenameMap(), injected: [], known: new Set() }
   }
@@ -353,11 +353,11 @@ function convertLegacyFunctions(entries: any, shape: any, renames: any, used: an
     const description = typeof raw.description === 'string' ? raw.description : undefined
     const parameters = raw.parameters ?? { type: 'object', properties: {} }
     if (shape === 'chat') {
-      const fn = { name: wireName, description, parameters }
+      const fn: Record<string, any> = { name: wireName, description, parameters }
       if (raw.strict !== undefined) fn.strict = raw.strict
       converted.push({ type: 'function', function: fn })
     } else {
-      const tool = { type: 'function', name: wireName, description, parameters }
+      const tool: Record<string, any> = { type: 'function', name: wireName, description, parameters }
       if (raw.strict !== undefined) tool.strict = raw.strict
       converted.push(tool)
     }

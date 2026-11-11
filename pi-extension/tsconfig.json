@@ -19,6 +19,6 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["node"]
   },
-  "include": ["*.ts", "client/**/*.ts", "core/**/*.ts", "gateway/**/*.ts", "o2a/**/*.ts", "packages/**/*.ts", "token-saver/**/*.ts", "worker/**/*.ts"],
+  "include": ["*.ts", "core/**/*.ts", "gateway/**/*.ts", "o2a/**/*.ts", "packages/**/*.ts", "token-saver/**/*.ts", "worker/**/*.ts"],
   "exclude": ["test", "scripts", "dist", "node_modules", "packages/standalone/frontend", "client/sponsor-ui.ts"]
 }

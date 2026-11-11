@@ -1,0 +1,36 @@
+{
+  // The console's browser half.
+  //
+  // Split from `tsconfig.json` on purpose: the server half compiles against
+  // node types only (`types: ["node"]`), so a `document` typo in a gateway
+  // route is an error rather than a silent dependency on a lib this runtime
+  // does not have. The console is the one half that legitimately touches the
+  // DOM, so it gets its own project with the DOM libs and its own outDir that
+  // lands exactly where the running code already imports it from
+  // (`dist/client/…`, see test/sanitizer.test.ts).
+  //
+  // `client/sponsor-ui.ts` is excluded: it is the standalone bundle's entry
+  // (`?inline` image import, `vite/client` types) and is typechecked by
+  // packages/standalone/tsconfig.json instead.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "rootDir": "client",
+    "outDir": "dist/client",
+    "declaration": true,
+    "sourceMap": false,
+    "strict": true,
+    "noImplicitAny": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["node"]
+  },
+  "include": ["client/**/*.ts"],
+  "exclude": ["client/sponsor-ui.ts"]
+}

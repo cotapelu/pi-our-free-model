@@ -281,10 +281,10 @@ export function safeHtmlToText(nodes: Array<SafeNode>): string {
   ).join('')
 }
 
+/** One element's attribute text, re-emitted with the same escaping as a text node. */
 function attrsToString(props: Record<string, any>): string {
   const out: string[] = []
   for (const [key, value] of Object.entries(props)) {
-    if (value === undefined || value === null || value === '') continue
     if (key === 'style' && typeof value === 'object') {
       const css = Object.entries(value).map(([prop, v]) => `${prop}:${String(v)}`).join(';')
       if (css !== '') out.push(`style="${css}"`)
