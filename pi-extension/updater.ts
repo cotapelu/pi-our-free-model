@@ -149,10 +149,13 @@ const ENGINE_BINARY = /^vendor\/magpie\/bin\/magpie-(?:win32-(?:x64|arm64)\.exe|
 const SHA_RE = /^[0-9a-f]{64}$/
 const PROCESS_EPOCH = Symbol.for('our-free-model.process-epoch')
 const processEpoch: string = (globalThis as any)[PROCESS_EPOCH] ??= crypto.randomUUID()
-const restartRequiredVersions: Map<string, { version: string; epoch: string }> = (globalThis as any)[Symbol.for('our-free-model.restart-required-versions')] ??= new Map()
+/** Versions whose install finished but whose activation needs a fresh process. */
+const RESTART_MARKER = Symbol.for('our-free-model.restart-required-versions')
+const restartRequiredVersions: Map<string, { version: string; epoch: string }> = (globalThis as any)[RESTART_MARKER] ??= new Map()
 // Hot reload evaluates a fresh updater module before the old request finishes.
 // A process-wide lock keeps the successor from starting a second transaction.
-const upgradeLocks: Set<string> = (globalThis as any)[Symbol.for('our-free-model.upgrade-locks')] ??= new Set()
+const UPGRADE_LOCKS = Symbol.for('our-free-model.upgrade-locks')
+const upgradeLocks: Set<string> = (globalThis as any)[UPGRADE_LOCKS] ??= new Set()
 
 /** The refusal `apply` raises for a package-manager-owned copy. */
 const PACKAGE_MANAGER_REFUSAL = 'this installation is owned by pnpm; the in-app upgrade would be a second writer and can corrupt the copy — update it with pnpm (or reinstall from a release)'
@@ -949,11 +952,27 @@ function modulesHoistsPackage(text: string, name: string): boolean {
  * guards.
  */
 export function isPackageManagerOwned(pkgDir: string): boolean {
-  const profileDir = path.dirname(path.dirname(path.resolve(pkgDir)))
+  const profileDir = profileDirOf(pkgDir)
   const lockfile = readTextFile(path.join(profileDir, 'pnpm-lock.yaml'))
   if (lockfile !== undefined && lockfileDeclaresPackage(lockfile, PACKAGE_NAME)) return true
   const modules = readTextFile(path.join(profileDir, 'node_modules', '.modules.yaml'))
   return modules !== undefined && modulesHoistsPackage(modules, PACKAGE_NAME)
+}
+
+/**
+ * The profile root a package directory belongs to (`profileDirOf`).
+ *
+ * A bare install is `<profile>/node_modules/<name>`; a scoped one is
+ * `<profile>/node_modules/@scope/<name>`. Walking to node_modules instead of
+ * counting two parents keeps both layouts pointed at the profile, where pnpm
+ * writes its lockfile and .modules.yaml (dsh issue #773) — the two-parents
+ * version silently points a scoped install at the `@scope` directory, so the
+ * ownership probe reads no lockfile and a pnpm-owned copy looks bare.
+ */
+export function profileDirOf(pkgDir: string): string {
+  let dir = path.resolve(pkgDir)
+  while (dir !== path.dirname(dir) && path.basename(dir) !== 'node_modules') dir = path.dirname(dir)
+  return path.dirname(dir)
 }
 
 /** The upgrade lifecycle. The optional activate callback lets the Host include

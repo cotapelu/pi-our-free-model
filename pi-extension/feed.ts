@@ -80,6 +80,12 @@ export interface Announcement {
   createdAt: number
   expiresAt?: number
   pinned?: boolean
+  /**
+   * Seconds the console keeps the modal's close control locked (0/absent = close
+   * immediately). Validated and clamped here, once, so no consumer re-derives
+   * the ceiling and two surfaces do not disagree about how long a modal locks.
+   */
+  holdSeconds?: number
   link?: { url: string; label: string }
   /** Annotated by `view()`, from the caller's own ack set. */
   acked?: boolean
@@ -131,6 +137,13 @@ function parseItem(row: any, now: number): Announcement | undefined {
     && /^https?:\/\//i.test(row.link.url)) {
     link = { url: row.link.url, label: typeof row.link.label === 'string' ? row.link.label.slice(0, 100) : '' }
   }
+  // `holdSeconds` asks the client to keep the modal's close control locked for
+  // a few seconds so the body is actually read (0/absent closes immediately).
+  // The ceiling keeps an owner from writing "hold for a week" — and an owner who
+  // writes "hold for -5 seconds" or "hold for 2.5 seconds" locks nothing at all,
+  // because a non-integer or negative value fails the same guard.
+  const holdSeconds = row.holdSeconds
+  const hold = Number.isInteger(holdSeconds) && holdSeconds >= 0 && holdSeconds <= 30 ? holdSeconds : 0
   return {
     id,
     title,
@@ -140,6 +153,7 @@ function parseItem(row: any, now: number): Announcement | undefined {
     ...expiresAt === undefined ? {} : { expiresAt },
     ...row.pinned === true ? { pinned: true } : {},
     ...link === undefined ? {} : { link },
+    ...(hold > 0 ? { holdSeconds: hold } : {}),
   }
 }
 

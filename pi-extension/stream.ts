@@ -50,7 +50,7 @@ export class BlockSink {
   emit: (chunk: any) => void
   next: number
   onProgress: () => void
-  open: Map<string, { index: number; kind: string; text: string; id?: string; name?: string; args?: string }>
+  open: Map<string, { index: number; kind: string; text: string; id?: string; name?: string; rawName?: string; args?: string }>
   usage: any
   sawReasoning: boolean
   sawToolCall: boolean
@@ -62,13 +62,15 @@ export class BlockSink {
   checkpointTruncated: boolean
   brokenToolCall: boolean
   lastToolKey: string | undefined
+  renameMap: Map<string, string>
   dsml: ReturnType<typeof createDsmlScrubber>
 
   constructor(
     yieldChunk: (chunk: any) => void,
     startIndex: number,
     checkpointLimit: number,
-    onProgress?: () => void
+    onProgress?: () => void,
+    renameMap?: Map<string, string>
   ) {
     this.emit = yieldChunk
     this.next = startIndex
@@ -85,6 +87,10 @@ export class BlockSink {
     this.checkpointTruncated = false
     this.brokenToolCall = false
     this.lastToolKey = undefined
+    // Sink-local so the declaration order above does not matter: a caller that
+    // never shapes a body (no fingerprint) still gets an empty map, and the
+    // restore step below degrades to "keep the wire spelling".
+    this.renameMap = renameMap instanceof Map ? renameMap : new Map()
     this.dsml = createDsmlScrubber()
   }
 
@@ -103,7 +109,7 @@ export class BlockSink {
     return this.lastToolKey ?? 'c0'
   }
 
-  slot(key: string, kind: string): { index: number; kind: string; text: string; id?: string; name?: string; args?: string } {
+  slot(key: string, kind: string): { index: number; kind: string; text: string; id?: string; name?: string; rawName?: string; args?: string } {
     if (kind === 'tool-call') this.sawToolCall = true
     const existing = this.open.get(key)
     if (existing !== undefined) return existing
@@ -150,10 +156,40 @@ export class BlockSink {
       && (block.name !== priorName || block.id !== priorId)) this.onProgress()
   }
 
+  /**
+   * Buffer one fragment of a Chat tool call's wire name (`toolNameFragment`).
+   *
+   * Some gateways split `tool_calls[].function.name` across delta frames — and
+   * resolving every fragment on arrival folds a half name into a wrong or
+   * unknown tool, surfacing ghost calls (opencode2api v1.4.7 buffers the same
+   * way). The raw name accumulates here and resolves through
+   * {@link resolveRawName} once the call's arguments start or the block closes;
+   * until then the emitted deltas simply carry no name, which downstream
+   * consumers already tolerate (arguments can legitimately precede a name).
+   */
+  toolNameFragment(key: string, id: string | undefined, fragment: string): void {
+    const block = this.slot(key, 'tool-call')
+    if (id) block.id = id
+    // Real servers repeat the *complete* name on every delta; a genuinely split
+    // name arrives as disjoint fragments. Extend when the fragment continues
+    // (or repeats) what we hold, concatenate only when it cannot be a repeat —
+    // that covers both shapes without ever doubling a repeated name.
+    const held = typeof block.rawName === 'string' ? block.rawName : ''
+    block.rawName = fragment.startsWith(held) ? fragment : held + fragment
+  }
+
+  /** Resolve a buffered raw wire name once, right before its first consumer needs it. */
+  #resolveRawName(block: { name?: string; rawName?: string }): void {
+    if (block.name || typeof block.rawName !== 'string' || block.rawName === '') return
+    block.name = restoreToolName(block.rawName, this.renameMap)
+    this.onProgress()
+  }
+
   toolArgs(key: string, delta: string | undefined): void {
     this.sawToolCall = true
     if (!delta) return
     const block = this.slot(key, 'tool-call')
+    this.#resolveRawName(block)
     block.args += delta
     const name = typeof block.name === 'string' && block.name !== '' ? { name: block.name } : {}
     this.emit({ type: 'tool-call-delta', index: block.index, id: block.id ?? '', ...name, argumentsDelta: delta })
@@ -171,6 +207,7 @@ export class BlockSink {
       if (block.kind === 'text' && block.text !== '') this.emit({ type: 'block-end', index: block.index, block: { type: 'text', text: block.text } })
       else if (block.kind === 'reasoning' && block.text !== '') this.emit({ type: 'block-end', index: block.index, block: { type: 'reasoning', text: block.text } })
       else if (block.kind === 'tool-call') {
+        this.#resolveRawName(block)
         try { JSON.parse(block.args === '' ? '{}' : block.args ?? "") } catch { this.brokenToolCall = argumentsCutMidway(block.args ?? "") }
         if (typeof block.name !== 'string' || block.name === '') this.brokenToolCall = true
         this.emit({
@@ -258,7 +295,9 @@ function feedChat(sink: BlockSink, payload: any, renameMap: Map<string, string>,
       sink.sawToolCall = true
       const key = sink.toolKey(call)
       const name = call.function?.name
-      if (typeof name === 'string' && name !== '') sink.toolStart(key, call.id ?? '', restoreToolName(name, renameMap))
+      // The name is buffered, not resolved per fragment: split frames fold a
+      // half name into a ghost tool (see BlockSink.toolNameFragment).
+      if (typeof name === 'string' && name !== '') sink.toolNameFragment(key, call.id ?? '', name)
       else if (call.id) sink.toolStart(key, call.id, '')
       if (call.function?.arguments) sink.toolArgs(key, call.function.arguments)
     }
@@ -387,7 +426,7 @@ export async function * readStream(
   const outbox: any[] = []
   const startIndex = Number.isSafeInteger(options?.startIndex) && options.startIndex !== undefined && options.startIndex >= 0 ? options.startIndex : 0
   const checkpointLimit = Number.isSafeInteger(options?.checkpointLimit) && options.checkpointLimit !== undefined && options.checkpointLimit >= 0 ? options.checkpointLimit : 131072
-  const sink = new BlockSink((chunk: any) => outbox.push(chunk), startIndex, checkpointLimit, options?.onProgress)
+  const sink = new BlockSink((chunk: any) => outbox.push(chunk), startIndex, checkpointLimit, options?.onProgress, renameMap)
   const state: any = {
     usage: undefined, finish: undefined, sawFinish: false, sawUsage: false,
     sawToolCall: false, firstDeltaAt: undefined, sawReasoning: false, sawText: false,

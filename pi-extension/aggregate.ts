@@ -51,6 +51,7 @@
 
 import { UpstreamError, CODE } from './eac.js'
 import { classifyFailure } from './gateway/classify.js'
+import { egressStream } from './gateway/egress.js'
 import { readHead, readSse, replayStream, sniffBody, transportCause, SNIFF_BYTES } from './transport.js'
 import { chatEndpoint, defaultHeaders, getProvider, modelsEndpoint, providerModelId } from './providers/index.js'
 
@@ -77,6 +78,8 @@ const DEFAULT_CONTEXT_WINDOW = 131072
 const DEFAULT_MAX_OUTPUT = 32768
 const LISTING_TIMEOUT_MS = 15000
 const TURN_TIMEOUT_MS = 300000
+/** The user-agent every aggregate request carries when the registry names none. */
+export const USER_AGENT = 'pi-our-free-model'
 
 /** A trimmed non-empty string, or ''. */
 function text(value: any): string {
@@ -537,30 +540,76 @@ export async function postAggregateStreamed({ config, providerId, modelId, body,
   }
   const bodyText = typeof outbound === 'string' ? outbound
     : JSON.stringify({ ...outbound, ...(model === '' ? {} : { model }), stream: true })
+  return postCompatibleStreamed({
+    url: resolved.chatUrl,
+    headers: {
+      ...resolved.headers,
+      // The provider's gateway either ignores this or uses it to keep this
+      // conversation's state separate from concurrent ones on the same key —
+      // the free lane's session dimension, without its fingerprint family.
+      ...(text(session) === '' ? {} : { 'x-session-id': text(session) }),
+    },
+    body: bodyText,
+    model,
+    wire: resolved.wire,
+    signal,
+    onData,
+    timeoutMs,
+    secret: resolved.apiKey,
+    label: resolved.provider.name,
+  })
+}
+
+/**
+ * POST one streaming completion to a resolved endpoint and push raw SSE `data:`
+ * payloads to `onData`.
+ *
+ * The lane-neutral core the aggregate lane shares with the extension channels:
+ * the URL, headers, body and wire are already decided by the caller (the
+ * aggregate resolver, or an extension's `prepareChat`); this layer owns the
+ * transport discipline — body-shape sniffing, head replay, the idle deadline,
+ * the JSON-answer fold into the row's wire's frame sequence — and the
+ * credential scrubbing (`secret`) on every refusal message.
+ *
+ * Goes through `egressStream` rather than a bare `fetch`: a relay that is up
+ * serves the request, and a relay that is down must not take the aggregate
+ * lane with it.
+ */
+export async function postCompatibleStreamed({ url, headers, body, model = '', wire = 'chat', signal, onData, timeoutMs = TURN_TIMEOUT_MS, secret = '', label = 'the provider' }: {
+  url: string
+  headers: Record<string, string>
+  body: string
+  model?: string
+  wire?: string
+  signal?: AbortSignal
+  onData: (payload: string) => void
+  timeoutMs?: number
+  secret?: string
+  label?: string
+}): Promise<{ status: number }> {
   let response: Response
   try {
-    response = await fetch(resolved.chatUrl, {
+    response = await egressStream(url, {
       method: 'POST',
       headers: {
-        ...resolved.headers,
+        ...headers,
         accept: 'text/event-stream',
-        ...(text(session) === '' ? {} : { 'x-session-id': text(session) }),
       },
-      body: bodyText,
+      body,
       redirect: 'error',
       signal,
     })
   } catch (error: any) {
     if (signal?.aborted === true || error?.name === 'AbortError') throw new UpstreamError('request aborted', CODE.aborted)
     throw new UpstreamError(
-      `model request to ${resolved.provider.name} failed: ${redact(error?.message ?? error, resolved.apiKey)}${transportCause(error)}`,
+      `model request to ${label} failed: ${redact(error?.message ?? error, secret)}${transportCause(error)}`,
       CODE.transport)
   }
 
   const setRetry = retryAfterMs(response)
   if (!response.ok) {
     const refusal = await response.text().catch(() => '')
-    throw classifyUpstream(response.status, refusal, setRetry, resolved.apiKey)
+    throw classifyUpstream(response.status, refusal, setRetry, secret)
   }
   if (response.body === null) throw new UpstreamError('model stream returned no body', CODE.empty)
 
@@ -592,7 +641,7 @@ export async function postAggregateStreamed({ config, providerId, modelId, body,
   rawText += head.decoder.decode()
   let payload: any
   try {
-    payload = JSON.parse(redact(rawText, resolved.apiKey))
+    payload = JSON.parse(redact(rawText, secret))
   } catch {
     // A 200 body that is not JSON is a hop speaking for the provider. Markup is
     // a front proxy (a WAF page, a CDN error), and replaying the identical body
@@ -602,12 +651,12 @@ export async function postAggregateStreamed({ config, providerId, modelId, body,
         `the provider's front proxy answered HTTP ${response.status} with an HTML error page`,
         CODE.client)
     }
-    throw new UpstreamError(`unexpected non-stream response: ${redact(rawText, resolved.apiKey).slice(0, 200)}`, CODE.server)
+    throw new UpstreamError(`unexpected non-stream response: ${redact(rawText, secret).slice(0, 200)}`, CODE.server)
   }
   if (payload?.error !== undefined || payload?.type === 'error') {
-    throw classifyUpstream(response.status, rawText, setRetry, resolved.apiKey)
+    throw classifyUpstream(response.status, rawText, setRetry, secret)
   }
-  for (const frame of synthesisedFrames(resolved.wire, payload, model)) onData(frame)
+  for (const frame of synthesisedFrames(wire, payload, model)) onData(frame)
   return { status: response.status }
 }
 

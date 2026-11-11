@@ -26,7 +26,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
-import { execFileSync } from 'node:child_process'
+import { restrictPermissions } from '../open-external.js'
 
 export const DATA_DIR_NAME = 'our-free-model'
 export const STATS_VERSION = 3
@@ -36,20 +36,18 @@ export function dataDir(): string {
   return process.env.OFM_DATA_DIR ?? path.join(os.homedir(), '.' + DATA_DIR_NAME)
 }
 
-/** A creator-only mode; `icacls` on Windows, where chmod does not exist. */
-export function restrictPermissions(file: string, directory = false): void {
-  if (process.platform !== 'win32') {
-    fs.chmodSync(file, directory ? 0o700 : 0o600)
-    return
-  }
-  const system32 = path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32')
-  const user = process.env.USERNAME ?? ''
-  execFileSync(
-    path.join(system32, 'icacls.exe'),
-    [file, '/inheritance:r', '/grant:r', `${user}:${directory ? '(OI)(CI)F' : 'F'}`],
-    { stdio: 'ignore', windowsHide: true, shell: false },
-  )
-}
+/**
+ * A creator-only mode; `icacls` on Windows, where chmod does not exist.
+ *
+ * Re-exported from `open-external.ts` rather than inlined here: the copy that
+ * used to live in this file granted to the *bare* account name, which `icacls`
+ * resolves against the account database *and* the computer account — and the
+ * computer account wins on a case-only difference. `inheritance:r` in the same
+ * call has already removed the inherited ACEs, so the file ends up with a DACL
+ * nothing can satisfy and the writer's own `renameSync` fails EPERM (dsh issue
+ * #738). One SID-first copy for every store in the package.
+ */
+export { restrictPermissions }
 
 export interface StoreOptions<T extends Record<string, any>> {
   file: string

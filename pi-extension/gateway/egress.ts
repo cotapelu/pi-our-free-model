@@ -192,7 +192,7 @@ export function egressActive() {
  * origin-form the loopback relay serves. Call sites keep `redirect: 'error'` in
  * `init`, so a 3xx is a response, never a second hop that would dodge the outlet.
  */
-export async function egressFetch(url: any, init: any) {
+export async function egressFetch(url: any, init: any): Promise<Response | BunResponse> {
   const relay = activeRelay
   const targetUrl = new URL(url instanceof Request ? url.url : String(url))
   // Only the official OC inference lane uses Bun. Kilo/EAC/catalogs and local
@@ -228,6 +228,22 @@ export async function egressFetch(url: any, init: any) {
     redirect: request.redirect, ...(request.body ? { duplex: 'half' } : {}),
   } : init
   return fetch(`http://${RELAY_HOST}:${relay.port}${target.pathname}${target.search}`, { ...outgoing, headers })
+}
+
+/**
+ * `egressFetch`, narrowed to a streaming answer.
+ *
+ * The only caller that can get a buffered `BunResponse` back is the official
+ * opencode.ai inference lane, which reads its whole body from the subprocess;
+ * every other lane reads a body stream. A lane that silently treated buffered
+ * bytes as a stream would report "no body" instead of "this lane cannot read a
+ * buffered answer", so the narrowing says so loudly rather than returning a
+ * shape the caller cannot use.
+ */
+export async function egressStream(url: string, init: Record<string, any>): Promise<Response> {
+  const answer = await egressFetch(url, init)
+  if (answer instanceof Response) return answer
+  throw new Error('this lane needs a streaming response, and the egress transport returned a buffered one')
 }
 
 /**

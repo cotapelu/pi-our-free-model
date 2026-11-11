@@ -5,8 +5,8 @@
 
 - File code: **581**
 - Đã map: **349** · thiếu: **226**
-- Export quét: **1681** · không thấy ở đâu: **73**
-- File đã map nhưng có drift: **259**
+- Export quét: **1681** · không thấy ở đâu: **69**
+- File đã map nhưng có drift: **254**
 
 ## 1. File chưa có
 - `.github/workflows/build-macos.yml` → `.github/workflows/build-macos.yml`
@@ -260,7 +260,6 @@
 - `verifyLoginTerminal` — scripts/standalone-login-terminal-test.mjs
 - `verifyModelOperation` — scripts/standalone-model-operation-test.mjs
 - `verifySettingsHost` — scripts/standalone-settings-host-test.mjs
-- `postCompatibleStreamed` — src/aggregate.js
 - `EXTENSION_CHANNEL` — src/catalog.js
 - `extensionModelId` — src/catalog.js
 - `isExtensionEntry` — src/catalog.js
@@ -305,11 +304,8 @@
 - `builtinDescriptors` — src/plugins.js
 - `REGISTRY_FALLBACK` — src/plugins.js
 - `pageBridgeSource` — src/plugins.js
-- `profileDirOf` — src/updater.js
 - `isTitleRequest` — src/upstream.js
 - `randomProjectId` — src/upstream.js
-- `AUTO_CHECKIN_TICK_MS` — vendor/channel-pack/src/auto-checkin.ts
-- `AUTO_CHECKIN_RETRY_MS` — vendor/channel-pack/src/auto-checkin.ts
 
 ## 3. Definition thiếu trong đúng file port
 - `adapter/dsh-llm.d.ts` → `packages/standalone/frontend/types.ts`: attributionHeaders
@@ -325,24 +321,19 @@
 - `scripts/build-manifest.mjs` → `scripts/build-manifest.mjs`: desktopRoot, desktopVersions, lock
 - `scripts/pack-standalone.mjs` → `scripts/pack-standalone.mjs`: sourceFiles
 - `src/adapter.js` → `adapter.ts`: freeLane, sessionSeed
-- `src/aggregate.js` → `aggregate.ts`: postCompatibleStreamed, USER_AGENT
 - `src/bun-fetch.js` → `loopback-fetch.ts`: WORKER_SOURCE, receivedHeaders, webBody
 - `src/catalog.js` → `catalog.ts`: eacLabel, extensionModelId, isExtensionEntry, extensionEntryOf, buildExtensionCatalog, extensionReplaces, EAC_LABELS, EXTENSION_CHANNEL, REPLACEABLE_LANES, EXTENSION_WIRES
 - `src/core/runtime.js` → `core/runtime.ts`: laneRow, setLaneState, laneGate, clearLaneBreaker, recordPassiveResult, noteFreeLaneOutcome, LANE_QUOTA_DEFAULT_MS, extensionCatalog, replacedLane, laneStandsDown, LISTING_MIN_INTERVAL_MS, lastListingAt
 - `src/core/stats.js` → `core/stats.ts`: empty
 - `src/core.js` → `core/runtime.ts`: laneRow, setLaneState, laneGate, clearLaneBreaker, recordPassiveResult, noteFreeLaneOutcome, LANE_QUOTA_DEFAULT_MS, extensionCatalog, replacedLane, laneStandsDown, LISTING_MIN_INTERVAL_MS, lastListingAt
-- `src/feed.js` → `feed.ts`: holdSeconds, hold
 - `src/http.js` → `gateway/forward-server.ts`: deadlineFor, headRead, rawHtml, isHtmlPage, completeData, valueText
 - `src/kilo.js` → `kilo.ts`: kiloFetch, KILO_ATTRIBUTION, listingCache, listingETag, rawMeta, rawDetail, providerName, providerSuffix
 - `src/magpie-engine.js` → `magpie-engine.ts`: engineAppearanceBridge, engineProductCopy, engineDisplayControls, findAgentCli, gatewayURL, runController, webPort, ownedID, savedKey, webKey, agentHome, agentRoaming, agentLocal, revisionFile, previousRevision, spawnFailed, nominated
 - `src/magpie-models.js` → `magpie-models.ts`: defaultInferenceTransport, catalogFetch, inferenceTransport
 - `src/o2a.js` → `o2a.ts`: OFFICIAL_PROMPT_V2, OFFICIAL_TOOLS_V2, messages2, droppedCalls2, changed2, choice2
-- `src/open-external.js` → `open-external.ts`: currentUserGrantee, grantee
-- `src/stream.js` → `stream.ts`: toolNameFragment
 - `src/token-saver/inject.js` → `token-saver/inject.ts`: result
-- `src/updater.js` → `updater.ts`: profileDirOf, RESTART_MARKER, UPGRADE_LOCKS, escaped
+- `src/updater.js` → `updater.ts`: escaped
 - `src/upstream.js` → `upstream.ts`: plausibleSession, isMuseSpark, shapeOf, carriesOfficialDefinition, isTitleRequest, randomProjectId, O2A_PORTED_VERSION, MAX_SESSION_LENGTH, SESSION_PLAUSIBILITY_MS, TITLE_MARKERS
 - `vendor/channel-pack/pack.js` → `vendor/channel-pack/pack.js`: setHeader, isUndiciFormData, dealloc, hasDebug, isAutodetect, isRequest, shouldManageUnconsumed, shouldSuspendAfterHeaders, getMaxStartLineLength, getMaxHeaderLength, getMaxBodyPayload, shouldContinueWithoutData, isConnect, isDebug, shouldSkipBody, getState, getPosition, getParsed, getErrorCode, getMethod, getStatus, hasConnectionClose, hasConnectionUpgrade, getContentLength, getChunkSize, getRemainingContentLength, getRemainingChunkSize, hasContentLength, hasTransferEncoding, hasChunkedTransferEncoding, hasUpgrade, hasTrailers, getErrorDescription, setShouldAutodetect, setShouldContinueWithoutData, setIsRequest, setIsConnect, setDebug, setShouldManageUnconsumed, setShouldSuspendAfterHeaders, setMaxStartLineLength, setMaxHeaderLength, setMaxBodyPayload, setShouldSkipBody, setActiveCallbacks, setActiveEvents, simpleCreate, simpleDestroy, setup, simple, getMilo, setMiloEnabled, getMiloEnabled, pauseResponseStream, resumeResponseStream, closeClients, isReplacedHeader, buildResumeHeaders, getContentType, isCompressibleContentType, defaultScheduleTick, kWebAssemblyNotSupportedError, WebAssemblyNotSupportedError, kMaxRedirectsError, MaxRedirectsError, defaultWebSocketMaxFragments, defaultWebSocketMaxPayloadSize, evicted, require_simd, wasmModule, Errors, Callbacks, CallbackActives, EventActives, States, ParserFields, milo, spans, require_no_simd, require_parser_h1, kPausedByHandler, BUFFER_PAGE_SIZE, INITIAL_BUFFER_SIZE, BODY_KIND_CONTENT_LENGTH, EVENT_RANGE_SIZE, EVENT_HEADERS_SIZE, miloEnabled, miloInstance, H1Parser, parseLen, headersEnd, parseData, consumedTotal, errorName, errorDescription, firstEvent, eventLen, shouldUpgrade, bodyKind, charsetSeparator, languageSeparator, isContinuation, localMaxConcurrentStreams, remoteMaxConcurrentStreams, kRetireClient, kRetiring, ret2, CacheController, finalUrl, redirectCacheControl, hopDirectives, finish304, targetSize, targetCount, abortReason, COMPRESS_THRESHOLD, hasZstd, storedBody, expiresMs, maxTimeValue, minParserItems, maxParserItems, bytesPerParserItem, parserItemLimit, dataSize, eventSize, maxReconnectionTime, AUTO_CHECKIN_TICK_MS, AUTO_CHECKIN_RETRY_MS, lastAttemptAt, tickMs, attemptedToday, setEventFieldSize
-- `vendor/channel-pack/src/auto-checkin.ts` → `vendor/channel-pack/src/auto-checkin.ts`: defaultScheduleTick, AUTO_CHECKIN_TICK_MS, AUTO_CHECKIN_RETRY_MS, lastAttemptAt, tickMs, attemptedToday
 - `worker/auth-github.mjs` → `worker/auth-github.ts`: chunks, abort
 

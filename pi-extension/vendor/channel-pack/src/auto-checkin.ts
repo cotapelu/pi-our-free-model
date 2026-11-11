@@ -174,6 +174,24 @@ export const DSH_CHANNEL_PACK_AUTO_CHECKIN_DELAY_MS = 'DSH_CHANNEL_PACK_AUTO_CHE
 export const AUTO_CHECKIN_DELAY_MS = 30_000
 
 /**
+ * 常驻进程的跨天巡检间隔（毫秒，默认 2.5 小时）。
+ *
+ * 启动补跑只覆盖「当天第一次启动」；独立服务会连续运行多天，必须有跨天触发点。
+ * 巡检只做日期比较，真正的判断与在飞去重都在 `runIfDue()` 里，成本可以忽略；
+ * 过零点后最多晚 2.5 小时签到。
+ */
+export const AUTO_CHECKIN_TICK_MS = 150 * 60 * 1000
+
+/**
+ * 今天尝试过、但没有任何渠道能证明「今天已被处理」时的重试间隔下限（毫秒）。
+ *
+ * 失败（凭据过期 / 网络）时 `runIfDue()` 不记 `lastDate`，会随巡检自然重试。
+ * 该值是**下限保护**：巡检间隔（默认 2.5 小时）不小于它时不生效；只有巡检被
+ * 自定义调小到 1 小时以内时，才用它拦住「每 15 分钟打一轮上游」的高频重试。
+ */
+export const AUTO_CHECKIN_RETRY_MS = 60 * 60 * 1000
+
+/**
  * 读延迟配置。
  *
  * ⚠️ 不能写成 `Number(env.X) || 默认值`：`0` 是**合法**值（立刻执行），
@@ -441,6 +459,10 @@ export interface AutoCheckinDeps {
   delayMs?: number
   /** 排定延迟执行（注入以便单测零等待）。返回值交给 `stop()` 取消。 */
   schedule?(fn: () => void, ms: number): { cancel(): void }
+  /** 跨天巡检间隔，0 表示关闭。 */
+  tickMs?: number
+  /** 排定巡检（与 `schedule` 分开注入：巡检是长周期、必须可单独关掉那个）。 */
+  scheduleTick?(fn: () => void, ms: number): { cancel(): void }
   warn?(message: string): void
 }
 
@@ -475,6 +497,11 @@ export function createAutoCheckin(deps: AutoCheckinDeps): AutoCheckin {
   let inflight: Promise<void> | null = null
   let pending: { cancel(): void } | null = null
 
+  let tick: { cancel(): void } | null = null
+  // 尝试时间也覆盖「故意不记今天」的失败：没有它就无法区分
+  // 「今天没跑过」与「今天跑了但失败」，重试下限也就无从谈起。
+  let lastAttemptAt = doc.lastAt
+
   const today = (): string => utc8DateString(now())
 
   function state(): RpcUsageAutoCheckinState {
@@ -492,6 +519,7 @@ export function createAutoCheckin(deps: AutoCheckinDeps): AutoCheckin {
   }
 
   async function performRun(): Promise<void> {
+    lastAttemptAt = now()
     const totals = emptyTotals()
     let providers: string[] = []
     try {
@@ -610,7 +638,7 @@ export function createAutoCheckin(deps: AutoCheckinDeps): AutoCheckin {
       return state()
     },
     start() {
-      if (pending !== null) return
+      if (pending !== null || tick !== null) return
       const ms = deps.delayMs ?? autoCheckinDelayMs()
       const fire = (): void => {
         pending = null
@@ -619,9 +647,23 @@ export function createAutoCheckin(deps: AutoCheckinDeps): AutoCheckin {
       // 延迟为 0 = 立刻跑（单测的默认形态，也是用户把环境变量设成 0 时的语义）。
       if (ms <= 0) {
         fire()
-        return
+      } else {
+        pending = (deps.schedule ?? defaultSchedule)(fire, ms)
       }
-      pending = (deps.schedule ?? defaultSchedule)(fire, ms)
+      // 独立服务会常驻多天：启动补跑只覆盖「当天第一次启动」，跨天必须有巡检，
+      // 否则过了零点就再没有触发点（2026-10-27 实测：进程从 10-25 起未重启，
+      // 10-26 的记录是手动点的，10-27 一整天没有自动签到）。
+      // 开关 / 今天是否已跑 / 在飞去重都收敛在 `runIfDue()`；这里只多做一层
+      // 失败退避下限，拦住「巡检被调小后高频打上游」的情况。
+      const tickMs = deps.tickMs ?? AUTO_CHECKIN_TICK_MS
+      if (tickMs > 0) {
+        tick = (deps.scheduleTick ?? defaultScheduleTick)(() => {
+          if (doc.lastDate !== '' && doc.lastDate === today()) return
+          const attemptedToday = lastAttemptAt > 0 && utc8DateString(lastAttemptAt) === today()
+          if (attemptedToday && now() - lastAttemptAt < AUTO_CHECKIN_RETRY_MS) return
+          void runIfDue()
+        }, tickMs)
+      }
     },
     runIfDue,
     async dismiss() {
@@ -638,6 +680,8 @@ export function createAutoCheckin(deps: AutoCheckinDeps): AutoCheckin {
     stop() {
       pending?.cancel()
       pending = null
+      tick?.cancel()
+      tick = null
     },
   }
 }
@@ -652,4 +696,16 @@ function defaultSchedule(fn: () => void, ms: number): { cancel(): void } {
   const timer = setTimeout(fn, ms)
   timer.unref?.()
   return { cancel: () => clearTimeout(timer) }
+}
+
+/**
+ * 默认跨天巡检排定：`setInterval` + `unref()`。
+ *
+ * `unref()` 的理由同 `defaultSchedule`：巡检定时器不能拖住宿主进程退出 ——
+ * 一个 2.5 小时的 interval 会让「关掉服务」在终端里看起来像卡住。
+ */
+function defaultScheduleTick(fn: () => void, ms: number): { cancel(): void } {
+  const timer = setInterval(fn, ms)
+  timer.unref?.()
+  return { cancel: () => clearInterval(timer) }
 }
