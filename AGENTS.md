@@ -33,12 +33,12 @@ làm ở `./dsh-our-free-model/`. `./dsh-our-free-model/` **không** nằm trong
 ## 3. Trạng thái thật (2026-11-11)
 
 Bản gốc **2.8.3**: **567 file code / 301.362 dòng**. Bản port `pi-extension/`
-hiện có **~376 module `.ts`** + **64 file test** (số này là của **lần kiểm kê
+hiện có **~378 module `.ts`** + **66 file test** (số này là của **lần kiểm kê
 2026-11-11**, sinh bằng `node scripts/audit-ports.mjs`).
 
 | Nhóm | Gốc | Đã port | Còn lại |
 |---|---|---|---|
-| `src/` | 93 file | **90** | **3.130 dòng**: `extensions.js` (1.888) + `plugins.js` (1.240); phần mihomo của `egress.js` cố ý không port |
+| `src/` | 93 file | **92** | phần mihomo của `egress.js` (~300 dòng, cố ý) |
 | `worker/` | 8 file | 7 | `worker/worker.js` entry CF |
 | `packages/standalone/` | 55 file | 55 | `web/` cần tái sinh |
 | `packages/desktop/` | 13 file | 12 | Rust giữ nguyên |
@@ -46,7 +46,7 @@ hiện có **~376 module `.ts`** + **64 file test** (số này là của **lần
 | `client.js` | 8.599 dòng | ~1.100 | **~7.500 dòng** (14 trang/hạ tầng) |
 | `vendor/` | 158 file | 158 | — |
 
-**Chưa port: ~199 file / ~107.000 dòng** — trong đó `scripts/` chiếm 170 file
+**Chưa port: ~197 file / ~104.000 dòng** — trong đó `scripts/` chiếm 170 file
 (~41.000 dòng, phần lớn là test script fake-kernel) và `client.js` ~7.500 dòng.
 
 ## 4. Quy tắc làm việc

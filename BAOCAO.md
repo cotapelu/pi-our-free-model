@@ -4,7 +4,7 @@
 > Bản port: `./pi-extension/`. Bản gốc cũ ở root không còn và không dùng để đối
 > chiếu nữa.
 >
-> Lần kiểm kê: **2026-11-11 (lần 5)**. Sinh bằng `scripts/audit-ports.mjs`, không đếm tay.
+> Lần kiểm kê: **2026-11-11 (lần 6)**. Sinh bằng `scripts/audit-ports.mjs`, không đếm tay.
 
 ---
 
@@ -12,7 +12,7 @@
 
 | Nhóm gốc | File | Dòng | Đã port | Còn lại |
 |---|---|---|---|---|
-| `src/` | 93 | 30.067 | **90/93 file** | **3.100 dòng**: `extensions.js` + `plugins.js` (toàn bộ code mới của 2.8.3) + phần mihomo của `egress.js` (cố ý) |
+| `src/` | 93 | 30.067 | **92/93 file** | phần mihomo của `egress.js` (~300 dòng, **cố ý** — cần binary lậu) |
 | `vendor/channel-pack/` | 158 | 133.051 | 158/158 | — |
 | `packages/standalone/` | 55 | 15.936 | 55/55 | `web/` cần tái sinh |
 | `packages/desktop/` | 12 | 1.342 | 12/12 | Rust giữ nguyên |
@@ -21,10 +21,10 @@
 | `client.js` | 1 | 8.599 | ~1.100 | **~7.500 dòng** |
 | `adapter/`, `index.js`, data | ~12 | 2.700 | thiết kế lại có ý thức | — |
 | `src/o2a/` | 10 | 1.414 | **9/9 module** | `src/o2a.js` là bundle esbuild sinh từ 9 module này — phần bundle thuộc về script (xem §2.3) |
-| **TỔNG** | **~580** | **~301.000** | **~376** | **~199 file / ~107.000 dòng** |
+| **TỔNG** | **~580** | **~301.000** | **~378** | **~197 file / ~104.000 dòng** |
 
 Build/test tại thời điểm kiểm kê: `tsc` strict **0 lỗi** (hai project);
-**64 suite / 1.222 check / 0 fail**. Smoke thật: 4 dialect + `/v1/models` +
+**66 suite / 1.284 check / 0 fail**. Smoke thật: 4 dialect + `/v1/models` +
 `/v1/events` trên `dist/server.js`; console + `/api/management/summary` +
 `assets/app.js` trên `standalone/cli.js`.
 
@@ -42,16 +42,18 @@ fingerprint, eac*, kilo, picks, disclaimer, failure, channel, chan-relay,
 loopback-fetch, model-test, open-external, engine-payload, image-pricing,
 magpie-models/engine, probe, local-optimize, sponsor.
 
-### 2.2 Chưa port — **2 file, toàn bộ là code mới của 2.8.3**
+### 2.2 Chưa port — **chỉ còn phần cố ý**
 
-| File gốc | Dòng | Vai trò | Chặn những gì |
+| File gốc | Dòng | Vai trò |
+|---|---|---|
+| `src/egress.js` phần mihomo/Clash | ~300 | spawn binary lậu — **cố ý không port** (AGENTS.md §5) |
+
+Nền tảng extension (toàn bộ là code mới của 2.8.3) đã xong trong lần soi này:
+
+| File gốc | Dòng | Bản port | Ghi chú |
 |---|---|---|---|
-| `src/extensions.js` | 1.889 | nền tảng extension của host: registry ký (`PINNED_EXTENSIONS_PUBLIC_KEY`, `verifyRegistrySignature`, `parseRegistry`, `registrySources`), manifest (`parseExtensionManifest`, `scanExtensionSource`), runtime (`createExtensionRuntime`, `applyRequestHooks`) | `magpie-models.ts` (thiếu `inferenceFetch` + `extensionRuntime`), `packages/standalone/service.ts` (`extensionHookRuntime`, `registryTimer`), `management.ts` (`injectPluginBridge`, `servePluginAsset`), `frontend/app.tsx` (`pluginPages`) |
-| `src/plugins.js` | 1.241 | quản lý plugin của host: `PLUGIN_KINDS`, `PLUGIN_CAPABILITIES`, `PAGE_ICONS`, `safePluginPath`, `satisfiesApiVersion`, quét page asset, `providerContributions`, `builtinDescriptors` | `frontend/components/shell.tsx` (`pageIdsFor`/`pageLabel`/`pageIcon`), `frontend/plugins.tsx` (585 dòng), `frontend/plugin-page.tsx` |
-
-Phần mihomo/Clash của `src/egress.js` (~300 dòng: `renderMihomoConfig`,
-`findMihomoBinary`, `outletLabel`, `readOutletSelection`) là **cố ý không port** —
-cần binary lậu (AGENTS.md §5).
+| `src/plugins.js` | 1.241 | `pi-extension/plugins.ts` | manifest, scan, descriptor, page bridge, `REGISTRY_FALLBACK` (495 dòng JSON carve nguyên, parse lại đối chiếu: identical) |
+| `src/extensions.js` | 1.888 | `pi-extension/extensions.ts` | registry ký, install verify-then-write, sandbox worker, runtime |
 
 **Phát hiện quan trọng của lần soi này:** `src/o2a/` (9 file) đã port và khớp
 nguồn, nhưng **không có module nào import nó** — lane thật vẫn chạy shaping của
@@ -126,7 +128,7 @@ facade `index.ts`, wiring console vào `frontend/` của standalone. Đây là k
 |---|---|
 | File code (trừ node_modules/dist/docs) | **567** |
 | Dòng code | **301.362** |
-| File mới chưa port | `src/{extensions,plugins}.js` (3.130 dòng) |
+| File mới chưa port | — (`src/` chỉ còn phần mihomo của `egress.js`, cố ý) |
 | File đã port nhưng nội dung 2.8.3 đổi | 44 (trong `src/`, `worker/`, `packages/`) |
 
 ## 7. Cảnh báo

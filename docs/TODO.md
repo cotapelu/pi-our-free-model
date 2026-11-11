@@ -30,7 +30,7 @@ xuất hiện trong `pi-extension/` không.
 
 | Nhóm | File | Dòng | Đã port (trên đĩa) | Còn lại |
 |---|---|---|---|---|
-| `src/` | 93 | 30.067 | **90/93** | **3 file / 3.100 dòng**: `extensions.js`, `plugins.js`, + phần mihomo của `egress.js` (cố ý) |
+| `src/` | 93 | 30.067 | **92/93** | **1 file**: phần mihomo của `egress.js` (cố ý không port) |
 | `vendor/channel-pack/` | 158 | 136.410 | **158/158** | — |
 | `packages/standalone/` | 66 | 15.936 | **55/66** | **11 file** (frontend mới + web bundle mới) |
 | `packages/desktop/` | 13 | 1.354 | **12/13** | `ui/titlebar.js` (copy verbatim — Rust `include_str!`) |
@@ -41,7 +41,7 @@ xuất hiện trong `pi-extension/` không.
 | **TỔNG** | **~539** | **~245.000** | **~331** | **~208 file / ~114.000 dòng** |
 
 Build/test hiện tại: `tsc` strict **0 lỗi** (hai project: node + client DOM);
-**64 suite / 1.222 check / 0 fail**;
+**66 suite / 1.284 check / 0 fail**;
 smoke thật (2026-11-11): `dist/server.js --port 18900` — `/health`, `/v1/models`,
 `/v1/chat/completions` (stream SSE), `/v1/messages`, `/v1/responses`,
 `/v1beta/...:generateContent` (Gemini), `/v1/events` (SSE hello) đều trả lời;
@@ -168,30 +168,18 @@ theo nhóm (đã loại nhiễu — tên nằm ở file lân cận cùng cụm):
 
 ## 3. VIỆC THEO THỨ TỰ (làm từ trên xuống)
 
-### A. `src/` mới của 2.8.3 — ưu tiên 1, còn 2 file
-- [x] `src/o2a.js` + `src/o2a/` (9 file) — 2026-11-11: khớp nguồn, và **nối vào
-      lane thật** (`applyFingerprintWire`), kèm fix bug assets không vào `dist/`
-- [x] `src/semver.js` — 2026-11-11 (`pi-extension/semver.ts`)
+### A. `src/` mới của 2.8.3 — **xong** (2026-11-11)
+- [x] `src/o2a.js` + `src/o2a/` (9 file) — khớp nguồn, và **nối vào lane thật**
+      (`applyFingerprintWire`), kèm fix bug assets không vào `dist/`
+- [x] `src/semver.js` → `pi-extension/semver.ts`
 - [x] `src/engine-payload.js` — đối chiếu lại, không drift
-- [x] `src/catalog.js` phần kênh extension (2.8.3): `EXTENSION_CHANNEL`,
-      `REPLACEABLE_LANES`, `EXTENSION_WIRES`, `extensionModelId`,
-      `isExtensionEntry`, `extensionEntryOf`, `buildExtensionCatalog`,
-      `extensionReplaces` + `EAC_LABELS`/`eacLabel`
-- [ ] `src/extensions.js` (1.889) — **chặn**: `magpie-models.ts`
-      (`inferenceFetch`/`extensionRuntime`), `standalone/service.ts`
-      (`extensionHookRuntime`), `standalone/management.ts` (`servePluginAsset`),
-      `frontend/app.tsx` (`pluginPages`)
-- [ ] `src/plugins.js` (1.241) — **chặn**: `frontend/components/shell.tsx`
-      (`pageIdsFor`/`pageLabel`/`pageIcon`), `management.ts` (`injectPluginBridge`),
-      `frontend/plugins.tsx`
-- [x] `src/core.js` — soi xong: bản port đã dồn vào `core/runtime.ts` +
-      `core/{completion,stats}.ts`; phần thiếu còn lại là `laneRow`,
-      `setLaneState`, `laneGate`, `clearLaneBreaker`, `recordPassiveResult`,
-      `noteFreeLaneOutcome`, `extensionCatalog`, `replacedLane` — **làm sau khi
-      `extensions.ts` có**, vì `extensionCatalog`/`replacedLane` là đầu ra của nó
-- [ ] đối chiếu lại 44 file đã port nhưng 2.8.3 đổi: **1/44 xong**
-      (`engine-payload.js`). Còn 43; danh sách export thiếu thật ở
-      `docs/audit-ports.md` §2, definition thiếu ở §3
+- [x] `src/catalog.js` kênh extension + `EAC_LABELS`/`eacLabel`
+- [x] `src/plugins.js` (1.241) → `pi-extension/plugins.ts` + 30 check
+- [x] `src/extensions.js` (1.888) → `pi-extension/extensions.ts` + 32 check
+- [x] `src/core.js` — soi xong: đã dồn vào `core/runtime.ts` + `core/{completion,stats}.ts`
+- [ ] đối chiếu lại 44 file đã port nhưng 2.8.3 đổi: **2/44 xong**
+      (`engine-payload.js`, `plugins.js`, `extensions.js`). Còn 41; danh sách
+      export thiếu thật ở `docs/audit-ports.md` §2, definition thiếu ở §3
 
 ### B. `client.js` còn lại (~7.500 dòng)
 - [ ] các mục ở §1.3
@@ -226,7 +214,7 @@ theo nhóm (đã loại nhiễu — tên nằm ở file lân cận cùng cụm):
 
 ```bash
 npm --prefix pi-extension run build                    # tsc strict + copy assets
-node pi-extension/test/run-all.mjs                     # 64 suite / 1.222 check
+node pi-extension/test/run-all.mjs                     # 66 suite / 1.284 check
 node pi-extension/dist/server.js --port 18900          # API provider độc lập
 node pi-extension/dist/packages/standalone/cli.js      # service + console
 node scripts/audit-ports.mjs                           # kiểm kê (nếu đã viết)
@@ -236,6 +224,7 @@ node scripts/audit-ports.mjs                           # kiểm kê (nếu đã 
 
 | Ngày | Việc | Commit |
 |---|---|---|
+| 2026-11-11 | **G12 xong**: nền tảng extension đầy đủ — `plugins.ts` (1.241) + `extensions.ts` (1.888) + 62 check. `src/` chỉ còn phần mihomo của `egress.js` (cố ý) | 6dd67bf, d2dad2a |
 | 2026-11-11 | **G11 xong**: `o2a/` khớp nguồn + nối vào lane thật; fix bug build (`assets/` không vào `dist/`); kênh extension trong catalog; `semver.ts`; nhóm gap nhỏ (tool-name buffering, `profileDirOf`, `holdSeconds`, tick xuyên ngày, `postCompatibleStreamed`, `restrictPermissions` SID-first); thêm `scripts/audit-ports.mjs` | 5c8945d, 7e1ee9a, 311cba2 |
 | 2026-11-11 | **G10 xong**: packages/standalone 55 file + desktop + console + listener 4 dialect + lấp ~20 gap `src/` | adc60d8e |
 | 2026-11-11 | egress ~600 dòng + magpie host ~700 dòng + 4 suite + 2 bug thật | a81b543, beb3a51 |
