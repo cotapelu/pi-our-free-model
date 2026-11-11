@@ -13,7 +13,7 @@ nào. Đồng thời nó vẫn mount được như pi extension.
 
 ## 2. Vì sao lại sinh ra từ DSH
 
-Dự án gốc `dsh-our-free-model` là một plugin nằm trong một host duy nhất
+Dự án gốc `./dsh-our-free-model/` là một plugin nằm trong một host duy nhất
 (DeepSeek Harness): nó có host half (`index.js`), browser half (`client.js`),
 một relay worker, một app desktop Tauri. Chừng nào nó còn nằm trong host đó, chỉ
 có người dùng host đó dùng được.
@@ -57,16 +57,6 @@ Tất cả sau **key fence + CORS**, bind loopback với port retry/scan.
 
 `ofm-chain/<tên>` là virtual model: chain các lane theo thứ tự, link đầu tiên
 trả lời được thắng.
-
-### 3.3 Còn phải có (chưa port)
-
-- **Console quản lý** — 11 trang React của `client.js` + frontend của
-  `packages/standalone`, phục vụ từ gateway để con người cũng dùng được.
-- **Gateway EAC tự host** — `worker/` 7 file.
-- **App standalone** — `packages/standalone/` 55 file.
-- **Desktop shell** — `packages/desktop/` 12 file.
-- **Kiểm chứng** — `scripts/` 181 file của DSH thành test suite.
-- **Hạ tầng còn gap** — `src/` 8 file: `adapter.js`, `core/*`, `token-saver/inject.js`…
 
 ## 4. Nguyên tắc thiết kế
 
