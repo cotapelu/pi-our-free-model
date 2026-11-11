@@ -33,19 +33,21 @@ làm ở `./dsh-our-free-model/`. `./dsh-our-free-model/` **không** nằm trong
 ## 3. Trạng thái thật (2026-11-11)
 
 Bản gốc **2.8.3**: **567 file code / 301.362 dòng**. Bản port `pi-extension/`
-hiện có **~140 module `.ts`** + **63 file test**.
+hiện có **~376 module `.ts`** + **64 file test** (số này là của **lần kiểm kê
+2026-11-11**, sinh bằng `node scripts/audit-ports.mjs`).
 
 | Nhóm | Gốc | Đã port | Còn lại |
 |---|---|---|---|
-| `src/` | 56 file | ~51 | ~5.000 dòng **mới của 2.8.3**: `extensions.js` (1.888), `plugins.js` (1.240), `core.js` (838), `o2a.js` (993) + `src/o2a/` (10 file) + `semver.js` |
+| `src/` | 93 file | **90** | **3.130 dòng**: `extensions.js` (1.888) + `plugins.js` (1.240); phần mihomo của `egress.js` cố ý không port |
 | `worker/` | 8 file | 7 | `worker/worker.js` entry CF |
 | `packages/standalone/` | 55 file | 55 | `web/` cần tái sinh |
 | `packages/desktop/` | 13 file | 12 | Rust giữ nguyên |
-| `scripts/` | 168 file | 18 | ~150 |
+| `scripts/` | 191 file | 21 | ~170 |
 | `client.js` | 8.599 dòng | ~1.100 | **~7.500 dòng** (14 trang/hạ tầng) |
 | `vendor/` | 158 file | 158 | — |
 
-**Chưa port: ~240 file / ~110.000 dòng.**
+**Chưa port: ~199 file / ~107.000 dòng** — trong đó `scripts/` chiếm 170 file
+(~41.000 dòng, phần lớn là test script fake-kernel) và `client.js` ~7.500 dòng.
 
 ## 4. Quy tắc làm việc
 
@@ -78,8 +80,12 @@ Ngoài ba thứ đó, **không có gì được coi là ngoài phạm vi**.
 ## 6. Lệnh dùng lại
 
 ```bash
-# build (tsc strict + copy providers/registry.json + assets)
+# build (tsc strict cho HAI project: node + client DOM; rồi copy assets —
+# bao gồm o2a/assets/* mà lane đọc bằng node:fs)
 npm --prefix pi-extension run build
+
+# kiểm kê drift giữa bản gốc và bản port (file + export + definition)
+node scripts/audit-ports.mjs        # ghi docs/audit-ports.md
 
 # toàn bộ test offline (spawn mỗi suite, không dùng && chain)
 node pi-extension/test/run-all.mjs
@@ -93,9 +99,6 @@ node pi-extension/dist/packages/standalone/cli.js --port 18900
 
 # cài như pi extension
 pi install ./pi-extension
-
-# kiểm kê drift giữa bản gốc và bản port
-node scripts/audit-ports.mjs        # file + export symbol (xem TODO §0)
 ```
 
 ## 7. Ranh giới đã pin (sai là hỏng)

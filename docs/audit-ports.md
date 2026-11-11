@@ -4,9 +4,9 @@
 > Con số này trả lời "có tên không", không trả lời "đúng hành vi không".
 
 - File code: **581**
-- Đã map: **349** · thiếu: **226**
+- Đã map: **376** · thiếu: **199**
 - Export quét: **1681** · không thấy ở đâu: **63**
-- File đã map nhưng có drift: **253**
+- File đã map nhưng có drift: **233**
 
 ## 1. File chưa có
 - `.github/workflows/build-macos.yml` → `.github/workflows/build-macos.yml`
@@ -204,36 +204,9 @@
 - `scripts/workbench-test.mjs` → `scripts/workbench-test.mjs`
 - `scripts/workbench-ui-test.mjs` → `scripts/workbench-ui-test.mjs`
 - `scripts/workspace-appearance-ui-test.mjs` → `scripts/workspace-appearance-ui-test.mjs`
-- `src/anthropic.js` → `anthropic.ts`
-- `src/deferred-response.js` → `deferred-response.ts`
 - `src/egress.js` → `egress.ts`
 - `src/extensions.js` → `extensions.ts`
-- `src/gemini.js` → `gemini.ts`
-- `src/local-optimize.js` → `local-optimize.ts`
 - `src/plugins.js` → `plugins.ts`
-- `src/probe.js` → `probe.ts`
-- `src/recovery.js` → `recovery.ts`
-- `src/store.js` → `store.ts`
-- `src/token-saver/rtk/applyFilter.js` → `token-saver/rtk/applyFilter.ts`
-- `src/token-saver/rtk/autodetect.js` → `token-saver/rtk/autodetect.ts`
-- `src/token-saver/rtk/constants.js` → `token-saver/rtk/constants.ts`
-- `src/token-saver/rtk/filters/buildOutput.js` → `token-saver/rtk/filters/buildOutput.ts`
-- `src/token-saver/rtk/filters/dedupLog.js` → `token-saver/rtk/filters/dedupLog.ts`
-- `src/token-saver/rtk/filters/find.js` → `token-saver/rtk/filters/find.ts`
-- `src/token-saver/rtk/filters/gitDiff.js` → `token-saver/rtk/filters/gitDiff.ts`
-- `src/token-saver/rtk/filters/gitLog.js` → `token-saver/rtk/filters/gitLog.ts`
-- `src/token-saver/rtk/filters/gitStatus.js` → `token-saver/rtk/filters/gitStatus.ts`
-- `src/token-saver/rtk/filters/grep.js` → `token-saver/rtk/filters/grep.ts`
-- `src/token-saver/rtk/filters/ls.js` → `token-saver/rtk/filters/ls.ts`
-- `src/token-saver/rtk/filters/readNumbered.js` → `token-saver/rtk/filters/readNumbered.ts`
-- `src/token-saver/rtk/filters/searchList.js` → `token-saver/rtk/filters/searchList.ts`
-- `src/token-saver/rtk/filters/smartTruncate.js` → `token-saver/rtk/filters/smartTruncate.ts`
-- `src/token-saver/rtk/filters/tree.js` → `token-saver/rtk/filters/tree.ts`
-- `src/token-saver/rtk/hitLine.js` → `token-saver/rtk/hitLine.ts`
-- `src/token-saver/rtk/index.js` → `token-saver/rtk-index.ts`
-- `src/token-saver/rtk/registry.js` → `token-saver/rtk/registry.ts`
-- `worker/gateway-node.mjs` → `worker/gateway-node.ts`
-- `worker/verify-deployment.mjs` → `worker/verify-deployment.ts`
 - `worker/worker.js` → `worker/worker.js`
 
 ## 2. Export không xuất hiện trong toàn bộ bản port
@@ -315,18 +288,25 @@
 - `scripts/build-manifest.mjs` → `scripts/build-manifest.mjs`: desktopRoot, desktopVersions, lock
 - `scripts/pack-standalone.mjs` → `scripts/pack-standalone.mjs`: sourceFiles
 - `src/adapter.js` → `adapter.ts`: freeLane, sessionSeed
+- `src/anthropic.js` → `gateway/anthropic.ts`: isObject, harnessImage, toolResultBlocks, assistantBlocks, reasoningEffortFor, sseFrame, contentDelta, ensureState, closeStreamingBlock, openStreamingBlock, toolSlot, openToolBlock, closeToolBlock, closeAllBlocks, hasToolBlock, anthropicFrames, usageOf, parseInput, anthropicMessage, toAnthropicUsage, foldAnthropicOutcome, countTokens, BALANCED_AT, DEEP_AT, budget, callId, maxTokens, slot, another, fragment, carried, failure, parsed, calls, bySlot, byId, textChars, images, rows, toolChars, toolCount, toolTokens
 - `src/bun-fetch.js` → `loopback-fetch.ts`: WORKER_SOURCE, receivedHeaders, webBody
 - `src/core/runtime.js` → `core/runtime.ts`: laneRow, setLaneState, laneGate, clearLaneBreaker, recordPassiveResult, noteFreeLaneOutcome, LANE_QUOTA_DEFAULT_MS, extensionCatalog, replacedLane, LISTING_MIN_INTERVAL_MS, lastListingAt
 - `src/core/stats.js` → `core/stats.ts`: empty
 - `src/core.js` → `core/runtime.ts`: laneRow, setLaneState, laneGate, clearLaneBreaker, recordPassiveResult, noteFreeLaneOutcome, LANE_QUOTA_DEFAULT_MS, extensionCatalog, replacedLane, LISTING_MIN_INTERVAL_MS, lastListingAt
+- `src/gemini.js` → `gateway/gemini.ts`: fields, geminiError, schema, functionPart, estimate, geminiEndpoint, upstreamError, MAX_PENDING_BYTES, methods, inline, file, ids, flush, kinds, blocks, thinking, effort, budget, prompt, cached, thoughts, input, secrets, safeMessage, rows, pageSize, pageToken, size, identity, declared, slots, sentIds, sentSignatures, signature, pendingBytes, truncated, sawText, sawThought, send, flushCall, hash, slot, result, failed, failure
 - `src/http.js` → `gateway/forward-server.ts`: deadlineFor, headRead, rawHtml, isHtmlPage, completeData, valueText
 - `src/kilo.js` → `kilo.ts`: kiloFetch, KILO_ATTRIBUTION, listingCache, listingETag, rawMeta, rawDetail, providerName, providerSuffix
+- `src/local-optimize.js` → `gateway/optimize.ts`: quotaAnswer, prefixAnswer, titleAnswer, suggestionAnswer, filepathAnswer, top, DETECTORS
 - `src/magpie-engine.js` → `magpie-engine.ts`: engineAppearanceBridge, engineProductCopy, engineDisplayControls, findAgentCli, gatewayURL, runController, webPort, ownedID, savedKey, webKey, agentHome, agentRoaming, agentLocal, revisionFile, previousRevision, spawnFailed, nominated
 - `src/magpie-models.js` → `magpie-models.ts`: defaultInferenceTransport, catalogFetch, inferenceTransport
 - `src/o2a.js` → `o2a.ts`: OFFICIAL_PROMPT_V2, OFFICIAL_TOOLS_V2, messages2, droppedCalls2, changed2, choice2
+- `src/probe.js` → `gateway/probe.ts`: probeModel, buildPing, detectEgress, probeCatalog, ECHO_SOURCES, PING_PROMPT, started, body, parsed, controller, relayAbort, response, payload, ip, country, results, cursor, workers, index, startedAt, result
+- `src/store.js` → `gateway/store.ts`: resolveDshHome, savingsSample, fromEnv, raw, lifetimeModels
 - `src/token-saver/inject.js` → `token-saver/inject.ts`: result
+- `src/token-saver/rtk/index.js` → `token-saver/applyFilter.ts`: compressMessages, compressKiroFormat, compressText, formatRtkLog, compressRequest, compressChatPayload, compressMessagesPayload, compressResponsesPayload, describeSavings, humanBytes, resolveEnabled, items, stats, msg, part, block, state, allMessages, toolResults, bytesIn, saved, pct, filters, enabled, before, after, hits
 - `src/updater.js` → `updater.ts`: escaped
 - `src/upstream.js` → `upstream.ts`: plausibleSession, isMuseSpark, definitionOf, randomProjectId, O2A_PORTED_VERSION, MAX_SESSION_LENGTH, SESSION_PLAUSIBILITY_MS
 - `vendor/channel-pack/pack.js` → `vendor/channel-pack/pack.js`: setHeader, isUndiciFormData, dealloc, hasDebug, isAutodetect, isRequest, shouldManageUnconsumed, shouldSuspendAfterHeaders, getMaxStartLineLength, getMaxHeaderLength, getMaxBodyPayload, shouldContinueWithoutData, isConnect, isDebug, shouldSkipBody, getState, getPosition, getParsed, getErrorCode, getMethod, getStatus, hasConnectionClose, hasConnectionUpgrade, getContentLength, getChunkSize, getRemainingContentLength, getRemainingChunkSize, hasContentLength, hasTransferEncoding, hasChunkedTransferEncoding, hasUpgrade, hasTrailers, getErrorDescription, setShouldAutodetect, setShouldContinueWithoutData, setIsRequest, setIsConnect, setDebug, setShouldManageUnconsumed, setShouldSuspendAfterHeaders, setMaxStartLineLength, setMaxHeaderLength, setMaxBodyPayload, setShouldSkipBody, setActiveCallbacks, setActiveEvents, simpleCreate, simpleDestroy, setup, simple, getMilo, setMiloEnabled, getMiloEnabled, pauseResponseStream, resumeResponseStream, closeClients, isReplacedHeader, buildResumeHeaders, getContentType, isCompressibleContentType, defaultScheduleTick, kWebAssemblyNotSupportedError, WebAssemblyNotSupportedError, kMaxRedirectsError, MaxRedirectsError, defaultWebSocketMaxFragments, defaultWebSocketMaxPayloadSize, evicted, require_simd, wasmModule, Errors, Callbacks, CallbackActives, EventActives, States, ParserFields, milo, spans, require_no_simd, require_parser_h1, kPausedByHandler, BUFFER_PAGE_SIZE, INITIAL_BUFFER_SIZE, BODY_KIND_CONTENT_LENGTH, EVENT_RANGE_SIZE, EVENT_HEADERS_SIZE, miloEnabled, miloInstance, H1Parser, parseLen, headersEnd, parseData, consumedTotal, errorName, errorDescription, firstEvent, eventLen, shouldUpgrade, bodyKind, charsetSeparator, languageSeparator, isContinuation, localMaxConcurrentStreams, remoteMaxConcurrentStreams, kRetireClient, kRetiring, ret2, CacheController, finalUrl, redirectCacheControl, hopDirectives, finish304, targetSize, targetCount, abortReason, COMPRESS_THRESHOLD, hasZstd, storedBody, expiresMs, maxTimeValue, minParserItems, maxParserItems, bytesPerParserItem, parserItemLimit, dataSize, eventSize, maxReconnectionTime, AUTO_CHECKIN_TICK_MS, AUTO_CHECKIN_RETRY_MS, lastAttemptAt, tickMs, attemptedToday, setEventFieldSize
 - `worker/auth-github.mjs` → `worker/auth-github.ts`: chunks, abort
+- `worker/gateway-node.mjs` → `worker/node-host.ts`: dayKey, hourKey, freshIpRow, statsFile, eq, HOUR_MS, KEEP_DAYS, KEEP_IPS, cutoffHour, rows, hk, dk, day, temp, hourNow, hourAgo, dayNow, hourly, days, models, rem, scan, c, seen, DASHBOARD_HTML, ENTRY_JS, impl
 

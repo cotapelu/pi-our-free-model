@@ -75,12 +75,33 @@ const EXPLICIT = {
   'src/forward.js': 'gateway/forward-server.ts',
   'src/core.js': 'core/runtime.ts',
 
+  // ── worker/ đã dồn ──
+  'worker/gateway-node.mjs': 'worker/node-host.ts',
+  'worker/verify-deployment.mjs': 'worker/verify.ts',
+  'worker/auth-github.mjs': 'worker/auth-github.ts',
+
   // ── docs của bản gốc: bản port đã viết lại, không giữ nguyên ──
   'README.md': null,
   'README_EN.md': null,
   'PACKAGING.md': null,
   'LICENSE': null,
   'package-lock.json': null,
+
+  // ── src/*.js đã được dồn vào cụm thư mục của bản port ──
+  'src/anthropic.js': 'gateway/anthropic.ts',
+  'src/gemini.js': 'gateway/gemini.ts',
+  'src/store.js': 'gateway/store.ts',
+  'src/probe.js': 'gateway/probe.ts',
+  'src/recovery.js': 'gateway/recovery.ts',
+  'src/deferred-response.js': 'gateway/response-stream.ts',
+  'src/local-optimize.js': 'gateway/optimize.ts',
+  'src/token-saver/rtk/index.js': 'token-saver/applyFilter.ts',
+  'src/token-saver/rtk/registry.js': 'token-saver/registry.ts',
+  'src/token-saver/rtk/constants.js': 'token-saver/constants.ts',
+  'src/token-saver/rtk/autodetect.js': 'token-saver/autodetect.ts',
+  'src/token-saver/rtk/applyFilter.js': 'token-saver/applyFilter.ts',
+  'src/token-saver/rtk/hitLine.js': 'token-saver/hitLine.ts',
+  'src/token-saver/filters': null,
 
   // ── dữ liệu, không phải code tay ──
   'src/engine-parts/win32-x64.000.part': 'magpie-engine.ts',
@@ -131,13 +152,18 @@ function portPathOf(rel) {
   if (rel.startsWith('vendor/')) return rel
   if (rel.startsWith('packages/')) return rel.replace(/\.mjs$/, '.ts').replace(/^packages\/desktop\/src-tauri\//, 'packages/desktop/src-tauri/')
   if (rel.startsWith('worker/')) return rel.replace(/\.mjs$/, '.ts')
+  if (rel === 'worker/worker.js') return 'worker/entry.js'
   if (rel.startsWith('scripts/')) return rel
   if (rel.startsWith('adapter/') || rel.startsWith('catalog/') || rel.startsWith('feed/') || rel.startsWith('locale/')) {
     return rel.replace(/\.js$/, '.ts').replace(/kernel\.ts$/, 'kernel.js')
   }
   if (rel.startsWith('src/o2a/')) return 'o2a/' + rel.slice('src/o2a/'.length).replace(/\.js$/, '.ts')
   if (rel.startsWith('src/core/')) return 'core/' + rel.slice('src/core/'.length).replace(/\.js$/, '.ts')
-  if (rel.startsWith('src/token-saver')) return rel.slice('src/'.length).replace(/\.js$/, '.ts')
+  if (rel.startsWith('src/token-saver')) {
+    // 2.8.3 giữ phân cấp rtk/; bản port bỏ lớp rtk/ vì chính nó đã là cấp đó.
+    const flat = rel.slice('src/token-saver/'.length).replace(/^rtk\//, '').replace(/\.js$/, '.ts')
+    return 'token-saver/' + flat
+  }
   if (rel.startsWith('src/providers/')) return 'providers/' + rel.slice('src/providers/'.length).replace(/\.js$/, '.ts')
   if (rel.startsWith('src/')) {
     const name = rel.slice('src/'.length)

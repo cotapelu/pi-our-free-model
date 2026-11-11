@@ -8,15 +8,29 @@
 > **Gốc để đối chiếu: `./dsh-our-free-model/` — bản 2.8.3.**
 > Bản gốc cũ ở root đã xóa. `./dsh-our-free-model/` không nằm trong git.
 
-## 0. KIỂM KÊ TOÀN BỘ — sinh tự động từ bản 2.8.3
+## 0. KIỂM KÊ TOÀN BỔN — sinh tự động từ bản 2.8.3
 
 **555 file code / 301.865 dòng** trong `./dsh-our-free-model/`
 (đã loại `node_modules`, `dist`, `docs`). 1.847 export symbol đã quét xem tên có
 xuất hiện trong `pi-extension/` không.
 
+> Số dưới đây lấy từ `node scripts/audit-ports.mjs` (lần chạy 2026-11-11, sau khi
+> fix build). Script đó là **lượt 1** của AGENTS.md §8 và ghi
+> `docs/audit-ports.md`; nó trả lời "có tên không", **không** trả lời "đúng hành vi
+> không". Kết quả: **581 file code / 376 đã map / 199 thiếu / 63 tên export không
+> thấy ở đâu**, và **233 file đã map nhưng có drift** cần đọc tay.
+
+> Hai lớp nhiễu của audit đã được loại trong chính script: file nguồn là *bundle
+> esbuild* (`src/o2a.js`, `src/core.js`, `src/http.js`, `src/forward.js`,
+> `src/token-saver.js`) soi trên cả cụm module tương ứng, và các file đã được bản
+> port dồn vào cụm thư mục khác (`src/anthropic.js` → `gateway/anthropic.ts`,
+> `src/token-saver/rtk/*` → `token-saver/*`) đã có bảng alias tường minh.
+> File `src/` mà audit còn báo thiếu chỉ còn **3**: `extensions.js`,
+> `plugins.js`, và phần mihomo của `egress.js` (cố ý không port).
+
 | Nhóm | File | Dòng | Đã port (trên đĩa) | Còn lại |
 |---|---|---|---|---|
-| `src/` | 93 | 30.067 | **75/93** | **18 file / ~5.700 dòng** (xem 0.1) |
+| `src/` | 93 | 30.067 | **90/93** | **3 file / 3.100 dòng**: `extensions.js`, `plugins.js`, + phần mihomo của `egress.js` (cố ý) |
 | `vendor/channel-pack/` | 158 | 136.410 | **158/158** | — |
 | `packages/standalone/` | 66 | 15.936 | **55/66** | **11 file** (frontend mới + web bundle mới) |
 | `packages/desktop/` | 13 | 1.354 | **12/13** | `ui/titlebar.js` (copy verbatim — Rust `include_str!`) |
@@ -26,24 +40,25 @@ xuất hiện trong `pi-extension/` không.
 | root (`client.js`, `index.js`) | 2 | 11.358 | 1 (thiết kế lại) | `client.js` 8.599 dòng |
 | **TỔNG** | **~539** | **~245.000** | **~331** | **~208 file / ~114.000 dòng** |
 
-Build/test hiện tại: `tsc` strict **0 lỗi**; **63 suite / 1.206 check / 0 fail**;
-smoke thật: `dist/server.js` (4 dialect), `dist/packages/standalone/cli.js`
-(console + management), `prepare-desktop.mjs` (stage 159 file + boot envelope).
+Build/test hiện tại: `tsc` strict **0 lỗi** (hai project: node + client DOM);
+**64 suite / 1.222 check / 0 fail**;
+smoke thật (2026-11-11): `dist/server.js --port 18900` — `/health`, `/v1/models`,
+`/v1/chat/completions` (stream SSE), `/v1/messages`, `/v1/responses`,
+`/v1beta/...:generateContent` (Gemini), `/v1/events` (SSE hello) đều trả lời;
+`dist/packages/standalone/cli.js --port 18901` — console HTML, `assets/app.js`
+433 KB, `/api/management/summary` sau khi mở session, catalog 23 dòng (12
+anonymous + 11 kilo).
 
-### 0.1 `src/` — 18 file chưa port (toàn bộ là code MỚI của 2.8.3)
+### 0.1 `src/` — file chưa port, sau lượt soi 2026-11-11
 
-| File | Dòng | Vai trò |
-|---|---|---|
-| `src/extensions.js` | 1.889 | hệ cơ sở extension của host |
-| `src/plugins.js` | 1.241 | quản lý plugin của host |
-| `src/o2a.js` + `src/o2a/` (9 file) | 994 + ~1.700 | đường "one-to-all": mount một API shape ra mọi dialect |
-| `src/core.js` | 839 | lõi thứ hai của host |
-| `src/semver.js` | 41 | so sánh phiên bản |
-| `src/engine-payload.js` | 100 | *đã port* — bản 2.8.3 đổi nội dung, cần đọc lại |
-| `src/o2a/assets/opencode_tools.json` | 328 | dữ liệu công cụ |
-
-18 file "chưa mapping" còn lại là các file đã port nhưng **nội dung 2.8.3 đổi** —
-cứ cho là "đã port" cho tới khi đối chiếu lại từng cái (xem §1.2).
+| File | Dòng | Vai trò | Trạng thái |
+|---|---|---|---|
+| `src/extensions.js` | 1.889 | nền tảng extension của host (registry ký, manifest, runtime, `applyRequestHooks`) | **chưa port** — chặn `magpie-models.ts`, `packages/standalone/service.ts` (`extensionHookRuntime`), `management.ts` (plugin asset), `frontend/app.tsx` (trang plugin) |
+| `src/plugins.js` | 1.241 | quản lý plugin của host (kinds, capabilities, quét page asset, `PAGE_ICONS`) | **chưa port** — chặn `shell.tsx` (`pageIcon`/`pageIdsFor`/`pageLabel`), `management.ts` (`servePluginAsset`), `frontend/plugins.tsx` |
+| `src/egress.js` phần mihomo/Clash | ~300 | spawn binary lậu | **cố ý không port** (AGENTS.md §5) |
+| `src/o2a.js` + `src/o2a/` | 994 + ~800 | đường one-to-all | **đã port**: 9 module khớp nguồn (chỉ khác annotation TS), asset byte-identical. `src/o2a.js` là *bundle* do `build-legacy-payload.mjs` sinh — bản port giữ dạng module, nên phần bundle còn thiếu là của **script** chứ không phải của lane |
+| `src/semver.js` | 41 | so sánh phiên bản | **đã port** (`pi-extension/semver.ts`) |
+| `src/engine-payload.js` | 100 | khôi phục engine từ shard | **đã port**, đối chiếu lại: không drift |
 
 ### 0.2 `scripts/` — 177 file chưa port
 
@@ -153,13 +168,30 @@ theo nhóm (đã loại nhiễu — tên nằm ở file lân cận cùng cụm):
 
 ## 3. VIỆC THEO THỨ TỰ (làm từ trên xuống)
 
-### A. `src/` mới của 2.8.3 (~5.700 dòng) — ưu tiên 1
-- [ ] `src/o2a.js` + `src/o2a/` (9 file, ~1.700 dòng)
-- [ ] `src/extensions.js` (1.889)
-- [ ] `src/plugins.js` (1.241)
-- [ ] `src/core.js` (839)
-- [ ] `src/semver.js` (41)
-- [ ] đối chiếu lại 44 file đã port nhưng 2.8.3 đổi
+### A. `src/` mới của 2.8.3 — ưu tiên 1, còn 2 file
+- [x] `src/o2a.js` + `src/o2a/` (9 file) — 2026-11-11: khớp nguồn, và **nối vào
+      lane thật** (`applyFingerprintWire`), kèm fix bug assets không vào `dist/`
+- [x] `src/semver.js` — 2026-11-11 (`pi-extension/semver.ts`)
+- [x] `src/engine-payload.js` — đối chiếu lại, không drift
+- [x] `src/catalog.js` phần kênh extension (2.8.3): `EXTENSION_CHANNEL`,
+      `REPLACEABLE_LANES`, `EXTENSION_WIRES`, `extensionModelId`,
+      `isExtensionEntry`, `extensionEntryOf`, `buildExtensionCatalog`,
+      `extensionReplaces` + `EAC_LABELS`/`eacLabel`
+- [ ] `src/extensions.js` (1.889) — **chặn**: `magpie-models.ts`
+      (`inferenceFetch`/`extensionRuntime`), `standalone/service.ts`
+      (`extensionHookRuntime`), `standalone/management.ts` (`servePluginAsset`),
+      `frontend/app.tsx` (`pluginPages`)
+- [ ] `src/plugins.js` (1.241) — **chặn**: `frontend/components/shell.tsx`
+      (`pageIdsFor`/`pageLabel`/`pageIcon`), `management.ts` (`injectPluginBridge`),
+      `frontend/plugins.tsx`
+- [x] `src/core.js` — soi xong: bản port đã dồn vào `core/runtime.ts` +
+      `core/{completion,stats}.ts`; phần thiếu còn lại là `laneRow`,
+      `setLaneState`, `laneGate`, `clearLaneBreaker`, `recordPassiveResult`,
+      `noteFreeLaneOutcome`, `extensionCatalog`, `replacedLane` — **làm sau khi
+      `extensions.ts` có**, vì `extensionCatalog`/`replacedLane` là đầu ra của nó
+- [ ] đối chiếu lại 44 file đã port nhưng 2.8.3 đổi: **1/44 xong**
+      (`engine-payload.js`). Còn 43; danh sách export thiếu thật ở
+      `docs/audit-ports.md` §2, definition thiếu ở §3
 
 ### B. `client.js` còn lại (~7.500 dòng)
 - [ ] các mục ở §1.3
@@ -194,7 +226,7 @@ theo nhóm (đã loại nhiễu — tên nằm ở file lân cận cùng cụm):
 
 ```bash
 npm --prefix pi-extension run build                    # tsc strict + copy assets
-node pi-extension/test/run-all.mjs                     # 63 suite / 1.206 check
+node pi-extension/test/run-all.mjs                     # 64 suite / 1.222 check
 node pi-extension/dist/server.js --port 18900          # API provider độc lập
 node pi-extension/dist/packages/standalone/cli.js      # service + console
 node scripts/audit-ports.mjs                           # kiểm kê (nếu đã viết)
@@ -204,6 +236,7 @@ node scripts/audit-ports.mjs                           # kiểm kê (nếu đã 
 
 | Ngày | Việc | Commit |
 |---|---|---|
+| 2026-11-11 | **G11 xong**: `o2a/` khớp nguồn + nối vào lane thật; fix bug build (`assets/` không vào `dist/`); kênh extension trong catalog; `semver.ts`; nhóm gap nhỏ (tool-name buffering, `profileDirOf`, `holdSeconds`, tick xuyên ngày, `postCompatibleStreamed`, `restrictPermissions` SID-first); thêm `scripts/audit-ports.mjs` | 5c8945d, 7e1ee9a, 311cba2 |
 | 2026-11-11 | **G10 xong**: packages/standalone 55 file + desktop + console + listener 4 dialect + lấp ~20 gap `src/` | adc60d8e |
 | 2026-11-11 | egress ~600 dòng + magpie host ~700 dòng + 4 suite + 2 bug thật | a81b543, beb3a51 |
 | 2026-11-11 | scripts build/packaging 18 file (chạy thật được) | b945994 |

@@ -4,7 +4,7 @@
 > Bản port: `./pi-extension/`. Bản gốc cũ ở root không còn và không dùng để đối
 > chiếu nữa.
 >
-> Lần kiểm kê: **2026-11-11 (lần 4)**. Sinh bằng script, không đếm tay.
+> Lần kiểm kê: **2026-11-11 (lần 5)**. Sinh bằng `scripts/audit-ports.mjs`, không đếm tay.
 
 ---
 
@@ -12,18 +12,21 @@
 
 | Nhóm gốc | File | Dòng | Đã port | Còn lại |
 |---|---|---|---|---|
-| `src/` | 56 | 27.000 | ~51 file | **~5.000 dòng mới của 2.8.3** |
+| `src/` | 93 | 30.067 | **90/93 file** | **3.100 dòng**: `extensions.js` + `plugins.js` (toàn bộ code mới của 2.8.3) + phần mihomo của `egress.js` (cố ý) |
 | `vendor/channel-pack/` | 158 | 133.051 | 158/158 | — |
 | `packages/standalone/` | 55 | 15.936 | 55/55 | `web/` cần tái sinh |
 | `packages/desktop/` | 12 | 1.342 | 12/12 | Rust giữ nguyên |
 | `worker/` | 8 | 2.170 | 7/8 | `worker.js` entry CF |
-| `scripts/` | 168 | 43.902 | 18 | **150 file / ~42.000 dòng** |
+| `scripts/` | 191 | 47.359 | 21 | **170 file / ~41.000 dòng** |
 | `client.js` | 1 | 8.599 | ~1.100 | **~7.500 dòng** |
 | `adapter/`, `index.js`, data | ~12 | 2.700 | thiết kế lại có ý thức | — |
-| **TỔNG** | **~370** | **~235.000** | **~240** | **~130 file / ~110.000 dòng** |
+| `src/o2a/` | 10 | 1.414 | **9/9 module** | `src/o2a.js` là bundle esbuild sinh từ 9 module này — phần bundle thuộc về script (xem §2.3) |
+| **TỔNG** | **~580** | **~301.000** | **~376** | **~199 file / ~107.000 dòng** |
 
-Build/test tại thời điểm kiểm kê: `tsc` strict **0 lỗi**;
-**63 suite / 1.206 check / 0 fail**.
+Build/test tại thời điểm kiểm kê: `tsc` strict **0 lỗi** (hai project);
+**64 suite / 1.222 check / 0 fail**. Smoke thật: 4 dialect + `/v1/models` +
+`/v1/events` trên `dist/server.js`; console + `/api/management/summary` +
+`assets/app.js` trên `standalone/cli.js`.
 
 ## 2. `src/` — chi tiết theo bản 2.8.3
 
@@ -39,16 +42,35 @@ fingerprint, eac*, kilo, picks, disclaimer, failure, channel, chan-relay,
 loopback-fetch, model-test, open-external, engine-payload, image-pricing,
 magpie-models/engine, probe, local-optimize, sponsor.
 
-### 2.2 Chưa port — **toàn bộ là code mới của 2.8.3**
+### 2.2 Chưa port — **2 file, toàn bộ là code mới của 2.8.3**
 
-| File gốc | Dòng | Vai trò |
-|---|---|---|
-| `src/extensions.js` | 1.888 | hệ cơ sở extension của host |
-| `src/plugins.js` | 1.240 | quản lý plugin của host |
-| `src/o2a.js` + `src/o2a/` (10 file) | 993 + ~800 | đường "one-to-all" (mount một API ra nhiều dialect) |
-| `src/core.js` | 838 | lõi thứ hai của host |
-| `src/semver.js` | 40 | so sánh phiên bản |
-| `src/engine-parts/` | — |分片 engine (dữ liệu, không phải code tay) |
+| File gốc | Dòng | Vai trò | Chặn những gì |
+|---|---|---|---|
+| `src/extensions.js` | 1.889 | nền tảng extension của host: registry ký (`PINNED_EXTENSIONS_PUBLIC_KEY`, `verifyRegistrySignature`, `parseRegistry`, `registrySources`), manifest (`parseExtensionManifest`, `scanExtensionSource`), runtime (`createExtensionRuntime`, `applyRequestHooks`) | `magpie-models.ts` (thiếu `inferenceFetch` + `extensionRuntime`), `packages/standalone/service.ts` (`extensionHookRuntime`, `registryTimer`), `management.ts` (`injectPluginBridge`, `servePluginAsset`), `frontend/app.tsx` (`pluginPages`) |
+| `src/plugins.js` | 1.241 | quản lý plugin của host: `PLUGIN_KINDS`, `PLUGIN_CAPABILITIES`, `PAGE_ICONS`, `safePluginPath`, `satisfiesApiVersion`, quét page asset, `providerContributions`, `builtinDescriptors` | `frontend/components/shell.tsx` (`pageIdsFor`/`pageLabel`/`pageIcon`), `frontend/plugins.tsx` (585 dòng), `frontend/plugin-page.tsx` |
+
+Phần mihomo/Clash của `src/egress.js` (~300 dòng: `renderMihomoConfig`,
+`findMihomoBinary`, `outletLabel`, `readOutletSelection`) là **cố ý không port** —
+cần binary lậu (AGENTS.md §5).
+
+**Phát hiện quan trọng của lần soi này:** `src/o2a/` (9 file) đã port và khớp
+nguồn, nhưng **không có module nào import nó** — lane thật vẫn chạy shaping của
+2.7.4 trong `fingerprint.ts`. Đã nối lại (§2.3).
+
+### 2.3 Đã nối và đã sửa trong lần soi này
+
+| Việc | Bug/lỗi mà nó là |
+|---|---|
+| `applyFingerprintWire` chạy bộ của 2.8.3 (`isTitleRequest` → `injectOfficialPrompt` → `renameAndCompleteTools` → `ensureChatUsage`/`ensureV2CompletionLimit`) | shaping cũ **không gửi system prompt chính thức** — gate của free tier kiểm tra cả prompt, chỉ bù tool là không đủ; và tool mang từ vựng lạ vẫn đi nguyên spelling lên wire, hình dạng mà free tier trả 403/429 |
+| `scripts/copy-registry.mjs` copy `o2a/assets/*` vào `dist/` | **bug im lặng**: `asset-source.ts` đọc bằng `node:fs` URL tính so với file đã biên dịch, nên `dist/` — thứ chạy thật và thứ test import — luôn rơi về prompt rỗng và *không có định nghĩa tool nào*: mọi caller tool bị đổi thành `clint_…` mà không có tool chính thức nào được bù. Không throw nên không ai thấy. Cùng lớp bug AGENTS.md §7 đã pin cho `registry.json` |
+| `semver.ts` | `src/semver.js` chưa từng có bản port |
+| `catalog-rows.ts`: `EAC_LABELS`/`eacLabel` + cả kênh extension | bản port chỉ giữ một label đặc biệt và làm mất cách hiển thị `-free` → `highspeed`; kênh extension (producer thứ tư, `ext:<plugin>/<model>`) chưa có |
+| `stream.ts`: `toolNameFragment` + `#resolveRawName` | gateway cắt `rea` + `d` qua hai delta frame sẽ cho ra cuộc gọi tên `rea` — tool không tồn tại, và `repairToolPairing` giữ lại làm hỏng mọi turn sau |
+| `gateway/store.ts` re-export `restrictPermissions` từ `open-external.ts` | bản copy cũ `/grant:r` theo **tên account trần** — đúng lỗi dsh #738: `icacls` phân giải cả account database lẫn computer account, computer account thắng khi chỉ khác hoa/thường, ACE đặt SID không token nào mang, `/inheritance:r` đã xoá ACE kế thừa ⇒ file không đọc/ghi/xoá được |
+| `updater.ts`: `profileDirOf` | bản cũ đếm hai cấp (`dirname(dirname(…))`), sai với install scoped `@scope/name`: trỏ về thư mục `@scope`, đọc chẳng thấy lockfile, nên bản copy do pnpm sở hữu bị coi là bare |
+| `feed.ts`: `holdSeconds` | announcement xin khoá nút đóng 5 giây bị đóng được ngay |
+| `auto-checkin.ts`: `AUTO_CHECKIN_TICK_MS` + `AUTO_CHECKIN_RETRY_MS` + `lastAttemptAt` | chỉ có chạy-bù lúc `start()`: dịch vụ chạy qua nửa đêm không bao giờ check-in lại — chính lỗi 2026-10-27 upstream ghi trong comment |
+| `aggregate.ts`: tách `postCompatibleStreamed`; `loopback-fetch.ts`, `open-external.ts` port đủ | hơn 1.000 dòng bị thiếu/stub |
 
 ## 3. Kiểm kê sâu — soi từng definition
 
@@ -65,6 +87,20 @@ cố ý không port).
 
 ## 4. `client.js` — console (đang port dở)
 
+**Đã tách** (`pi-extension/client/`, ~1.100 dòng, 13 trang `.tsx`) — và lần soi
+này build sạch được nó: `client/` có project riêng (`tsconfig.client.json`, lib
+DOM) vì nó là nửa trình duyệt, nên một lần gõ nhầm `document` trong gateway vẫn
+là lỗi biên dịch. Vì `feed.ts` import `./client/sanitizer.js` (parser announcement
+chạy trên node), `sanitizer.ts` giữ nguyên phần node-safe và hai hàm materialize
+(`htmlToDom`, `htmlToReact`) chuyển sang `client/sanitizer-materialize.ts`.
+
+Ba bug thật trong nhóm này: `api.ts` gọi `\`\${API}\${path}\`` với biến không tồn
+tại (mọi `api()` của console sẽ throw ReferenceError); `toast.ts` import
+`htmlToDom` không tồn tại cộng thêm 3 dòng lệnh ở cấp trên cùng (throw lúc import);
+`showUrgentModal` mất cả bộ đếm ngược `holdMs`/`holdHint` nên announcement bắt đọc
+bị bấm đóng được ngay. `client/*.tsx` vẫn chưa typecheck (thiếu `@types/react` ở
+gốc — deps nằm ở `packages/standalone/`, chưa cài).
+
 **Đã tách** (`pi-extension/client/`, ~1.100 dòng): sanitizer, sponsor UI,
 copy (1.466 key song ngữ), css (1.073 dòng), api, hooks, chrome (13 primitive +
 4 biểu đồ SVG), toast, pool, eac-auth, + 9 trang (dashboard, forward, egress,
@@ -73,7 +109,8 @@ routing, settings).
 
 **Còn lại ~7.500 dòng** (số dòng theo bản 2.8.3, cần đọc lại):
 `useChannelRpc` + `ChannelsPage`, `Shell`, `Announcement`/`AnnouncementGate`,
-facade `index.ts`, wiring console vào `frontend/` của standalone.
+facade `index.ts`, wiring console vào `frontend/` của standalone. Đây là khối
+**lớn nhất còn lại ngoài `scripts/`** và chưa ai đụng tới.
 
 ## 5. Hai bug im lặm tìm ra khi viết test (đã fix)
 
@@ -89,7 +126,7 @@ facade `index.ts`, wiring console vào `frontend/` của standalone.
 |---|---|
 | File code (trừ node_modules/dist/docs) | **567** |
 | Dòng code | **301.362** |
-| File mới chưa port | `src/{extensions,plugins,o2a,core,semver}.js` + `src/o2a/` |
+| File mới chưa port | `src/{extensions,plugins}.js` (3.130 dòng) |
 | File đã port nhưng nội dung 2.8.3 đổi | 44 (trong `src/`, `worker/`, `packages/`) |
 
 ## 7. Cảnh báo
