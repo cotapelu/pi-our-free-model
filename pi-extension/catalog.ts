@@ -23,6 +23,16 @@ export const OPENECODE_CHAT_BASE = (process.env.OFM_OPENECODE_CHAT_BASE ?? 'http
 export const KILO_BASE = (process.env.OFM_KILO_BASE ?? 'https://api.kilo.ai/api/gateway').replace(/\/+$/, '')
 export const KILO_LISTING = `${KILO_BASE}/models`
 
+/** Where the compiled provider registry lives, resolved next to this module.
+ *
+ *  `providers/index.ts` and `plugins.ts` both read it with `node:fs`; resolving
+ *  it from `import.meta.url` is what makes the answer correct for whichever
+ *  tree the caller is running out of (the repo's or `dist/`), and
+ *  `scripts/copy-registry.mjs` is what makes the file actually be there. */
+export function registryJsonPath(): string {
+  return new URL('./providers/registry.json', import.meta.url).pathname
+}
+
 const LISTING_TIMEOUT_MS = 20000
 
 /** pi's thinking levels, in the order pi clamps to. */

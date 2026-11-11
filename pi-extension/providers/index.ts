@@ -48,7 +48,11 @@ export const AUTH_KINDS = Object.freeze(['apiKey', 'none', 'oauth', 'adc'])
  */
 export const CATEGORY_VALUES = Object.freeze(['apikey', 'free', 'free-tier', 'local', 'oauth'])
 
-const REGISTRY_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), 'registry.json')
+import { registryJsonPath } from '../catalog.js'
+
+/** Resolved next to this module, and copied beside its compiled self by
+ *  `scripts/copy-registry.mjs` — the same rule `o2a/assets/` follows. */
+const REGISTRY_FILE = registryJsonPath()
 
 /** Freeze the shared data so one caller cannot hand another a mutated record. */
 function deepFreeze(value: any): any {

@@ -4,9 +4,9 @@
 > Con số này trả lời "có tên không", không trả lời "đúng hành vi không".
 
 - File code: **581**
-- Đã map: **376** · thiếu: **199**
-- Export quét: **1681** · không thấy ở đâu: **63**
-- File đã map nhưng có drift: **233**
+- Đã map: **377** · thiếu: **198**
+- Export quét: **1681** · không thấy ở đâu: **37**
+- File đã map nhưng có drift: **232**
 
 ## 1. File chưa có
 - `.github/workflows/build-macos.yml` → `.github/workflows/build-macos.yml`
@@ -206,7 +206,6 @@
 - `scripts/workspace-appearance-ui-test.mjs` → `scripts/workspace-appearance-ui-test.mjs`
 - `src/egress.js` → `egress.ts`
 - `src/extensions.js` → `extensions.ts`
-- `src/plugins.js` → `plugins.ts`
 - `worker/worker.js` → `worker/worker.js`
 
 ## 2. Export không xuất hiện trong toàn bộ bản port
@@ -215,7 +214,6 @@
 - `pageIcon` — packages/standalone/frontend/components/shell.tsx
 - `pageIdsFor` — packages/standalone/frontend/components/shell.tsx
 - `pageLabel` — packages/standalone/frontend/components/shell.tsx
-- `PluginPage` — packages/standalone/frontend/plugin-page.tsx
 - `verifyChannelCreditsRpc` — scripts/channel-credits-rpc-test.mjs
 - `verifyChannelCreditsUi` — scripts/channel-credits-ui-test.mjs
 - `verifyChannelImagePricing` — scripts/channel-image-pricing-test.mjs
@@ -246,32 +244,7 @@
 - `verifyRegistrySignature` — src/extensions.js
 - `parseRegistry` — src/extensions.js
 - `createExtensionRuntime` — src/extensions.js
-- `parseExtensionManifest` — src/extensions.js
-- `scanExtensionSource` — src/extensions.js
 - `findAgentCli` — src/magpie-engine.js
-- `PLUGIN_API_VERSION` — src/plugins.js
-- `PLUGIN_KINDS` — src/plugins.js
-- `PAGE_ICONS` — src/plugins.js
-- `PLUGIN_CAPABILITIES` — src/plugins.js
-- `safePluginPath` — src/plugins.js
-- `satisfiesApiVersion` — src/plugins.js
-- `parsePluginManifest` — src/plugins.js
-- `manifestHasChannel` — src/plugins.js
-- `manifestHasEnhancement` — src/plugins.js
-- `manifestHasPage` — src/plugins.js
-- `scanPageAsset` — src/plugins.js
-- `scanPageHtml` — src/plugins.js
-- `scanPageScript` — src/plugins.js
-- `scanPageStyle` — src/plugins.js
-- `stripStringsAndComments` — src/plugins.js
-- `CHANNEL_PACK_CHANNELS` — src/plugins.js
-- `CHANNEL_PACK_DISABLED` — src/plugins.js
-- `WORKBENCH_CLIENTS` — src/plugins.js
-- `LIBRARY_FORMATS` — src/plugins.js
-- `providerContributions` — src/plugins.js
-- `builtinDescriptors` — src/plugins.js
-- `REGISTRY_FALLBACK` — src/plugins.js
-- `pageBridgeSource` — src/plugins.js
 - `randomProjectId` — src/upstream.js
 
 ## 3. Definition thiếu trong đúng file port
