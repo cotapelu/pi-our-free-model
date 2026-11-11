@@ -4,8 +4,8 @@
 > Con số này trả lời "có tên không", không trả lời "đúng hành vi không".
 
 - File code: **581**
-- Đã map: **377** · thiếu: **198**
-- Export quét: **1681** · không thấy ở đâu: **37**
+- Đã map: **378** · thiếu: **197**
+- Export quét: **1681** · không thấy ở đâu: **32**
 - File đã map nhưng có drift: **232**
 
 ## 1. File chưa có
@@ -205,7 +205,6 @@
 - `scripts/workbench-ui-test.mjs` → `scripts/workbench-ui-test.mjs`
 - `scripts/workspace-appearance-ui-test.mjs` → `scripts/workspace-appearance-ui-test.mjs`
 - `src/egress.js` → `egress.ts`
-- `src/extensions.js` → `extensions.ts`
 - `worker/worker.js` → `worker/worker.js`
 
 ## 2. Export không xuất hiện trong toàn bộ bản port
@@ -239,11 +238,6 @@
 - `findMihomoBinary` — src/egress.js
 - `outletLabel` — src/egress.js
 - `readOutletSelection` — src/egress.js
-- `PINNED_EXTENSIONS_PUBLIC_KEY` — src/extensions.js
-- `registrySources` — src/extensions.js
-- `verifyRegistrySignature` — src/extensions.js
-- `parseRegistry` — src/extensions.js
-- `createExtensionRuntime` — src/extensions.js
 - `findAgentCli` — src/magpie-engine.js
 - `randomProjectId` — src/upstream.js
 
@@ -254,7 +248,7 @@
 - `index.js` → `index.ts`: readPackageVersion, distributionOf, fetchPoolSnapshot, eacAuthStatus, feedView, pushUpdate, settleOutletWatch, syncForward, syncForwardOnce, forwardKey, relayKey, lanAddresses, syncRelay, syncRelayOnce, chanRelayKey, rotateChanRelayKey, chanGatewayTarget, syncChanRelay, syncChanRelayOnce, chanRelayStatus, measureGatewayLatency, readOutletStatus, syncEgress, syncFreeLaneProxy, syncEgressOnce, scheduleOutletRestart, reloadFromDisk, applyUpgrade, syncWatcher, eventsRoute, helloPayload, emitTopology, httpError, sanitizeSettings, imageResolver, createApiRoutes, ackedSet, pick, readJson, publicTokenSaver, publicAggregate, publicProviderRegistry, publicLocalOptimize, optimizeConfig, clientSnippets, publicCombo, publicSettings, buildSummary, PKG_URL, PKG_DIR, ENTRY_URL, inject, ANNOUNCEMENT_VERSION, MANAGED_MESSAGE, logger, home, packageVersion, bunAvailable, generation, stores, distribution, managed, forward, forwardError, forwardNotice, relay, relayError, outletRelay, outletError, outletNode, profileNameOf, context, sealedCredentialOf, poolError, POOL_STALE_MS, poolCache, gatewayRoot, controller, timer, eacAuthCache, eacAuthRootOf, local, eacLoginPoller, eacAuth, prepared, cleared, MANAGED_FEED_VIEW, updater, updateNotifiedFor, refreshUpdatePush, disposed, pendingUpgrade, magpieEngine, extensionHookRuntime, magpieModels, extensions, modelRuntime, runForwarded, routes, registration, advertised, later, forwardSyncInFlight, desired, closing, minted, relaySyncInFlight, lan, currentLan, settledForward, chanRelay, chanRelayError, chanRelaySyncInFlight, targetNow, settled, latencyMeasureInFlight, outletSyncInFlight, outletFingerprint, mihomoPath, OUTLET_STABLE_MS, outletUpSince, outletRestartAttempts, outletRestartTimer, delay, pendingKey, watcher, safeReload, optional, fenceConnection, channelPack, stopped, logAdmissionRejection, section, previous, providerId, entries, catalog, hotReloadAvailable, rejection, registryTimer, period, handle, hours, egressWarned, positive, value, incoming, merged, proxyUrl, MAX_IMAGE_BYTES, attachments, hostPath, media, POOL_REASONS, marker, markerAt, apiPrefix, routePath, method, send, body, pluginAsset, upstreamPath, action, mutations, abort, polled, reason, visibility, egressPatch, egress, outcome, echo, image, responseStatus, out, MAX_API_BODY_BYTES, chunks, config, OPTIMIZATION_KINDS, publicView, running, lanAddress, shownKey, shownLanKey, sample, snippets, forwardInfo, update, defaultMaxTokens, unprobed
 - `packages/standalone/frontend/app.tsx` → `packages/standalone/frontend/app.tsx`: pluginPages, pageIds, pluginPage
 - `packages/standalone/frontend/components/shell.tsx` → `packages/standalone/frontend/components/shell.tsx`: pageIdsFor, pageLabel, pageIcon
-- `packages/standalone/management.mjs` → `packages/standalone/management.ts`: injectPluginBridge, servePluginAsset, PLUGIN_ASSET_RE, pluginAssetPath, pluginPageAsset, pluginBase, pageAsset
+- `packages/standalone/management.mjs` → `packages/standalone/management.ts`: injectPluginBridge, servePluginAsset, PLUGIN_ASSET_RE, pluginAssetPath, pluginPageAsset, pluginBase
 - `packages/standalone/service.mjs` → `packages/standalone/service.ts`: extensionHookRuntime, registryTimer
 - `scripts/build-legacy-payload.mjs` → `scripts/build-legacy-payload.mjs`: exportedNames, bundleToFile, o2aInlineAssets, keepParentExternals, source, names, segment, aliased, barrel, built, o2aModules, seenExports, o2aSpecs, coreSpecs, partBudget, mod, gzipAsync
 - `scripts/build-magpie-engine.mjs` → `scripts/build-magpie-engine.mjs`: patchDir, patches, patchDigests
@@ -262,10 +256,11 @@
 - `scripts/pack-standalone.mjs` → `scripts/pack-standalone.mjs`: sourceFiles
 - `src/adapter.js` → `adapter.ts`: freeLane, sessionSeed
 - `src/anthropic.js` → `gateway/anthropic.ts`: isObject, harnessImage, toolResultBlocks, assistantBlocks, reasoningEffortFor, sseFrame, contentDelta, ensureState, closeStreamingBlock, openStreamingBlock, toolSlot, openToolBlock, closeToolBlock, closeAllBlocks, hasToolBlock, anthropicFrames, usageOf, parseInput, anthropicMessage, toAnthropicUsage, foldAnthropicOutcome, countTokens, BALANCED_AT, DEEP_AT, budget, callId, maxTokens, slot, another, fragment, carried, failure, parsed, calls, bySlot, byId, textChars, images, rows, toolChars, toolCount, toolTokens
-- `src/bun-fetch.js` → `loopback-fetch.ts`: WORKER_SOURCE, receivedHeaders, webBody
+- `src/bun-fetch.js` → `loopback-fetch.ts`: receivedHeaders, webBody
 - `src/core/runtime.js` → `core/runtime.ts`: laneRow, setLaneState, laneGate, clearLaneBreaker, recordPassiveResult, noteFreeLaneOutcome, LANE_QUOTA_DEFAULT_MS, extensionCatalog, replacedLane, LISTING_MIN_INTERVAL_MS, lastListingAt
 - `src/core/stats.js` → `core/stats.ts`: empty
 - `src/core.js` → `core/runtime.ts`: laneRow, setLaneState, laneGate, clearLaneBreaker, recordPassiveResult, noteFreeLaneOutcome, LANE_QUOTA_DEFAULT_MS, extensionCatalog, replacedLane, LISTING_MIN_INTERVAL_MS, lastListingAt
+- `src/extensions.js` → `extensions.ts`: COVER_NAME_RE
 - `src/gemini.js` → `gateway/gemini.ts`: fields, geminiError, schema, functionPart, estimate, geminiEndpoint, upstreamError, MAX_PENDING_BYTES, methods, inline, file, ids, flush, kinds, blocks, thinking, effort, budget, prompt, cached, thoughts, input, secrets, safeMessage, rows, pageSize, pageToken, size, identity, declared, slots, sentIds, sentSignatures, signature, pendingBytes, truncated, sawText, sawThought, send, flushCall, hash, slot, result, failed, failure
 - `src/http.js` → `gateway/forward-server.ts`: deadlineFor, headRead, rawHtml, isHtmlPage, completeData, valueText
 - `src/kilo.js` → `kilo.ts`: kiloFetch, KILO_ATTRIBUTION, listingCache, listingETag, rawMeta, rawDetail, providerName, providerSuffix
