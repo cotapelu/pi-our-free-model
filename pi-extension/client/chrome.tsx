@@ -291,3 +291,55 @@ export function PanelError(props) {
       h('div', null, message)),
     h(Button, { kind: 'ghost', onClick: onRetry }, t('retry')))
 }
+
+/** Panel data loader with one-shot fetch and manual reload. */
+export function usePanel(fetchFn, deps) {
+  const [data, setData] = useState(undefined)
+  const [status, setStatus] = useState('loading')
+  const [error, setError] = useState('')
+  const load = useCallback(async () => {
+    setStatus('loading'); setError('')
+    try { const value = await fetchFn(); setData(value); setStatus('ready') }
+    catch (err) { setError(String(err?.message ?? err)); setStatus('error') }
+  }, deps)
+  useEffect(() => { void load() }, [load])
+  const reload = useCallback(() => void load(), [load])
+  const patch = useCallback(fn => setData(current => fn(current)), [])
+  return { data, status, error, reload, patch }
+}
+
+/** Provider display names for subscription accounts. */
+export const SUBSCRIPTION_PROVIDERS = {
+  codex: 'Codex',
+  claude: 'Claude',
+  gemini: 'Gemini',
+  kilo: 'Kilo',
+}
+
+/** Injected CSS for the embedded engine workspace iframe. */
+export const WORKSPACE_CSS = `
+  body { margin: 0; padding: 0; font-family: inherit; }
+  .engine-root { height: 100vh; display: flex; flex-direction: column; }
+  .engine-toolbar { padding: 8px 12px; border-bottom: 1px solid var(--dsw-alias-border-l1); }
+  .engine-content { flex: 1; overflow: auto; padding: 12px; }
+  .provider-card { border: 1px solid var(--dsw-alias-border-l1); border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+  .provider-card h3 { margin: 0 0 8px; font-size: 14px; }
+  .provider-card .models { display: flex; flex-wrap: wrap; gap: 4px; }
+  .provider-card .model-tag { font-size: 12px; padding: 2px 6px; border-radius: 4px; background: var(--dsw-alias-bg-layer-2); }
+`
+
+/** Simple icon component for workspace toolbar. */
+export function WorkspaceIcon({ name }) {
+  const icons = {
+    close: 'M4 4l16 16M20 4L4 20',
+    expand: 'M4 8V4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4',
+    refresh: 'M23 4v6h-6M1 20v-6h6',
+    settings: 'M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.15a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-2 2h-.44a2 2 0 0 1-2-2v-.44a2 2 0 0 1 1-1.72l.15-.15a2 2 0 0 0-.73-2.73l.22-.39a2 2 0 0 0 2.73-.73l.15-.08a2 2 0 0 1 1-1.72V4a2 2 0 0 1 2-2h.44a2 2 0 0 1 2 2v.18a2 2 0 0 0 1 1.73l.43.25a2 2 0 0 0 2 0l.15-.08a2 2 0 0 1 2.73.73l.22.39a2 2 0 0 0-.73 2.73l-.15.08a2 2 0 0 1-1 1.72V20a2 2 0 0 1-2 2h-.44a2 2 0 0 1-2-2v-.18a2 2 0 0 0-1-1.73l-.43-.25a2 2 0 0 0-2 0l-.15.08a2 2 0 0 1-2.73-.73l-.22-.38a2 2 0 0 0-.73-2.73l.15-.15a2 2 0 0 1 1-1.72V4a2 2 0 0 1 2-2h.44a2 2 0 0 1 2 2z',
+  }
+  const path = icons[name] || icons.expand
+  return h('svg', { viewBox: '0 0 24 24', width: 18, height: 18, 'aria-hidden': 'true' },
+    h('path', { d: path, fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }))
+}
+
+import { useState, useCallback, useEffect } from 'react'
+import { createElement as h } from 'react'

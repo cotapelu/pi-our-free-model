@@ -13,7 +13,7 @@
  */
 import fs from 'node:fs'
 import vm from 'node:vm'
-let source = fs.readFileSync(new URL('../../../client.js', import.meta.url), 'utf8')
+let source = fs.readFileSync(new URL('../../dsh-our-free-model/client.js', import.meta.url), 'utf8')
 function replaceOnce(from, to) {
   if (source.split(from).length !== 2) throw new Error(`共享页面替换位置改变：${from.slice(0, 90)}`)
   source = source.replace(from, to)

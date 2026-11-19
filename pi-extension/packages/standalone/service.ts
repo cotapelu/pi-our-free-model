@@ -40,6 +40,8 @@ import { createSubscriptions } from '../../subscriptions.js'
 import { createSubscriptionRuntime } from '../../subscription-completion.js'
 import { createMagpieEngine } from '../../magpie-engine.js'
 import { combineSubscriptionRuntimes, createMagpieModels } from '../../magpie-models.js'
+import { createExtensionRuntime } from '../../extensions.js'
+import { builtinDescriptors } from '../../plugins.js'
 
 const PRODUCT = 'our-free-model-standalone'
 const VERSION = JSON.parse(fs.readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version
@@ -167,6 +169,8 @@ export async function startStandalone({
   let subscriptions: any
   let magpieEngine: any
   let magpieModels: any
+  /** The OFM extension platform: marketplace client, sandboxed channel host, lane. */
+  let extensions: any
   let eac: any
   let timer: any
   let refreshInFlight: Promise<any> | undefined
@@ -285,15 +289,30 @@ export async function startStandalone({
     // The model workspace: the same embedded engine the plugin's settings page
     // uses, so both products answer "which providers, which models" the same way.
     magpieEngine = createMagpieEngine({ dataDir, logger })
+    // The extension runtime is created just below; the lazy reference gives the
+    // magpie lane the enhancement-hook seam without reordering boot.
+    let extensionHookRuntime: any = null
     magpieModels = createMagpieModels({
       engine: magpieEngine, stats: stores.stats, logger,
       onChanged: () => runtime?.syncAggregateCatalog?.(),
+      extensionRuntime: () => extensionHookRuntime,
     })
     const combinedSubscriptionRuntime = combineSubscriptionRuntimes(magpieModels, subscriptionRuntime)
+    // The OFM extension platform, same as the plugin's: the marketplace client,
+    // the sandboxed channel host, and the lane they contribute.
+    extensions = createExtensionRuntime({
+      dataDir, logger, hostVersion: VERSION,
+      onCatalogChanged: () => { try { runtime?.syncExtensionCatalog?.() } catch { /* boot ordering */ } },
+    })
+    extensionHookRuntime = extensions
+    // Built-ins register through the same kernel a third-party plugin uses: one
+    // list in the plugin center, not two worlds.
+    for (const descriptor of builtinDescriptors()) extensions.registerBuiltin(descriptor)
     runtime = createModelRuntime({
       ...stores, logger, attributionUserAgent: `${PRODUCT}/${VERSION}`,
       sealedCredential: eac.credential,
       subscriptionRuntime: combinedSubscriptionRuntime,
+      extensionRuntime: extensions,
     })
     channels = await createChannelRuntime({ dataDir, logger, stats: stores.stats })
     const core = runtime
@@ -354,6 +373,22 @@ export async function startStandalone({
     }
     await reconcileRelay()
 
+    void extensions.init().catch((error: any) => {
+      logger.warn?.(`our-free-model standalone: extension mount failed (${error?.message ?? error})`)
+    })
+    if (!process.env.OFM_TEST_UPSTREAM) extensions.startWatching({ intervalMs: 2000 })
+    void extensions.refreshRegistry().catch(() => {})
+    // The marketplace index refreshes on its own cadence too: an update that
+    // lands upstream should reach the Installed tab without the user opening
+    // the market first. The TTL cache keeps ticks cheap; failures are silent.
+    const registryTimer = setInterval(() => {
+      void extensions.refreshRegistry().catch(() => {})
+      // Same contract as the plugin side: the automatic updater rides the
+      // registry tick and only ever installs a soaked, still-enabled update.
+      if (settings.get().autoUpdateExtensions === true) void extensions.autoUpdate().catch(() => {})
+    }, 6 * 60 * 60 * 1000)
+    registryTimer.unref?.()
+
     function scheduleRefresh() {
       clearTimeout(timer)
       if (stopped || !refresh) return
@@ -387,10 +422,12 @@ export async function startStandalone({
         if (closing !== undefined) return closing
         stopped = true
         clearTimeout(timer)
+        clearInterval(registryTimer)
         const managementClosing = management.dispose()
         eac.dispose()
         magpieModels?.close()
         const engineClosing = magpieEngine?.close()
+        extensions?.dispose()
         runtime.dispose()
         closing = (async () => {
           try {

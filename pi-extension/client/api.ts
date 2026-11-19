@@ -62,6 +62,11 @@ export function ago(ts: unknown, locale?: string): string {
   return zh ? `${Math.round(hours / 24)} 天前` : `${Math.round(hours / 24)}d ago`
 }
 
+/** POST helper with the same timeout semantics. */
+export async function post(path: string, body: any, timeoutMs = 30_000): Promise<any> {
+  return api(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body), timeout: timeoutMs })
+}
+
 /** Clipboard, with the execCommand fallback a non-secure context still needs. */
 export function copy(text: string, done: (ok: boolean) => void): void {
   const finish = (ok: boolean) => done(ok)

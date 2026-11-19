@@ -31,12 +31,13 @@ export interface MagpieEngine {
 /**
  * Create a Magpie models provider that fetches the engine's live catalog.
  */
-export function createMagpieModels({ engine, stats, logger, onChanged = () => {}, fetchImpl = loopbackFetch }: {
+export function createMagpieModels({ engine, stats, logger, onChanged = () => {}, fetchImpl = loopbackFetch, extensionRuntime = () => null }: {
   engine: MagpieEngine
   stats: any
   logger: any
   onChanged?: () => void
   fetchImpl?: typeof loopbackFetch
+  extensionRuntime?: () => any
 }) {
   let models: MagpieModel[] = []
   let closed = false

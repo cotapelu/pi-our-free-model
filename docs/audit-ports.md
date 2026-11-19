@@ -3,10 +3,10 @@
 > Nguồn: `/home/quangtynu/Qcoder/pi-our-free-model/dsh-our-free-model`. Chạy `node scripts/audit-ports.mjs [--verbose]` để tạo lại.
 > Con số này trả lời "có tên không", không trả lời "đúng hành vi không".
 
-- File code: **581**
-- Đã map: **378** · thiếu: **197**
-- Export quét: **1681** · không thấy ở đâu: **32**
-- File đã map nhưng có drift: **232**
+- File code: **609**
+- Đã map: **383** · thiếu: **220**
+- Export quét: **1718** · không thấy ở đâu: **59**
+- File đã map nhưng có drift: **292**
 
 ## 1. File chưa có
 - `.github/workflows/build-macos.yml` → `.github/workflows/build-macos.yml`
@@ -16,22 +16,29 @@
 - `.github/workflows/test.yml` → `.github/workflows/test.yml`
 - `packages/desktop/ui/titlebar.js` → `packages/desktop/ui/titlebar.js`
 - `packages/standalone/channels/business.mjs` → `packages/standalone/channels/business.ts`
+- `packages/standalone/feedback.mjs` → `packages/standalone/feedback.ts`
 - `packages/standalone/frontend/channels.mjs` → `packages/standalone/frontend/channels.ts`
+- `packages/standalone/frontend/components/provider-icon.tsx` → `packages/standalone/frontend/components/provider-icon.tsx`
 - `packages/standalone/frontend/models-data.mjs` → `packages/standalone/frontend/models-data.ts`
-- `packages/standalone/frontend/plugin-page.css` → `packages/standalone/frontend/plugin-page.css`
-- `packages/standalone/frontend/plugin-page.tsx` → `packages/standalone/frontend/plugin-page.tsx`
-- `packages/standalone/frontend/plugins.css` → `packages/standalone/frontend/plugins.css`
-- `packages/standalone/frontend/plugins.tsx` → `packages/standalone/frontend/plugins.tsx`
+- `packages/standalone/frontend/motion/field.tsx` → `packages/standalone/frontend/motion/field.tsx`
+- `packages/standalone/frontend/motion/hooks.ts` → `packages/standalone/frontend/motion/hooks.ts`
+- `packages/standalone/frontend/motion/index.ts` → `packages/standalone/frontend/motion/index.ts`
 - `packages/standalone/frontend/settings-data.mjs` → `packages/standalone/frontend/settings-data.ts`
+- `packages/standalone/frontend/system/compat.css` → `packages/standalone/frontend/system/compat.css`
+- `packages/standalone/frontend/system/motion.css` → `packages/standalone/frontend/system/motion.css`
+- `packages/standalone/frontend/system/overview.css` → `packages/standalone/frontend/system/overview.css`
+- `packages/standalone/frontend/system/provider-icons.README.md` → `packages/standalone/frontend/system/provider-icons.README.md`
+- `packages/standalone/frontend/system/provider-icons.ts` → `packages/standalone/frontend/system/provider-icons.ts`
+- `packages/standalone/frontend/system/shell.css` → `packages/standalone/frontend/system/shell.css`
+- `packages/standalone/frontend/system/tokens.css` → `packages/standalone/frontend/system/tokens.css`
 - `packages/standalone/frontend/theme.mjs` → `packages/standalone/frontend/theme.ts`
 - `packages/standalone/frontend/usage-data.mjs` → `packages/standalone/frontend/usage-data.ts`
 - `packages/standalone/frontend/visibility-data.mjs` → `packages/standalone/frontend/visibility-data.ts`
-- `packages/standalone/package-lock.json` → `packages/standalone/package-lock.json`
 - `packages/standalone/vite.config.mjs` → `packages/standalone/vite.config.ts`
-- `packages/standalone/web/channels-CqFHCMz8.js` → `packages/standalone/web/channels-CqFHCMz8.js`
-- `packages/standalone/web/models-ChmCQDPX.js` → `packages/standalone/web/models-ChmCQDPX.js`
-- `packages/standalone/web/settings-pl214s3V.js` → `packages/standalone/web/settings-pl214s3V.js`
-- `packages/standalone/web/usage-DiusNYSE.js` → `packages/standalone/web/usage-DiusNYSE.js`
+- `packages/standalone/web/channels-CUES-TF9.js` → `packages/standalone/web/channels-CUES-TF9.js`
+- `packages/standalone/web/models-DKeafDX5.js` → `packages/standalone/web/models-DKeafDX5.js`
+- `packages/standalone/web/settings-aL0k74X_.js` → `packages/standalone/web/settings-aL0k74X_.js`
+- `packages/standalone/web/usage-DgPpz8WU.js` → `packages/standalone/web/usage-DgPpz8WU.js`
 - `packages/standalone/web/visibility-data-BTNpyYn8.js` → `packages/standalone/web/visibility-data-BTNpyYn8.js`
 - `scripts/_render-probe.mjs` → `scripts/_render-probe.mjs`
 - `scripts/aggregate-test.mjs` → `scripts/aggregate-test.mjs`
@@ -56,6 +63,7 @@
 - `scripts/channel-storage-compat-test.mjs` → `scripts/channel-storage-compat-test.mjs`
 - `scripts/client-terminal-test.mjs` → `scripts/client-terminal-test.mjs`
 - `scripts/combo-advance-test.mjs` → `scripts/combo-advance-test.mjs`
+- `scripts/compression-rewrite-benchmark.mjs` → `scripts/compression-rewrite-benchmark.mjs`
 - `scripts/desktop-test.mjs` → `scripts/desktop-test.mjs`
 - `scripts/desktop-update-test.mjs` → `scripts/desktop-update-test.mjs`
 - `scripts/eac-abort-test.mjs` → `scripts/eac-abort-test.mjs`
@@ -71,6 +79,12 @@
 - `scripts/extensions-live-verify.mjs` → `scripts/extensions-live-verify.mjs`
 - `scripts/extensions-test.mjs` → `scripts/extensions-test.mjs`
 - `scripts/feed-test.mjs` → `scripts/feed-test.mjs`
+- `scripts/feedback-desktop-verify.mjs` → `scripts/feedback-desktop-verify.mjs`
+- `scripts/feedback-e2e-test.mjs` → `scripts/feedback-e2e-test.mjs`
+- `scripts/feedback-plugin-test.mjs` → `scripts/feedback-plugin-test.mjs`
+- `scripts/feedback-plugin-ui-test.mjs` → `scripts/feedback-plugin-ui-test.mjs`
+- `scripts/feedback-proxy-test.mjs` → `scripts/feedback-proxy-test.mjs`
+- `scripts/feedback-server-test.mjs` → `scripts/feedback-server-test.mjs`
 - `scripts/fingerprint-test.mjs` → `scripts/fingerprint-test.mjs`
 - `scripts/fixtures/README.md` → `scripts/fixtures/README.md`
 - `scripts/fixtures/updater-1.3.1.mjs` → `scripts/fixtures/updater-1.3.1.mjs`
@@ -88,13 +102,16 @@
 - `scripts/heatmap-test.mjs` → `scripts/heatmap-test.mjs`
 - `scripts/host-selftest.mjs` → `scripts/host-selftest.mjs`
 - `scripts/image-pricing-host-test.mjs` → `scripts/image-pricing-host-test.mjs`
+- `scripts/independent-tool-live-test.mjs` → `scripts/independent-tool-live-test.mjs`
 - `scripts/kilo-test.mjs` → `scripts/kilo-test.mjs`
 - `scripts/legacy-upgrade-test.mjs` → `scripts/legacy-upgrade-test.mjs`
 - `scripts/lib/fake-kernel.mjs` → `scripts/lib/fake-kernel.mjs`
+- `scripts/lib/playwright.mjs` → `scripts/lib/playwright.mjs`
 - `scripts/lib/plugin-e2e-server.mjs` → `scripts/lib/plugin-e2e-server.mjs`
 - `scripts/live-audit.mjs` → `scripts/live-audit.mjs`
 - `scripts/live-feature-verify.mjs` → `scripts/live-feature-verify.mjs`
 - `scripts/local-optimize-test.mjs` → `scripts/local-optimize-test.mjs`
+- `scripts/local-rewrite-benchmark.mjs` → `scripts/local-rewrite-benchmark.mjs`
 - `scripts/magpie-engine-patches/README.md` → `scripts/magpie-engine-patches/README.md`
 - `scripts/magpie-engine-soak.mjs` → `scripts/magpie-engine-soak.mjs`
 - `scripts/magpie-engine-test.mjs` → `scripts/magpie-engine-test.mjs`
@@ -114,6 +131,7 @@
 - `scripts/offline-test.mjs` → `scripts/offline-test.mjs`
 - `scripts/open-external-test.mjs` → `scripts/open-external-test.mjs`
 - `scripts/opencode-parity-test.mjs` → `scripts/opencode-parity-test.mjs`
+- `scripts/pack-scoped-npm.mjs` → `scripts/pack-scoped-npm.mjs`
 - `scripts/picker-test.mjs` → `scripts/picker-test.mjs`
 - `scripts/picks-test.mjs` → `scripts/picks-test.mjs`
 - `scripts/picks-ui-test.mjs` → `scripts/picks-ui-test.mjs`
@@ -184,6 +202,7 @@
 - `scripts/subscription-wiring-test.mjs` → `scripts/subscription-wiring-test.mjs`
 - `scripts/subscriptions-test.mjs` → `scripts/subscriptions-test.mjs`
 - `scripts/test-all.mjs` → `scripts/test-all.mjs`
+- `scripts/toolshape-rewrite-benchmark.mjs` → `scripts/toolshape-rewrite-benchmark.mjs`
 - `scripts/truncation-test.mjs` → `scripts/truncation-test.mjs`
 - `scripts/trust-test.mjs` → `scripts/trust-test.mjs`
 - `scripts/tui-test.mjs` → `scripts/tui-test.mjs`
@@ -204,15 +223,35 @@
 - `scripts/workbench-test.mjs` → `scripts/workbench-test.mjs`
 - `scripts/workbench-ui-test.mjs` → `scripts/workbench-ui-test.mjs`
 - `scripts/workspace-appearance-ui-test.mjs` → `scripts/workspace-appearance-ui-test.mjs`
+- `server/feedback/README.md` → `server/feedback/README.md`
+- `server/feedback/server.mjs` → `server/feedback/server.mjs`
 - `src/egress.js` → `egress.ts`
+- `src/o2a/assets/ofm-agent-context.txt` → `o2a/assets/ofm-agent-context.txt`
+- `src/o2a/assets/ofm-tool-contracts.json` → `o2a/assets/ofm-tool-contracts.json`
 - `worker/worker.js` → `worker/worker.js`
 
 ## 2. Export không xuất hiện trong toàn bộ bản port
 - `ANNOUNCEMENT_VERSION` — index.js
 - `createApiRoutes` — index.js
+- `createFeedback` — packages/standalone/feedback.mjs
 - `pageIcon` — packages/standalone/frontend/components/shell.tsx
 - `pageIdsFor` — packages/standalone/frontend/components/shell.tsx
 - `pageLabel` — packages/standalone/frontend/components/shell.tsx
+- `mountMotionField` — packages/standalone/frontend/motion/field.tsx
+- `useMotionField` — packages/standalone/frontend/motion/field.tsx
+- `useSpotlight` — packages/standalone/frontend/motion/hooks.ts
+- `useTilt` — packages/standalone/frontend/motion/hooks.ts
+- `useReveal` — packages/standalone/frontend/motion/hooks.ts
+- `useMagnetic` — packages/standalone/frontend/motion/hooks.ts
+- `useParallax` — packages/standalone/frontend/motion/hooks.ts
+- `useMotionSetting` — packages/standalone/frontend/motion/hooks.ts
+- `lerp` — packages/standalone/frontend/motion/index.ts
+- `motionPreference` — packages/standalone/frontend/motion/index.ts
+- `saveMotionPreference` — packages/standalone/frontend/motion/index.ts
+- `motionAllowed` — packages/standalone/frontend/motion/index.ts
+- `pressScale` — packages/standalone/frontend/motion/index.ts
+- `easeOutExpo` — packages/standalone/frontend/motion/index.ts
+- `PROVIDER_ICONS` — packages/standalone/frontend/system/provider-icons.ts
 - `verifyChannelCreditsRpc` — scripts/channel-credits-rpc-test.mjs
 - `verifyChannelCreditsUi` — scripts/channel-credits-ui-test.mjs
 - `verifyChannelImagePricing` — scripts/channel-image-pricing-test.mjs
@@ -224,6 +263,8 @@
 - `fakeContext` — scripts/lib/fake-kernel.mjs
 - `FakeRequest` — scripts/lib/fake-kernel.mjs
 - `callRoute` — scripts/lib/fake-kernel.mjs
+- `loadPlaywright` — scripts/lib/playwright.mjs
+- `loadChromium` — scripts/lib/playwright.mjs
 - `verifyQoderEffortOrder` — scripts/qoder-effort-order-test.mjs
 - `verifyChannelFilters` — scripts/standalone-channel-filter-test.mjs
 - `verifyLoginLaunchers` — scripts/standalone-login-terminal-test.mjs
@@ -238,18 +279,34 @@
 - `findMihomoBinary` — src/egress.js
 - `outletLabel` — src/egress.js
 - `readOutletSelection` — src/egress.js
+- `feedbackBaseOf` — src/feed.js
 - `findAgentCli` — src/magpie-engine.js
+- `restoreResponsesToolName` — src/messages.js
+- `WINDOW_HOURS` — src/model-test.js
+- `siteRootFor` — src/model-test.js
+- `perfFrom` — src/model-test.js
+- `seriesFrom` — src/model-test.js
+- `readSeries` — src/model-test.js
+- `readPerf` — src/model-test.js
+- `truncateWindow` — src/token-saver/rtk/filters/smartTruncate.js
 - `randomProjectId` — src/upstream.js
 
 ## 3. Definition thiếu trong đúng file port
 - `adapter/dsh-llm.d.ts` → `packages/standalone/frontend/types.ts`: attributionHeaders
 - `adapter/kernel.js` → `adapter.ts`: resolveAttributionUserAgent, headers, agent
-- `client.js` → `client`: sameChannelTransport, channelTransport, closeLoginPopup, expiryText, ChannelCard, ChannelsPage, todayKey, ToggleRow, SubscriptionImport, SubscriptionWindow, SubscriptionAccount, SubscriptionsPage, ModelPicker, ChainCapacity, WorkspaceIcon, ModelWorkspace, WorkspacePage, ExtensionsPage, extensionAvatar, ExtensionCover, ExtensionDetail, announcementPortalHost, PageBody, localeTag, reloadNoticePlan, announceReloadNotice, AnnouncementGate, ReactDOM, NS, inject, SPONSOR_CARD_URL, SPONSOR_LOGO, idx, EAC_LOGIN_KEY, avg, sequence, raf, CHANNEL_ICONS, BRAND_ICON, CHANNEL_PROVIDERS, CHANNEL_CREDITS, ctxRef, readTransport, ZCODE_PROVIDER_KEY, modelBatchPending, balancePending, balanceGeneration, claimPending, creditCapability, loginAttempt, chooseZcodeProvider, balanceLabel, accountsCount, modelsTotal, modelsOff, chanState, stateText, loadAccounts, loadModels, loadCredits, loadBalances, balanceOf, balancesTotal, balancesKnown, balanceFailures, onEvent, toggle, startLogin, accountAction, setAllModels, removeAccount, successText, failureText, creditFor, loadAuto, toggleAuto, statusGeneration, statusRetry, statusRequest, statusApplied, loadStatus, transport, onError, stateOf, LEDGER_EMPTY, ttftSum, pslot, aslot, byModel, AGG_AUTH, SAVER_LEVEL, LANE_LABEL, AGG_UNUSABLE, parseModelIds, miniBtn, auths, matched, clearKey, SUBSCRIPTION_PROVIDERS, fileRef, readEpoch, clearCredentials, readFile, epoch, contents, submit, sameWindow, modelIds, mutate, labels, strategyLabels, byId, EFFECTS_KEY, TAB_KEY, TABS, WORKSPACE_CSS, anchor, closeButton, syncTheme, themed, colorScheme, wasInert, focused, frameEscape, bindFrame, doc, frameTimer, engineAction, toolbar, sections, toggleEffects, shellRef, inViewport, tabRefs, catalogPending, runCatalog, searchRef, onKey, patchRegistryRow, installFromDetail, registryById, indexRows, channelCount, installedSorted, ua, updatesById, soakHint, auditLabel, sourceLabel, updateAll, toggleAutoUpdate, exportShelf, shelf, importShelf, runSelfTest, cardFor, hasCover, blurb, hostGate, hostHint, tagRow, acquire, selfTest, initial, dialogRef, origins, repositoryHost, canAcquire, PAGES, seen, osEnabled, disposed, retries, errCount, view
-- `index.js` → `index.ts`: readPackageVersion, distributionOf, fetchPoolSnapshot, eacAuthStatus, feedView, pushUpdate, settleOutletWatch, syncForward, syncForwardOnce, forwardKey, relayKey, lanAddresses, syncRelay, syncRelayOnce, chanRelayKey, rotateChanRelayKey, chanGatewayTarget, syncChanRelay, syncChanRelayOnce, chanRelayStatus, measureGatewayLatency, readOutletStatus, syncEgress, syncFreeLaneProxy, syncEgressOnce, scheduleOutletRestart, reloadFromDisk, applyUpgrade, syncWatcher, eventsRoute, helloPayload, emitTopology, httpError, sanitizeSettings, imageResolver, createApiRoutes, ackedSet, pick, readJson, publicTokenSaver, publicAggregate, publicProviderRegistry, publicLocalOptimize, optimizeConfig, clientSnippets, publicCombo, publicSettings, buildSummary, PKG_URL, PKG_DIR, ENTRY_URL, inject, ANNOUNCEMENT_VERSION, MANAGED_MESSAGE, logger, home, packageVersion, bunAvailable, generation, stores, distribution, managed, forward, forwardError, forwardNotice, relay, relayError, outletRelay, outletError, outletNode, profileNameOf, context, sealedCredentialOf, poolError, POOL_STALE_MS, poolCache, gatewayRoot, controller, timer, eacAuthCache, eacAuthRootOf, local, eacLoginPoller, eacAuth, prepared, cleared, MANAGED_FEED_VIEW, updater, updateNotifiedFor, refreshUpdatePush, disposed, pendingUpgrade, magpieEngine, extensionHookRuntime, magpieModels, extensions, modelRuntime, runForwarded, routes, registration, advertised, later, forwardSyncInFlight, desired, closing, minted, relaySyncInFlight, lan, currentLan, settledForward, chanRelay, chanRelayError, chanRelaySyncInFlight, targetNow, settled, latencyMeasureInFlight, outletSyncInFlight, outletFingerprint, mihomoPath, OUTLET_STABLE_MS, outletUpSince, outletRestartAttempts, outletRestartTimer, delay, pendingKey, watcher, safeReload, optional, fenceConnection, channelPack, stopped, logAdmissionRejection, section, previous, providerId, entries, catalog, hotReloadAvailable, rejection, registryTimer, period, handle, hours, egressWarned, positive, value, incoming, merged, proxyUrl, MAX_IMAGE_BYTES, attachments, hostPath, media, POOL_REASONS, marker, markerAt, apiPrefix, routePath, method, send, body, pluginAsset, upstreamPath, action, mutations, abort, polled, reason, visibility, egressPatch, egress, outcome, echo, image, responseStatus, out, MAX_API_BODY_BYTES, chunks, config, OPTIMIZATION_KINDS, publicView, running, lanAddress, shownKey, shownLanKey, sample, snippets, forwardInfo, update, defaultMaxTokens, unprobed
+- `client.js` → `client`: usePerfFigures, PerfCharts, usePerfSeries, PerfTrendChart, perfTone, niceCeil, formatLatency, formatSpeed, todayKey, ToggleRow, SubscriptionWindow, ModelPicker, ChainCapacity, inject, SPONSOR_CARD_URL, SPONSOR_LOGO, idx, lo, tickLabel, hourLabel, magnitude, candidate, perfFigures, EAC_LOGIN_KEY, avg, sequence, raf, stateOf, LEDGER_EMPTY, ttftSum, pslot, aslot, byModel, AGG_AUTH, SAVER_LEVEL, LANE_LABEL, AGG_UNUSABLE, parseModelIds, miniBtn, auths, matched, clearKey, fileRef, readEpoch, clearCredentials, readFile, epoch, contents, sameWindow, modelIds, labels, strategyLabels, byId, osEnabled, disposed, retries, errCount
+- `index.js` → `index.ts`: readPackageVersion, distributionOf, fetchPoolSnapshot, eacAuthStatus, feedView, pushUpdate, settleOutletWatch, syncForward, syncForwardOnce, forwardKey, relayKey, lanAddresses, syncRelay, syncRelayOnce, chanRelayKey, rotateChanRelayKey, chanGatewayTarget, syncChanRelay, syncChanRelayOnce, chanRelayStatus, measureGatewayLatency, readOutletStatus, syncEgress, syncFreeLaneProxy, syncEgressOnce, scheduleOutletRestart, reloadFromDisk, applyUpgrade, syncWatcher, eventsRoute, helloPayload, emitTopology, httpError, sanitizeSettings, imageResolver, perfSnapshot, createApiRoutes, ackedSet, pick, readJson, publicTokenSaver, publicAggregate, publicProviderRegistry, publicLocalOptimize, optimizeConfig, clientSnippets, publicCombo, publicSettings, buildSummary, PKG_URL, PKG_DIR, ENTRY_URL, inject, ANNOUNCEMENT_VERSION, MANAGED_MESSAGE, logger, home, packageVersion, bunAvailable, generation, stores, distribution, managed, forward, forwardError, forwardNotice, relay, relayError, outletRelay, outletError, outletNode, profileNameOf, context, sealedCredentialOf, poolError, POOL_STALE_MS, poolCache, gatewayRoot, controller, timer, eacAuthCache, eacAuthRootOf, local, eacLoginPoller, eacAuth, prepared, cleared, feedback, MANAGED_FEED_VIEW, updater, updateNotifiedFor, refreshUpdatePush, disposed, pendingUpgrade, magpieEngine, extensionHookRuntime, magpieModels, extensions, modelRuntime, runForwarded, routes, registration, advertised, later, forwardSyncInFlight, desired, closing, minted, relaySyncInFlight, lan, currentLan, settledForward, chanRelay, chanRelayError, chanRelaySyncInFlight, targetNow, settled, latencyMeasureInFlight, outletSyncInFlight, outletFingerprint, mihomoPath, OUTLET_STABLE_MS, outletUpSince, outletRestartAttempts, outletRestartTimer, delay, pendingKey, watcher, safeReload, optional, fenceConnection, channelPack, stopped, logAdmissionRejection, section, previous, providerId, entries, catalog, hotReloadAvailable, rejection, registryTimer, period, handle, hours, egressWarned, positive, value, incoming, merged, proxyUrl, MAX_IMAGE_BYTES, attachments, hostPath, media, POOL_REASONS, PERF_FRESH_MS, perfCache, perfPending, marker, markerAt, apiPrefix, routePath, method, send, body, pluginAsset, upstreamPath, modelId, series, action, mutations, abort, polled, reason, visibility, egressPatch, egress, outcome, echo, image, responseStatus, out, MAX_API_BODY_BYTES, chunks, config, OPTIMIZATION_KINDS, publicView, running, lanAddress, shownKey, shownLanKey, sample, snippets, forwardInfo, update, defaultMaxTokens, unprobed
+- `packages/desktop/src-tauri/src/lib.rs` → `packages/desktop/src-tauri/src/lib.rs`: scale, work_width, work_height, min_width, min_height, width, height, work
+- `packages/standalone/channels/worker.mjs` → `packages/standalone/channels/worker.ts`: friendlyModelId, modelAliases, clean, idx, aliases, unavailable, alias, key, aliasesByModel, baseRow, incomingModel
+- `packages/standalone/frontend/agents.tsx` → `packages/standalone/frontend/agents.tsx`: attached, toggle, clientReveal, accountReveal
 - `packages/standalone/frontend/app.tsx` → `packages/standalone/frontend/app.tsx`: pluginPages, pageIds, pluginPage
-- `packages/standalone/frontend/components/shell.tsx` → `packages/standalone/frontend/components/shell.tsx`: pageIdsFor, pageLabel, pageIcon
+- `packages/standalone/frontend/components/overview.tsx` → `packages/standalone/frontend/components/overview.tsx`: sparkGeometry, MetricCard, points, x, y, tilt, spot, attach, spark, totalTokens, recovered, tokens, reveal, quickTilt, quickSpot, attachQuick
+- `packages/standalone/frontend/components/shell.tsx` → `packages/standalone/frontend/components/shell.tsx`: pageIdsFor, MotionToggle, pageLabel, pageIcon, navRef, scroll, active, navRect, activeRect, delta, timer
+- `packages/standalone/frontend/library.tsx` → `packages/standalone/frontend/library.tsx`: reveal
+- `packages/standalone/frontend/providers.tsx` → `packages/standalone/frontend/providers.tsx`: reveal
+- `packages/standalone/frontend/usage.tsx` → `packages/standalone/frontend/usage.tsx`: MetricValue, animated
 - `packages/standalone/management.mjs` → `packages/standalone/management.ts`: injectPluginBridge, servePluginAsset, PLUGIN_ASSET_RE, pluginAssetPath, pluginPageAsset, pluginBase
-- `packages/standalone/service.mjs` → `packages/standalone/service.ts`: extensionHookRuntime, registryTimer
+- `packages/standalone/web/app.js` → `packages/standalone/web/app.js`: B5
 - `scripts/build-legacy-payload.mjs` → `scripts/build-legacy-payload.mjs`: exportedNames, bundleToFile, o2aInlineAssets, keepParentExternals, source, names, segment, aliased, barrel, built, o2aModules, seenExports, o2aSpecs, coreSpecs, partBudget, mod, gzipAsync
 - `scripts/build-magpie-engine.mjs` → `scripts/build-magpie-engine.mjs`: patchDir, patches, patchDigests
 - `scripts/build-manifest.mjs` → `scripts/build-manifest.mjs`: desktopRoot, desktopVersions, lock
@@ -257,24 +314,54 @@
 - `src/adapter.js` → `adapter.ts`: freeLane, sessionSeed
 - `src/anthropic.js` → `gateway/anthropic.ts`: isObject, harnessImage, toolResultBlocks, assistantBlocks, reasoningEffortFor, sseFrame, contentDelta, ensureState, closeStreamingBlock, openStreamingBlock, toolSlot, openToolBlock, closeToolBlock, closeAllBlocks, hasToolBlock, anthropicFrames, usageOf, parseInput, anthropicMessage, toAnthropicUsage, foldAnthropicOutcome, countTokens, BALANCED_AT, DEEP_AT, budget, callId, maxTokens, slot, another, fragment, carried, failure, parsed, calls, bySlot, byId, textChars, images, rows, toolChars, toolCount, toolTokens
 - `src/bun-fetch.js` → `loopback-fetch.ts`: receivedHeaders, webBody
-- `src/core/runtime.js` → `core/runtime.ts`: laneRow, setLaneState, laneGate, clearLaneBreaker, recordPassiveResult, noteFreeLaneOutcome, LANE_QUOTA_DEFAULT_MS, extensionCatalog, replacedLane, LISTING_MIN_INTERVAL_MS, lastListingAt
+- `src/core/completion.js` → `core/completion.ts`: bare, ns
+- `src/core/runtime.js` → `core/runtime.ts`: laneRow, setLaneState, laneGate, clearLaneBreaker, recordPassiveResult, noteFreeLaneOutcome, LANE_QUOTA_DEFAULT_MS, LISTING_MIN_INTERVAL_MS, lastListingAt
 - `src/core/stats.js` → `core/stats.ts`: empty
-- `src/core.js` → `core/runtime.ts`: laneRow, setLaneState, laneGate, clearLaneBreaker, recordPassiveResult, noteFreeLaneOutcome, LANE_QUOTA_DEFAULT_MS, extensionCatalog, replacedLane, LISTING_MIN_INTERVAL_MS, lastListingAt
+- `src/core.js` → `core/runtime.ts`: laneRow, setLaneState, laneGate, clearLaneBreaker, recordPassiveResult, noteFreeLaneOutcome, LANE_QUOTA_DEFAULT_MS, LISTING_MIN_INTERVAL_MS, lastListingAt
+- `src/eac.js` → `eac.ts`: proxyUrl, forward, abortDial, proxyAuth
 - `src/extensions.js` → `extensions.ts`: COVER_NAME_RE
+- `src/feed.js` → `feed.ts`: feedbackBaseOf, feedbackCall, createFeedback, FEEDBACK_DEFAULT_BASE, FEEDBACK_MAX_TITLE, FEEDBACK_MAX_DETAIL, FEEDBACK_KINDS, feedbackFail, code, call, token, auth, kind, detail
+- `src/forward.js` → `gateway/forward-server.ts`: restoreCall, itemIndexes, responseSuffix, announceReasoning, reasoningRow
 - `src/gemini.js` → `gateway/gemini.ts`: fields, geminiError, schema, functionPart, estimate, geminiEndpoint, upstreamError, MAX_PENDING_BYTES, methods, inline, file, ids, flush, kinds, blocks, thinking, effort, budget, prompt, cached, thoughts, input, secrets, safeMessage, rows, pageSize, pageToken, size, identity, declared, slots, sentIds, sentSignatures, signature, pendingBytes, truncated, sawText, sawThought, send, flushCall, hash, slot, result, failed, failure
 - `src/http.js` → `gateway/forward-server.ts`: deadlineFor, headRead, rawHtml, isHtmlPage, completeData, valueText
 - `src/kilo.js` → `kilo.ts`: kiloFetch, KILO_ATTRIBUTION, listingCache, listingETag, rawMeta, rawDetail, providerName, providerSuffix
-- `src/local-optimize.js` → `gateway/optimize.ts`: quotaAnswer, prefixAnswer, titleAnswer, suggestionAnswer, filepathAnswer, top, DETECTORS
+- `src/local-optimize.js` → `gateway/optimize.ts`: subcommands, readers, argumentFlags, assignment, escaped, executable, suppliedPattern, systems, top, end
 - `src/magpie-engine.js` → `magpie-engine.ts`: engineAppearanceBridge, engineProductCopy, engineDisplayControls, findAgentCli, gatewayURL, runController, webPort, ownedID, savedKey, webKey, agentHome, agentRoaming, agentLocal, revisionFile, previousRevision, spawnFailed, nominated
 - `src/magpie-models.js` → `magpie-models.ts`: defaultInferenceTransport, catalogFetch, inferenceTransport
-- `src/o2a.js` → `o2a.ts`: OFFICIAL_PROMPT_V2, OFFICIAL_TOOLS_V2, messages2, droppedCalls2, changed2, choice2
+- `src/messages.js` → `messages.ts`: restoreResponsesToolName, pushTool, childName
+- `src/model-test.js` → `model-test.ts`: siteRootFor, metricOf, tickOf, perfFrom, pointOf, seriesFrom, readSeries, readPerf, METRICS_TIMEOUT_MS, WINDOW_HOURS, SETTLING_GAP, path, n, rate, latency, speed, series, ticks, reference, ts, rows, url, models, perf
+- `src/o2a/gateway-body.js` → `o2a/gateway-body.ts`: options
+- `src/o2a/headers.js` → `o2a/headers.ts`: entropy
+- `src/o2a/identity.js` → `o2a/identity.ts`: processSalt, period
+- `src/o2a/official-prompt.js` → `o2a/official-prompt.ts`: id, result, prepend, key
+- `src/o2a/official-tools.js` → `o2a/official-tools.ts`: fn
+- `src/o2a/tool-renames.js` → `o2a/tool-renames.ts`: lower
+- `src/o2a/toolshape.js` → `o2a/toolshape.ts`: preserved, target, records, blocks, renameFunction, mapChanged
+- `src/o2a.js` → `o2a.ts`: processSalt, OFFICIAL_PROMPT_V2, OFFICIAL_TOOLS_V2, prepend, renameFunction, mapChanged
 - `src/probe.js` → `gateway/probe.ts`: probeModel, buildPing, detectEgress, probeCatalog, ECHO_SOURCES, PING_PROMPT, started, body, parsed, controller, relayAbort, response, payload, ip, country, results, cursor, workers, index, startedAt, result
+- `src/route/classify.js` → `gateway/classify.ts`: selectedVerdict, exponent, accountAuth, accountPermission, accountRate, providerCapacity, missingModel, transientServer, candidates, textRules, statusRules, selected, label, requestError, amount
 - `src/store.js` → `gateway/store.ts`: resolveDshHome, savingsSample, fromEnv, raw, lifetimeModels
-- `src/token-saver/inject.js` → `token-saver/inject.ts`: result
-- `src/token-saver/rtk/index.js` → `token-saver/applyFilter.ts`: compressMessages, compressKiroFormat, compressText, formatRtkLog, compressRequest, compressChatPayload, compressMessagesPayload, compressResponsesPayload, describeSavings, humanBytes, resolveEnabled, items, stats, msg, part, block, state, allMessages, toolResults, bytesIn, saved, pct, filters, enabled, before, after, hits
+- `src/token-saver/inject.js` → `token-saver/inject.ts`: stripContent, stripRows, result, value, position
+- `src/token-saver/prompts.js` → `token-saver/prompts.ts`: answerBoundary, answerLevels, codeBoundary, codeLevels
+- `src/token-saver/rtk/autodetect.js` → `token-saver/autodetect.ts`: nonempty, trimmed, sampled, count
+- `src/token-saver/rtk/filters/buildOutput.js` → `token-saver/filters/buildOutput.ts`: summaryPattern, warningCount, diagnostic, newline, end, row, text, result
+- `src/token-saver/rtk/filters/dedupLog.js` → `token-saver/filters/dedupLog.ts`: output, offset, duplicates, newline, row, empty
+- `src/token-saver/rtk/filters/find.js` → `token-saver/filters/find.ts`: groups, start, newline, end, separator, group, directories
+- `src/token-saver/rtk/filters/gitDiff.js` → `token-saver/filters/gitDiff.ts`: newline, end, row, boundary, separator, addition, deletion
+- `src/token-saver/rtk/filters/gitLog.js` → `token-saver/filters/gitLog.ts`: newline, row
+- `src/token-saver/rtk/filters/gitStatus.js` → `token-saver/filters/gitStatus.ts`: offset, newline, end, row, heading, categories, detail
+- `src/token-saver/rtk/filters/grep.js` → `token-saver/filters/grep.ts`: offset, newline, end, row, hit, group
+- `src/token-saver/rtk/filters/ls.js` → `token-saver/filters/ls.ts`: excluded, dateColumn, extensions, offset, newline, ranked, labels
+- `src/token-saver/rtk/filters/searchList.js` → `token-saver/filters/searchList.ts`: firstBreak, groups, offset, newline, end, row, group, output
+- `src/token-saver/rtk/filters/smartTruncate.js` → `token-saver/filters/smartTruncate.ts`: truncateWindow, headEnd, position, tailStart, removed
+- `src/token-saver/rtk/filters/tree.js` → `token-saver/filters/tree.ts`: retained, count, lastContent, offset, newline, end, row, content
+- `src/token-saver/rtk/hitLine.js` → `token-saver/hitLine.ts`: delimiter, valueStart, offset, newline, end
+- `src/token-saver/rtk/index.js` → `token-saver/applyFilter.ts`: compressText, transform, walk, walkKiro, compressMessages, compressRequest, formatRtkLog, describeSavings, humanBytes, before, candidate, content, results, state, items, stats, enabled, filters, saved, percentage, after, hits, prefix, percent
+- `src/token-saver.js` → `token-saver/index.ts`: truncateWindow, deletion, summaryPattern, warningCount, dateColumn, lastContent, headEnd, firstBreak, answerBoundary, answerLevels, codeBoundary, codeLevels
 - `src/updater.js` → `updater.ts`: escaped
-- `src/upstream.js` → `upstream.ts`: plausibleSession, isMuseSpark, definitionOf, randomProjectId, O2A_PORTED_VERSION, MAX_SESSION_LENGTH, SESSION_PLAUSIBILITY_MS
-- `vendor/channel-pack/pack.js` → `vendor/channel-pack/pack.js`: setHeader, isUndiciFormData, dealloc, hasDebug, isAutodetect, isRequest, shouldManageUnconsumed, shouldSuspendAfterHeaders, getMaxStartLineLength, getMaxHeaderLength, getMaxBodyPayload, shouldContinueWithoutData, isConnect, isDebug, shouldSkipBody, getState, getPosition, getParsed, getErrorCode, getMethod, getStatus, hasConnectionClose, hasConnectionUpgrade, getContentLength, getChunkSize, getRemainingContentLength, getRemainingChunkSize, hasContentLength, hasTransferEncoding, hasChunkedTransferEncoding, hasUpgrade, hasTrailers, getErrorDescription, setShouldAutodetect, setShouldContinueWithoutData, setIsRequest, setIsConnect, setDebug, setShouldManageUnconsumed, setShouldSuspendAfterHeaders, setMaxStartLineLength, setMaxHeaderLength, setMaxBodyPayload, setShouldSkipBody, setActiveCallbacks, setActiveEvents, simpleCreate, simpleDestroy, setup, simple, getMilo, setMiloEnabled, getMiloEnabled, pauseResponseStream, resumeResponseStream, closeClients, isReplacedHeader, buildResumeHeaders, getContentType, isCompressibleContentType, defaultScheduleTick, kWebAssemblyNotSupportedError, WebAssemblyNotSupportedError, kMaxRedirectsError, MaxRedirectsError, defaultWebSocketMaxFragments, defaultWebSocketMaxPayloadSize, evicted, require_simd, wasmModule, Errors, Callbacks, CallbackActives, EventActives, States, ParserFields, milo, spans, require_no_simd, require_parser_h1, kPausedByHandler, BUFFER_PAGE_SIZE, INITIAL_BUFFER_SIZE, BODY_KIND_CONTENT_LENGTH, EVENT_RANGE_SIZE, EVENT_HEADERS_SIZE, miloEnabled, miloInstance, H1Parser, parseLen, headersEnd, parseData, consumedTotal, errorName, errorDescription, firstEvent, eventLen, shouldUpgrade, bodyKind, charsetSeparator, languageSeparator, isContinuation, localMaxConcurrentStreams, remoteMaxConcurrentStreams, kRetireClient, kRetiring, ret2, CacheController, finalUrl, redirectCacheControl, hopDirectives, finish304, targetSize, targetCount, abortReason, COMPRESS_THRESHOLD, hasZstd, storedBody, expiresMs, maxTimeValue, minParserItems, maxParserItems, bytesPerParserItem, parserItemLimit, dataSize, eventSize, maxReconnectionTime, AUTO_CHECKIN_TICK_MS, AUTO_CHECKIN_RETRY_MS, lastAttemptAt, tickMs, attemptedToday, setEventFieldSize
+- `src/upstream.js` → `upstream.ts`: plausibleSession, isMuseSpark, definitionOf, randomProjectId, O2A_PORTED_VERSION, MAX_SESSION_LENGTH, SESSION_PLAUSIBILITY_MS, containsTitle
+- `vendor/channel-pack/pack.js` → `vendor/channel-pack/pack.js`: setHeader, isUndiciFormData, dealloc, hasDebug, isAutodetect, isRequest, shouldManageUnconsumed, shouldSuspendAfterHeaders, getMaxStartLineLength, getMaxHeaderLength, getMaxBodyPayload, shouldContinueWithoutData, isConnect, isDebug, shouldSkipBody, getState, getPosition, getParsed, getErrorCode, getMethod, getStatus, hasConnectionClose, hasConnectionUpgrade, getContentLength, getChunkSize, getRemainingContentLength, getRemainingChunkSize, hasContentLength, hasTransferEncoding, hasChunkedTransferEncoding, hasUpgrade, hasTrailers, getErrorDescription, setShouldAutodetect, setShouldContinueWithoutData, setIsRequest, setIsConnect, setDebug, setShouldManageUnconsumed, setShouldSuspendAfterHeaders, setMaxStartLineLength, setMaxHeaderLength, setMaxBodyPayload, setShouldSkipBody, setActiveCallbacks, setActiveEvents, simpleCreate, simpleDestroy, setup, simple, getMilo, setMiloEnabled, getMiloEnabled, pauseResponseStream, resumeResponseStream, closeClients, isReplacedHeader, buildResumeHeaders, getContentType, isCompressibleContentType, defaultScheduleTick, kWebAssemblyNotSupportedError, WebAssemblyNotSupportedError, kMaxRedirectsError, MaxRedirectsError, defaultWebSocketMaxFragments, defaultWebSocketMaxPayloadSize, evicted, require_simd, wasmModule, Errors, Callbacks, CallbackActives, EventActives, States, ParserFields, milo, spans, require_no_simd, require_parser_h1, kPausedByHandler, BUFFER_PAGE_SIZE, INITIAL_BUFFER_SIZE, BODY_KIND_CONTENT_LENGTH, EVENT_RANGE_SIZE, EVENT_HEADERS_SIZE, miloEnabled, miloInstance, H1Parser, parseLen, headersEnd, parseData, consumedTotal, errorName, errorDescription, firstEvent, eventLen, shouldUpgrade, bodyKind, charsetSeparator, languageSeparator, isContinuation, localMaxConcurrentStreams, remoteMaxConcurrentStreams, kRetireClient, kRetiring, ret2, CacheController, finalUrl, redirectCacheControl, hopDirectives, finish304, targetSize, targetCount, abortReason, COMPRESS_THRESHOLD, hasZstd, storedBody, expiresMs, maxTimeValue, minParserItems, maxParserItems, bytesPerParserItem, parserItemLimit, dataSize, eventSize, maxReconnectionTime, AUTO_CHECKIN_TICK_MS, AUTO_CHECKIN_RETRY_MS, lastAttemptAt, tickMs, attemptedToday, hasTools, setEventFieldSize
+- `vendor/channel-pack/src/openai-gateway/responses.ts` → `vendor/channel-pack/src/openai-gateway/responses.ts`: hasTools
 - `worker/auth-github.mjs` → `worker/auth-github.ts`: chunks, abort
 - `worker/gateway-node.mjs` → `worker/node-host.ts`: dayKey, hourKey, freshIpRow, statsFile, eq, HOUR_MS, KEEP_DAYS, KEEP_IPS, cutoffHour, rows, hk, dk, day, temp, hourNow, hourAgo, dayNow, hourly, days, models, rem, scan, c, seen, DASHBOARD_HTML, ENTRY_JS, impl
 

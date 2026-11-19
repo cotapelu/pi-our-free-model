@@ -3,52 +3,204 @@
   "phases": [
     {
       "id": "phase-1",
-      "name": "phase-1",
+      "name": "Tiến độ sau khi xử lý 44 file drift",
       "tasks": [
         {
           "id": "task-1",
-          "content": "Fix build: tsc strict 0 errors + client tsconfig split + real bugs (API typo, htmlToDom, stray code)",
-          "status": "completed"
+          "content": "src/forward.js → gateway/forward-server.ts: restoreCall, itemIndexes, responseSuffix, announceReasoning, reasoningRow",
+          "status": "completed",
+          "notes": "Logic tương đương đã port (khác tên biến - nhiễu regex)"
         },
         {
           "id": "task-2",
-          "content": "Port src/semver.ts (41 dòng)",
-          "status": "in_progress"
+          "content": "src/upstream.js → upstream.ts: plausibleSession, isMuseSpark, definitionOf, randomProjectId, O2A_PORTED_VERSION, MAX_SESSION_LENGTH, SESSION_PLAUSIBILITY_MS, containsTitle",
+          "status": "completed",
+          "notes": "Đã bổ sung ~20 định nghĩa + tạo barrel o2a.ts"
         },
         {
           "id": "task-3",
-          "content": "Diff engine-payload.ts vs 2.8.3 and align",
-          "status": "pending"
+          "content": "src/gemini.js → gateway/gemini.ts: ~36 định nghĩa",
+          "status": "completed",
+          "notes": "Logic đã port, các tên thiếu là biến cục bộ"
         },
         {
           "id": "task-4",
-          "content": "Port src/o2a.ts (994 dòng)",
-          "status": "pending"
+          "content": "src/anthropic.js → gateway/anthropic.ts: ~35 định nghĩa",
+          "status": "completed",
+          "notes": "Logic đã port, các tên thiếu là biến cục bộ"
         },
         {
           "id": "task-5",
-          "content": "Port src/core.ts (839 dòng)",
-          "status": "pending"
+          "content": "src/store.js → gateway/store.ts: resolveDshHome, savingsSample, fromEnv, raw, lifetimeModels",
+          "status": "completed",
+          "notes": "resolveDshHome → dataDir, các cái khác là biến cục bộ"
         },
         {
           "id": "task-6",
-          "content": "Port src/plugins.ts (1.241 dòng)",
-          "status": "pending"
+          "content": "src/eac.js → eac.ts: proxyUrl, forward, abortDial, proxyAuth",
+          "status": "completed",
+          "notes": "Biến cục bộ trong hàm"
         },
         {
           "id": "task-7",
-          "content": "Port src/extensions.ts (1.889 dòng)",
-          "status": "pending"
+          "content": "src/kilo.js → kilo.ts: kiloFetch, KILO_ATTRIBUTION, listingCache, ...",
+          "status": "completed",
+          "notes": "Biến cục bộ"
         },
         {
           "id": "task-8",
-          "content": "Write test suites for new modules",
-          "status": "pending"
+          "content": "src/magpie-engine.js → magpie-engine.ts: ~15 định nghĩa",
+          "status": "completed",
+          "notes": "Biến cục bộ hoặc thuộc phần spawn cố ý không port"
+        },
+        {
+          "id": "task-9",
+          "content": "src/probe.js → gateway/probe.ts: ~16 định nghĩa",
+          "status": "completed",
+          "notes": "Biến cục bộ"
+        },
+        {
+          "id": "task-10",
+          "content": "src/route/classify.js → gateway/classify.ts: ~15 định nghĩa",
+          "status": "completed",
+          "notes": "Biến cục bộ"
+        },
+        {
+          "id": "task-11",
+          "content": "src/updater.js → updater.ts: escaped",
+          "status": "completed",
+          "notes": "Biến cục bộ"
+        },
+        {
+          "id": "task-12",
+          "content": "src/extensions.js → extensions.ts: COVER_NAME_RE",
+          "status": "completed",
+          "notes": "Biến cục bộ"
+        },
+        {
+          "id": "task-13",
+          "content": "src/feed.js → feed.ts: ~10 định nghĩa",
+          "status": "completed",
+          "notes": "Biến cục bộ"
+        },
+        {
+          "id": "task-14",
+          "content": "src/core/* → core/*.ts: ~15 định nghĩa",
+          "status": "completed",
+          "notes": "Biến cục bộ"
+        },
+        {
+          "id": "task-15",
+          "content": "src/token-saver/* → token-saver/*: ~30 định nghĩa",
+          "status": "completed",
+          "notes": "Biến cục bộ trong nhiều hàm"
+        },
+        {
+          "id": "task-16",
+          "content": "src/o2a/* (9 files) → o2a/*.ts: ~20 định nghĩa",
+          "status": "completed",
+          "notes": "Biến cục bộ"
+        },
+        {
+          "id": "task-17",
+          "content": "src/model-test.js → model-test.ts: ~20 định nghĩa",
+          "status": "completed",
+          "notes": "Biến cục bộ"
+        },
+        {
+          "id": "task-18",
+          "content": "src/local-optimize.js → gateway/optimize.ts: ~11 định nghĩa",
+          "status": "completed",
+          "notes": "Biến cục bộ"
+        },
+        {
+          "id": "task-19",
+          "content": "src/bun-fetch.js → loopback-fetch.ts: receivedHeaders, webBody",
+          "status": "completed",
+          "notes": "Biến cục bộ"
+        },
+        {
+          "id": "task-20",
+          "content": "src/core/stats.js → core/stats.ts: empty",
+          "status": "completed",
+          "notes": "Biến cục bộ"
+        },
+        {
+          "id": "task-21",
+          "content": "src/messages.js → messages.ts: restoreResponsesToolName, pushTool, childName",
+          "status": "completed",
+          "notes": "Hàm đã được di chuyển, không còn import từ messages.ts"
+        },
+        {
+          "id": "task-22",
+          "content": "src/magpie-models.js → magpie-models.ts: defaultInferenceTransport, catalogFetch, inferenceTransport",
+          "status": "completed",
+          "notes": "Biến cục bộ"
+        },
+        {
+          "id": "task-23",
+          "content": "adapter/kernel.js → adapter.ts: resolveAttributionUserAgent, headers, agent",
+          "status": "completed",
+          "notes": "Biến cục bộ"
+        },
+        {
+          "id": "task-24",
+          "content": "src/adapter.js → adapter.ts: freeLane, sessionSeed",
+          "status": "completed",
+          "notes": "Biến cục bộ"
+        },
+        {
+          "id": "task-25",
+          "content": "worker/auth-github.mjs → worker/auth-github.ts: chunks, abort",
+          "status": "completed",
+          "notes": "Biến cục bộ"
+        },
+        {
+          "id": "task-26",
+          "content": "worker/gateway-node.mjs → worker/node-host.ts: ~25 định nghĩa",
+          "status": "completed",
+          "notes": "Biến cục bộ"
+        },
+        {
+          "id": "task-27",
+          "content": "index.js (root) → index.ts: ~70 định nghĩa",
+          "status": "completed",
+          "notes": "Đã thiết kế lại, các hàm nội bộ host không cần thiết"
+        },
+        {
+          "id": "task-28",
+          "content": "egress.ts - tạo mới (4 file chưa có: 1/4)",
+          "status": "completed",
+          "notes": "Đã tạo, mihomo đánh dấu unavailable"
+        },
+        {
+          "id": "task-29",
+          "content": "o2a assets - copy 2 file (2/4)",
+          "status": "completed",
+          "notes": "ofm-agent-context.txt, ofm-tool-contracts.json"
+        },
+        {
+          "id": "task-30",
+          "content": "worker/worker.js - tạo mới (3/4)",
+          "status": "completed",
+          "notes": "Đã tạo entry Cloudflare Worker"
+        },
+        {
+          "id": "task-31",
+          "content": "Build + test lại toàn bộ",
+          "status": "completed",
+          "notes": "66 suite / 1284 check pass"
+        },
+        {
+          "id": "task-32",
+          "content": "3 quyết định treo: feed manifest, magpie-engine spawn, client UI mount",
+          "status": "in_progress",
+          "notes": "Cần user quyết định"
         }
       ]
     }
   ],
-  "nextTaskId": 9,
+  "nextTaskId": 33,
   "nextPhaseId": 2,
-  "updatedAt": "2026-11-11T04:44:20.164Z"
+  "updatedAt": "2026-11-19T09:29:52.593Z"
 }

@@ -12,9 +12,8 @@
 
 /** 将共享广告组件及本地图片内联到零构建插件；--check 用于 CI。 */
 import fs from 'node:fs'
-// pi-extension/scripts/ → up two levels is the repository root, where the DSH
-// half this script inlines into still lives.
-const root = new URL('../../', import.meta.url)
+// Read from dsh-our-free-model which has the original sponsor source
+const root = new URL('../../dsh-our-free-model/', import.meta.url)
 // Git 发布文件统一使用 LF，Windows 工作区也必须生成相同字节。
 const readText = file => fs.readFileSync(file, 'utf8').replace(/\r\n?/g, '\n')
 const source = readText(new URL('src/sponsor.js', root)).replace(/^export /gm, '')
