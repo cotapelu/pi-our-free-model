@@ -6,8 +6,8 @@
 
 ## 1. Một câu
 
-`pi-extension/` là **một API provider LLM độc lập**: chạy `node
-pi-extension/dist/server.js` là có ngay một endpoint OpenAI/Anthropic/Gemini/
+`src/` là **một API provider LLM độc lập**: chạy `node
+src/dist/server.js` là có ngay một endpoint OpenAI/Anthropic/Gemini/
 Responses-compatible, khóa API, CORS, 4 lane model và console quản lý — dùng cho
 **mọi** coding agent, **mọi** provider LLM, không phụ thuộc pi hay bất kỳ host
 nào. Đồng thời nó vẫn mount được như pi extension.
@@ -22,14 +22,14 @@ có người dùng host đó dùng được.
 Việc cần làm là **tháo toàn bộ giá trị đó ra khỏi host** và gói lại thành một
 dịch vụ đứng riêng:
 
-| DSH (trong host) | pi-extension (dịch vụ đứng riêng) |
+| DSH (trong host) | src/ (dịch vụ đứng riêng) |
 |---|---|
 | `index.js` — plugin entry, gọi API host | `index.ts` — pi provider + `/ofm`; `server.ts` — HTTP server độc lập |
 | `client.js` — UI nhúng slot của host | console phục vụ bởi gateway (bất kỳ trình duyệt nào) |
 | `src/forward.js` — listener cho harness khác | `gateway/server.ts` — cùng listener, không cần host |
-| `worker/` — gateway EAC tự host | `pi-extension/worker/` — cùng gateway, chạy trong Node |
-| `packages/standalone/` — app console riêng | `pi-extension/packages/standalone/` — cùng app, TS |
-| `packages/desktop/` — Tauri shell | `pi-extension/packages/desktop/` — cùng shell, ranh giới Rust giữ nguyên |
+| `worker/` — gateway EAC tự host | `src/worker/` — cùng gateway, chạy trong Node |
+| `packages/standalone/` — app console riêng | `src/packages/standalone/` — cùng app, TS |
+| `packages/desktop/` — Tauri shell | `src/packages/desktop/` — cùng shell, ranh giới Rust giữ nguyên |
 | `adapter/kernel.js` — seam duy nhất vào host | `adapter.ts` — attribution UA, không còn seam bắt buộc |
 
 ## 3. Đích đến cụ thể
@@ -89,9 +89,9 @@ Ngoài ba thứ đó, **không có gì được coi là ngoài phạm vi.**
 ## 6. Lệnh
 
 ```bash
-npm --prefix pi-extension run build              # tsc strict + copy registry
-node pi-extension/test/run-all.mjs               # 45 suite / 923 check hiện tại
-node pi-extension/dist/server.js --port 18900    # API provider độc lập
-pi install ./pi-extension                        # mount như pi extension
+npm run build                                    # tsc strict + copy registry
+node src/test/run-all.mjs                        # 45 suite / 923 check hiện tại
+node src/dist/server.js --port 18900             # API provider độc lập
+pi install ./src                                 # mount như pi extension
 npm run verify:pi-extension-upstream             # đo drift (tốn quota)
 ```

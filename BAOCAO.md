@@ -1,7 +1,7 @@
-# BÁO CÁO TOÀN DIỆN — `dsh-our-free-model/` gốc → `pi-extension/`
+# BÁO CÁO TOÀN DIỆN — `dsh-our-free-model/` gốc → `src/`
 
 > **Code gốc (tham chiếu duy nhất): `./dsh-our-free-model/` — bản 2.8.3.**
-> Bản port: `./pi-extension/`. Bản gốc cũ ở root không còn và không dùng để đối
+> Bản port: `./src/`. Bản gốc cũ ở root không còn và không dùng để đối
 > chiếu nữa.
 >
 > Lần kiểm kê: **2026-11-11 (lần 6)**. Sinh bằng `scripts/audit-ports.mjs`, không đếm tay.
@@ -52,8 +52,8 @@ Nền tảng extension (toàn bộ là code mới của 2.8.3) đã xong trong l
 
 | File gốc | Dòng | Bản port | Ghi chú |
 |---|---|---|---|
-| `src/plugins.js` | 1.241 | `pi-extension/plugins.ts` | manifest, scan, descriptor, page bridge, `REGISTRY_FALLBACK` (495 dòng JSON carve nguyên, parse lại đối chiếu: identical) |
-| `src/extensions.js` | 1.888 | `pi-extension/extensions.ts` | registry ký, install verify-then-write, sandbox worker, runtime |
+| `src/plugins.js` | 1.241 | `src/plugins.ts` | manifest, scan, descriptor, page bridge, `REGISTRY_FALLBACK` (495 dòng JSON carve nguyên, parse lại đối chiếu: identical) |
+| `src/extensions.js` | 1.888 | `src/extensions.ts` | registry ký, install verify-then-write, sandbox worker, runtime |
 
 **Phát hiện quan trọng của lần soi này:** `src/o2a/` (9 file) đã port và khớp
 nguồn, nhưng **không có module nào import nó** — lane thật vẫn chạy shaping của
@@ -89,7 +89,7 @@ cố ý không port).
 
 ## 4. `client.js` — console (đang port dở)
 
-**Đã tách** (`pi-extension/client/`, ~1.100 dòng, 13 trang `.tsx`) — và lần soi
+**Đã tách** (`src/client/`, ~1.100 dòng, 13 trang `.tsx`) — và lần soi
 này build sạch được nó: `client/` có project riêng (`tsconfig.client.json`, lib
 DOM) vì nó là nửa trình duyệt, nên một lần gõ nhầm `document` trong gateway vẫn
 là lỗi biên dịch. Vì `feed.ts` import `./client/sanitizer.js` (parser announcement
@@ -103,7 +103,7 @@ tại (mọi `api()` của console sẽ throw ReferenceError); `toast.ts` import
 bị bấm đóng được ngay. `client/*.tsx` vẫn chưa typecheck (thiếu `@types/react` ở
 gốc — deps nằm ở `packages/standalone/`, chưa cài).
 
-**Đã tách** (`pi-extension/client/`, ~1.100 dòng): sanitizer, sponsor UI,
+**Đã tách** (`src/client/`, ~1.100 dòng): sanitizer, sponsor UI,
 copy (1.466 key song ngữ), css (1.073 dòng), api, hooks, chrome (13 primitive +
 4 biểu đồ SVG), toast, pool, eac-auth, + 9 trang (dashboard, forward, egress,
 preferences, news, upgrade, picks, ledger/logs/gateway, aggregate, saver,

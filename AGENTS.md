@@ -1,17 +1,17 @@
-# AGENTS.md — port 100% `dsh-our-free-model/` sang `pi-extension/`
+# AGENTS.md — port 100% `dsh-our-free-model/` sang `src/`
 
 > **Thứ tự đọc:** file này → `GOAL.md` → `docs/TODO.md` → `BAOCAO.md`.
 > File này là **luật làm việc**. Ba file sau là báo cáo trạng thái.
 
 ## 1. Mục tiêu
 
-`pi-extension/` là **API provider LLM độc lập**, không phải plugin của một host
+`src/` là **API provider LLM độc lập**, không phải plugin của một host
 duy nhất. Nó phải:
 
-1. **Chạy như HTTP server** (`node pi-extension/dist/server.js`) — mọi coding
+1. **Chạy như HTTP server** (`node src/dist/server.js`) — mọi coding
    agent trỏ `base-url` vào là dùng: pi, Claude Code, Codex, Continue, Cline,
    Cursor, `curl`.
-2. **Chạy như pi extension** (`pi install ./pi-extension`) — cùng một bộ code,
+2. **Chạy như pi extension** (`pi install ./src`) — cùng một bộ code,
    hai cách mount.
 3. **Là bản port đầy đủ của DSH** — mọi file code trong repo gốc đều có bản port
    tương ứng, **không có ngoại lệ**, kể cả UI, desktop, test script.
@@ -24,7 +24,7 @@ provider*, không phải *một plugin của một host*.
 | Gì | Ở đâu |
 |---|---|
 | **Code gốc (tham chiếu duy nhất)** | `./dsh-our-free-model/` — bản **2.8.3** vừa clone |
-| **Bản port** | `./pi-extension/` |
+| **Bản port** | `./src/` |
 
 Không còn bản gốc rải ở root nữa. Mọi đối chiếu, mọi trích dẫn "file gốc" đều
 làm ở `./dsh-our-free-model/`. `./dsh-our-free-model/` **không** nằm trong git
@@ -32,7 +32,7 @@ làm ở `./dsh-our-free-model/`. `./dsh-our-free-model/` **không** nằm trong
 
 ## 3. Trạng thái thật (2026-11-11)
 
-Bản gốc **2.8.3**: **567 file code / 301.362 dòng**. Bản port `pi-extension/`
+Bản gốc **2.8.3**: **567 file code / 301.362 dòng**. Bản port `src/`
 hiện có **~378 module `.ts`** + **66 file test** (số này là của **lần kiểm kê
 2026-11-11**, sinh bằng `node scripts/audit-ports.mjs`).
 
@@ -73,7 +73,7 @@ hiện có **~378 module `.ts`** + **66 file test** (số này là của **lần
 |---|---|---|
 | `vendor/magpie/bin/` (68 MB) | Binary không ship trong package | `engine.json` pin sha256; `magpie-engine.ts` báo `unavailable` kèm cách khắc phục |
 | `src/egress.js` phần mihomo/Clash | Cần binary lậu | `renderMihomoConfig`/`outletLabel` chỉ port khi user tự có clash |
-| `packages/desktop/src-tauri/` phần Rust | Rust không chạy trong Node | Port **logic** sang TS, giữ Rust shell; ranh giới pin trong `pi-extension/packages/desktop/README.md` |
+| `packages/desktop/src-tauri/` phần Rust | Rust không chạy trong Node | Port **logic** sang TS, giữ Rust shell; ranh giới pin trong `src/packages/desktop/README.md` |
 
 Ngoài ba thứ đó, **không có gì được coi là ngoài phạm vi**.
 
@@ -82,23 +82,23 @@ Ngoài ba thứ đó, **không có gì được coi là ngoài phạm vi**.
 ```bash
 # build (tsc strict cho HAI project: node + client DOM; rồi copy assets —
 # bao gồm o2a/assets/* mà lane đọc bằng node:fs)
-npm --prefix pi-extension run build
+npm run build
 
 # kiểm kê drift giữa bản gốc và bản port (file + export + definition)
 node scripts/audit-ports.mjs        # ghi docs/audit-ports.md
 
 # toàn bộ test offline (spawn mỗi suite, không dùng && chain)
-node pi-extension/test/run-all.mjs
+node src/test/run-all.mjs
 
 # API provider độc lập
-node pi-extension/dist/server.js --port 18900
-OFM_DATA_DIR=/tmp/ofm node pi-extension/dist/server.js --port 18900 --key ofm-xxx
+node src/dist/server.js --port 18900
+OFM_DATA_DIR=/tmp/ofm node src/dist/server.js --port 18900 --key ofm-xxx
 
 # standalone service (console + 4 dialect + LAN relay)
-node pi-extension/dist/packages/standalone/cli.js --port 18900
+node src/dist/packages/standalone/cli.js --port 18900
 
 # cài như pi extension
-pi install ./pi-extension
+pi install ./src
 ```
 
 ## 7. Ranh giới đã pin (sai là hỏng)
@@ -135,7 +135,7 @@ Kiểm kê file-level không đủ: một file được tick nhưng mất nửa 
 là "đã port". Ba lượt, mỗi lượt sâu hơn:
 
 1. **File + export**: mọi file gốc có bản port trên đĩa; mọi export symbol có tên
-   xuất hiện ở `pi-extension/`.
+   xuất hiện ở `src/`.
 2. **Đích đến**: mỗi file gốc có đích đã biết (bảng trong `docs/TODO.md` §1).
 3. **Từng definition**: mọi `function`/`class`/`method` của DSH có mặt trong bản
    port. Lượt 3 tìm ra: egress thiếu ~600 dòng SOCKS5/tunnel, magpie-engine thiếu

@@ -1,8 +1,8 @@
-# TODO — port 100% `./dsh-our-free-model/` sang `pi-extension/`
+# TODO — port 100% `./dsh-our-free-model/` sang `src/`
 
 > **Quy tắc duy nhất của file này:** ghi đúng cái đang có. Không ghi `[x]` cho
 > stub, không ghi "xong" khi chỉ đọc code chưa chạy. Sau mỗi task: chạy
-> `npm --prefix pi-extension run build` + `node pi-extension/test/run-all.mjs`
+> `npm run build` + `node src/test/run-all.mjs`
 > + smoke, rồi mới tick.
 >
 > **Gốc để đối chiếu: `./dsh-our-free-model/` — bản 2.8.3.**
@@ -26,7 +26,7 @@ Drift trong file đã map: 292 (export 14 · definition 72)
 
 ---
 
-## 1. CÒN LẠI — CORE `pi-extension/` (không tính scripts/standalone/desktop)
+## 1. CÒN LẠI — CORE `src/` (không tính scripts/standalone/desktop)
 
 ### 1.1 File chưa có bản port — **ĐÃ XONG TẤT CẢ**
 
@@ -121,8 +121,8 @@ Tạo barrel `o2a.ts` để re-export các module `src/o2a/`.
 ### E. 3 quyết định treo — ⏳ CHỜ NGƯỜI DÙNG QUYẾT ĐỊNH
 
 ### F. Build + test lại toàn bộ — ✅ ĐÃ XONG
-- `npm --prefix pi-extension run build` — 0 lỗi
-- `node pi-extension/test/run-all.mjs` — 66 suite / 1.284 check / 0 fail
+- `npm run build` — 0 lỗi
+- `node src/test/run-all.mjs` — 66 suite / 1.284 check / 0 fail
 - Smoke `dist/server.js --port 18900` — chạy được
 
 ---
@@ -130,9 +130,9 @@ Tạo barrel `o2a.ts` để re-export các module `src/o2a/`.
 ## 4. LỆNH
 
 ```bash
-npm --prefix pi-extension run build              # tsc strict + copy registry
-node pi-extension/test/run-all.mjs               # 66 suite / 1.284 check
-node pi-extension/dist/server.js --port 18900    # API provider độc lập
+npm run build                                    # tsc strict + copy registry
+node src/test/run-all.mjs                        # 66 suite / 1.284 check
+node src/dist/server.js --port 18900             # API provider độc lập
 node scripts/audit-ports.mjs                     # kiểm kê drift
 ```
 
@@ -147,5 +147,5 @@ node scripts/audit-ports.mjs                     # kiểm kê drift
 | 2026-11-11 | G10 xong: packages/standalone 55 file + desktop + console + listener 4 dialect |
 | 2026-11-11 | client.js: tách nền + 13 trang (~1.100 dòng) |
 | 2026-11-11 | Viết lại AGENTS.md + BAOCAO.md + TODO.md theo đường dẫn mới `./dsh-our-free-model/` (2.8.3) |
-| 2026-11-1X | **Bỏ scripts/, packages/standalone/, packages/desktop/** theo quyết định user. Viết lại TODO.md chỉ chứa core `pi-extension/`. |
+| 2026-11-1X | **Bỏ scripts/, packages/standalone/, packages/desktop/** theo quyết định user. Viết lại TODO.md chỉ chứa core `src/`. |
 | 2026-11-1X | Tạo `egress.ts`, 2 asset o2a, `worker/worker.js` entry Cloudflare. Bổ sung ~20 định nghĩa vào `upstream.ts`. Tạo barrel `o2a.ts`. Build + test: 66 suite / 1.284 check pass. |

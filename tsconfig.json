@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "rootDir": "src",
+    "outDir": "dist",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": false,
+    "strict": true,
+    "noImplicitAny": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["node"]
+  },
+  "include": ["src/*.ts", "src/core/**/*.ts", "src/gateway/**/*.ts", "src/o2a/**/*.ts", "src/packages/**/*.ts", "src/token-saver/**/*.ts", "src/worker/**/*.ts"],
+  "exclude": ["test", "scripts", "dist", "node_modules", "src/packages/standalone/frontend", "src/client/sponsor-ui.ts"]
+}
