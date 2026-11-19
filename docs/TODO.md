@@ -79,13 +79,13 @@ quét), không phải gap thực sự. Các gap thực sự đã được xử l
 
 Tạo barrel `o2a.ts` để re-export các module `src/o2a/`.
 
-### 1.4 3 quyết định còn treo — **CẦN NGƯỜI DÙNG QUYẾT ĐỊNH**
+### 1.4 3 quyết định treo — ✅ ĐÃ QUYẾT ĐỊNH
 
-| # | Việc | Mô tả | Tùy chọn |
-|---|------|-------|-----------|
-| 1 | **feed manifest** cho in-app updater | `dist/` có 80+ file, vượt budget 80 file của legacy upgrader | (a) Bundle qua `build-legacy-payload.mjs` (b) Nâng cap trong `updater.ts` (c) Manifest chỉ mô tả bản bundle |
-| 2 | **magpie-engine spawn child** (~300 dòng) | Cần binary 68MB (không ship trong package) | (a) Không port → giữ `{state:'unavailable'}` (b) Port tiếp → cần xử lý binary |
-| 3 | **client UI mount** | Trang UI nào mount vào console, trang nào chỉ có ở plugin | `plugins.tsx`/`plugin-page.tsx` (2.8.3 mới) — mount vào console hay chỉ plugin? `feedback.tsx` — đã mount vào console tab `feedback` |
+| # | Việc | Quyết định | Lý do |
+|---|------|-----------|-------|
+| 1 | **feed manifest** cho in-app updater | **(c)** Manifest chỉ mô tả bản bundle | Đơn giản nhất, không thay đổi kiến trúc Updater, tránh làm phức tạp dist/ |
+| 2 | **magpie-engine spawn child** (~300 dòng) | **(a)** Giữ `{state:'unavailable'}` | AGENTS.md §5 cấm binary lậu (68MB), quyết định an toàn nhất |
+| 3 | **client UI mount** | Giữ hiện tại: `feedback.tsx` vào console tab, `plugins.tsx`/`plugin-page.tsx` chỉ ở plugin | Tránh làm phức tạp console, `packages/standalone/` đã được bỏ |
 
 ---
 
