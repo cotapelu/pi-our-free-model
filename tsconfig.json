@@ -2,10 +2,11 @@
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2023"],
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "rootDir": "src",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "rootDir": ".",
     "outDir": "dist",
+    "baseUrl": ".",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": false,
@@ -17,8 +18,28 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["node"]
+    "types": ["node"],
+    "paths": {
+      "@ofm/core/*": ["packages/core/*"],
+      "@ofm/gateway/*": ["packages/gateway/*"],
+      "@ofm/provider/*": ["packages/provider/*"],
+      "@ofm/standalone/*": ["packages/standalone/*"],
+      "@ofm/console/*": ["packages/console/*"],
+      "@ofm/shared/*": ["packages/shared/*"],
+      "@ofm/desktop/*": ["packages/desktop/*"],
+      "@ofm/worker/*": ["packages/worker/*"]
+    }
   },
-  "include": ["src/*.ts", "src/core/**/*.ts", "src/gateway/**/*.ts", "src/o2a/**/*.ts", "src/packages/**/*.ts", "src/token-saver/**/*.ts", "src/worker/**/*.ts"],
-  "exclude": ["test", "scripts", "dist", "node_modules", "src/packages/standalone/frontend", "src/client/sponsor-ui.ts"]
+  "include": ["packages/**/*.ts", "apps/**/*.ts", "config/**/*.ts"],
+  "exclude": [
+    "tests",
+    "scripts",
+    "dist",
+    "node_modules",
+    "packages/standalone/frontend",
+    "packages/console/sponsor-ui.ts",
+    "packages/console/**",
+    "packages/standalone/**",
+    "vendor/**"
+  ]
 }

@@ -1,16 +1,18 @@
 # MỤC TIÊU DỰ ÁN — API provider đa coding agent, đa LLM provider
 
-đọc các file md sau: 
+đọc các file md sau:
+
 > File này nói **đích đến**. Trạng thái thực ở `BAOCAO.md`, việc còn làm ở
 > `docs/TODO.md`, luật làm việc ở `AGENTS.md`.
 
 ## 1. Một câu
 
-`src/` là **một API provider LLM độc lập**: chạy `node
-src/dist/server.js` là có ngay một endpoint OpenAI/Anthropic/Gemini/
+Kho code này là **một API provider LLM độc lập**: chạy `node
+dist/apps/server/main.js` là có ngay một endpoint OpenAI/Anthropic/Gemini/
 Responses-compatible, khóa API, CORS, 4 lane model và console quản lý — dùng cho
 **mọi** coding agent, **mọi** provider LLM, không phụ thuộc pi hay bất kỳ host
-nào. Đồng thời nó vẫn mount được như pi extension.
+nào. Đồng thời nó vẫn mount được như pi extension (`pi install .`) và chạy
+được như standalone service (`node dist/apps/standalone/main.js`).
 
 ## 2. Vì sao lại sinh ra từ DSH
 
@@ -22,15 +24,15 @@ có người dùng host đó dùng được.
 Việc cần làm là **tháo toàn bộ giá trị đó ra khỏi host** và gói lại thành một
 dịch vụ đứng riêng:
 
-| DSH (trong host) | src/ (dịch vụ đứng riêng) |
-|---|---|
-| `index.js` — plugin entry, gọi API host | `index.ts` — pi provider + `/ofm`; `server.ts` — HTTP server độc lập |
-| `client.js` — UI nhúng slot của host | console phục vụ bởi gateway (bất kỳ trình duyệt nào) |
-| `src/forward.js` — listener cho harness khác | `gateway/server.ts` — cùng listener, không cần host |
-| `worker/` — gateway EAC tự host | `src/worker/` — cùng gateway, chạy trong Node |
-| `packages/standalone/` — app console riêng | `src/packages/standalone/` — cùng app, TS |
-| `packages/desktop/` — Tauri shell | `src/packages/desktop/` — cùng shell, ranh giới Rust giữ nguyên |
-| `adapter/kernel.js` — seam duy nhất vào host | `adapter.ts` — attribution UA, không còn seam bắt buộc |
+| DSH (trong host)                             | packages/ + apps/ (dịch vụ đứng riêng)                                   |
+| -------------------------------------------- | ------------------------------------------------------------------------ |
+| `index.js` — plugin entry, gọi API host      | `packages/provider/` — pi provider; `apps/server/` — HTTP server độc lập |
+| `client.js` — UI nhúng slot của host         | `packages/console/` — console trình duyệt, phục vụ bởi gateway           |
+| `src/forward.js` — listener cho harness khác | `packages/gateway/server.ts` — cùng listener, không cần host             |
+| `worker/` — gateway EAC tự host              | `packages/gateway/` — cùng gateway, chạy trong Node                      |
+| `packages/standalone/` — app console riêng   | `packages/standalone/` — cùng app, TS                                    |
+| `packages/desktop/` — Tauri shell            | `packages/desktop/` — cùng shell, ranh giới Rust giữ nguyên              |
+| `adapter/kernel.js` — seam duy nhất vào host | `packages/shared/adapter.ts` — attribution UA, không còn seam bắt buộc   |
 
 ## 3. Đích đến cụ thể
 
@@ -49,12 +51,12 @@ Tất cả sau **key fence + CORS**, bind loopback với port retry/scan.
 
 ### 3.2 Model lane (4 lane)
 
-| Lane | Đặc điểm |
-|---|---|
-| `ofm-kilo` | Kilo AI free pool — **không cần gì cả**: không key, không login, không fingerprint |
-| `ofm-opencode` | OpenCode free tier — pooled credential + client fingerprint |
-| `ofm-eac` | Co-paid lane — seal AES-256-GCM, 3 shard, mở per call frame |
-| `ofm-aggregate` | **76 provider** bên thứ ba, mỗi cái mở bằng key của user |
+| Lane            | Đặc điểm                                                                           |
+| --------------- | ---------------------------------------------------------------------------------- |
+| `ofm-kilo`      | Kilo AI free pool — **không cần gì cả**: không key, không login, không fingerprint |
+| `ofm-opencode`  | OpenCode free tier — pooled credential + client fingerprint                        |
+| `ofm-eac`       | Co-paid lane — seal AES-256-GCM, 3 shard, mở per call frame                        |
+| `ofm-aggregate` | **76 provider** bên thứ ba, mỗi cái mở bằng key của user                           |
 
 `ofm-chain/<tên>` là virtual model: chain các lane theo thứ tự, link đầu tiên
 trả lời được thắng.
@@ -78,10 +80,10 @@ trả lời được thắng.
 
 ## 5. Thứ KHÔNG bao giờ port
 
-| Thứ | Lý do |
-|---|---|
-| `vendor/magpie/bin/` 68 MB | Binary, `engine.json` đã pin sha256 thay cho nó |
-| `src/egress.js` mihomo/Clash spawn | Cần binary lậu |
+| Thứ                                              | Lý do                                                  |
+| ------------------------------------------------ | ------------------------------------------------------ |
+| `vendor/magpie/bin/` 68 MB                       | Binary, `engine.json` đã pin sha256 thay cho nó        |
+| `packages/standalone/` mihomo/Clash spawn        | Cần binary lậu                                         |
 | Rust shell của Tauri (trong `packages/desktop/`) | Rust không chạy trong Node — chỉ port logic, giữ shell |
 
 Ngoài ba thứ đó, **không có gì được coi là ngoài phạm vi.**
@@ -89,9 +91,10 @@ Ngoài ba thứ đó, **không có gì được coi là ngoài phạm vi.**
 ## 6. Lệnh
 
 ```bash
-npm run build                                    # tsc strict + copy registry
-node src/test/run-all.mjs                        # 45 suite / 923 check hiện tại
-node src/dist/server.js --port 18900             # API provider độc lập
-pi install ./src                                 # mount như pi extension
+npm run build                                    # tsc strict + vite build frontend + copy registry
+node tests/run-all.mjs                           # toàn bộ test offline
+node dist/apps/server/main.js --port 18900       # API provider độc lập
+pi install .                                     # mount như pi extension
+node dist/apps/standalone/main.js --port 18900   # standalone service
 npm run verify:pi-extension-upstream             # đo drift (tốn quota)
 ```

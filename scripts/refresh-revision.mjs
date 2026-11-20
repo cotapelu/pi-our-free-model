@@ -26,39 +26,59 @@
  * Writes nothing when the fields already match; exits non-zero when git or the
  * catalog files are unusable rather than guessing at a revision.
  */
-import fs from 'node:fs'
-import path from 'node:path'
-import { execFileSync } from 'node:child_process'
-import { fileURLToPath } from 'node:url'
+import fs from "node:fs";
+import path from "node:path";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
-const root = path.join(fileURLToPath(new URL('..', import.meta.url)))
-const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
+const root = path.join(fileURLToPath(new URL("..", import.meta.url)));
+const pkg = JSON.parse(
+  fs.readFileSync(path.join(root, "package.json"), "utf8"),
+);
 
-let revision
+let revision;
 try {
-  revision = execFileSync('git', ['log', '-1', '--format=%H', '--', 'package.json', ...(pkg.files ?? [])], { cwd: root, encoding: 'utf8' }).trim()
+  revision = execFileSync(
+    "git",
+    ["log", "-1", "--format=%H", "--", "package.json", ...(pkg.files ?? [])],
+    { cwd: root, encoding: "utf8" },
+  ).trim();
 } catch (error) {
-  console.error(`could not walk the git history for the release content (${error?.message ?? error})`)
-  process.exit(1)
+  console.error(
+    `could not walk the git history for the release content (${error?.message ?? error})`,
+  );
+  process.exit(1);
 }
 if (!/^[0-9a-f]{40}$/.test(revision)) {
-  console.error('the release content has no commit to point at yet')
-  process.exit(1)
+  console.error("the release content has no commit to point at yet");
+  process.exit(1);
 }
 
 const targets = [
-  { file: 'catalog/dsh-plugin.json', read: doc => doc.source?.revision, write: (doc, value) => { doc.source.revision = value } },
-  { file: 'catalog/provenance.json', read: doc => doc.subject?.sourceRevision, write: (doc, value) => { doc.subject.sourceRevision = value } },
-]
+  {
+    file: "catalog/dsh-plugin.json",
+    read: (doc) => doc.source?.revision,
+    write: (doc, value) => {
+      doc.source.revision = value;
+    },
+  },
+  {
+    file: "catalog/provenance.json",
+    read: (doc) => doc.subject?.sourceRevision,
+    write: (doc, value) => {
+      doc.subject.sourceRevision = value;
+    },
+  },
+];
 
-let changed = false
+let changed = false;
 for (const target of targets) {
-  const file = path.join(root, target.file)
-  const doc = JSON.parse(fs.readFileSync(file, 'utf8'))
-  if (target.read(doc) === revision) continue
-  target.write(doc, revision)
-  fs.writeFileSync(file, `${JSON.stringify(doc, null, 2)}\n`)
-  console.log(`${target.file}: revision -> ${revision}`)
-  changed = true
+  const file = path.join(root, target.file);
+  const doc = JSON.parse(fs.readFileSync(file, "utf8"));
+  if (target.read(doc) === revision) continue;
+  target.write(doc, revision);
+  fs.writeFileSync(file, `${JSON.stringify(doc, null, 2)}\n`);
+  console.log(`${target.file}: revision -> ${revision}`);
+  changed = true;
 }
-if (!changed) console.log(`catalog revision already points at ${revision}`)
+if (!changed) console.log(`catalog revision already points at ${revision}`);

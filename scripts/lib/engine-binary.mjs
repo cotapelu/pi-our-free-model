@@ -22,20 +22,27 @@
  * that does have a binary but whose bytes do not match the manifest is a real
  * failure, and the suites still assert the digest.
  */
-import fs from 'node:fs'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = fileURLToPath(new URL('../..', import.meta.url))
+const root = fileURLToPath(new URL("../..", import.meta.url));
 
-export function pinnedEngineEntry(platform = process.platform, arch = process.arch) {
+export function pinnedEngineEntry(
+  platform = process.platform,
+  arch = process.arch,
+) {
   try {
-    const metadata = JSON.parse(fs.readFileSync(path.join(root, 'vendor/magpie/engine.json'), 'utf8'))
-    const entry = metadata.binaries?.[`${platform}-${arch}`]
-    if (!entry || typeof entry.path !== 'string') return null
-    const file = path.join(root, 'vendor/magpie', entry.path)
-    return fs.existsSync(file) ? { ...entry, file } : null
-  } catch { return null }
+    const metadata = JSON.parse(
+      fs.readFileSync(path.join(root, "vendor/magpie/engine.json"), "utf8"),
+    );
+    const entry = metadata.binaries?.[`${platform}-${arch}`];
+    if (!entry || typeof entry.path !== "string") return null;
+    const file = path.join(root, "vendor/magpie", entry.path);
+    return fs.existsSync(file) ? { ...entry, file } : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -43,8 +50,10 @@ export function pinnedEngineEntry(platform = process.platform, arch = process.ar
  * Returns true when the caller should stop, after printing why.
  */
 export function skipWithoutEngineBinary(name) {
-  if (pinnedEngineEntry() !== null) return false
-  console.log(`ok  ${name} skipped: no pinned engine binary for ${process.platform}-${process.arch} `
-    + '(vendor/magpie/engine.json lists the platforms that were built)')
-  return true
+  if (pinnedEngineEntry() !== null) return false;
+  console.log(
+    `ok  ${name} skipped: no pinned engine binary for ${process.platform}-${process.arch} ` +
+      "(vendor/magpie/engine.json lists the platforms that were built)",
+  );
+  return true;
 }

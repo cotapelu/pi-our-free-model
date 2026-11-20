@@ -1,47 +1,49 @@
+# Upstream reference (tham chiếu duy nhất, không commit vào repo)
 dsh-our-free-model/
+
+# Vendored binaries (không ship trong package)
 vendor/magpie/bin/
+
+# Dependencies & build output
 node_modules/
 dist/
 *.log
 *.tgz
+
+# OS files
 .DS_Store
 Thumbs.db
-
-# Local verification scratch: isolated DSH_HOME, app output, profile backups.
-.verify/
-.aio-backup/
-.probe-*
 
 # Editor
 .idea/
 .vscode/
 *.swp
 
-# Co-paid lane minting: plaintext lives outside the repo.
-scripts/eac-vault-mint.mjs
+# Local verification scratch (isolated DSH_HOME, app output, profile backups)
+.verify/
+.aio-backup/
+.probe-*
 
-# Gateway deployment secrets (self-hosted form) never get committed.
+# Co-paid lane minting (plaintext lives outside the repo)
+scripts/eac-vault-mint.mjs
 worker/.env
 c3099.txt
 stats.json
 
-# 本地代码索引及工具状态，不进入仓库。
+# Local code index & tool status (không vào repo)
 .aoci/
 /aoci.txt
 /aoci.code.txt
 /aoci.meta.txt
 
-# PR 审查截图保留在本地，按需作为 PR 附件上传。
+# PR review screenshots (giữ local, đính kèm khi cần)
 .pr-screenshots/
 
 # AOCI agent host integration (machine-bound; do not commit)
 .codex/config.toml
 .codex/config.toml.backup.*
 
-# Vendored Magpie engine: pinned Windows binary rebuilt locally via `npm run build:magpie`.
-vendor/magpie/bin/
-
-# Desktop build artifacts
+# Desktop build artifacts (Rust/Tauri)
 packages/desktop/src-tauri/target/
 packages/desktop/src-tauri/resources/
 packages/desktop/src-tauri/.node-license-cache/
@@ -49,5 +51,5 @@ packages/desktop/node_modules/
 
 _audit/
 
-# pi coding agent runtime: project-local extensions copied by `npm run install`
+# pi coding agent runtime (project-local extensions copied by `npm run install`)
 .pi/

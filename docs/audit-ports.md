@@ -9,6 +9,7 @@
 - File đã map nhưng có drift: **292**
 
 ## 1. File chưa có
+
 - `.github/workflows/build-macos.yml` → `.github/workflows/build-macos.yml`
 - `.github/workflows/build-windows.yml` → `.github/workflows/build-windows.yml`
 - `.github/workflows/prepare-release.yml` → `.github/workflows/prepare-release.yml`
@@ -231,6 +232,7 @@
 - `worker/worker.js` → `worker/worker.js`
 
 ## 2. Export không xuất hiện trong toàn bộ bản port
+
 - `ANNOUNCEMENT_VERSION` — index.js
 - `createApiRoutes` — index.js
 - `createFeedback` — packages/standalone/feedback.mjs
@@ -292,6 +294,7 @@
 - `randomProjectId` — src/upstream.js
 
 ## 3. Definition thiếu trong đúng file port
+
 - `adapter/dsh-llm.d.ts` → `packages/standalone/frontend/types.ts`: attributionHeaders
 - `adapter/kernel.js` → `adapter.ts`: resolveAttributionUserAgent, headers, agent
 - `client.js` → `client`: usePerfFigures, PerfCharts, usePerfSeries, PerfTrendChart, perfTone, niceCeil, formatLatency, formatSpeed, todayKey, ToggleRow, SubscriptionWindow, ModelPicker, ChainCapacity, inject, SPONSOR_CARD_URL, SPONSOR_LOGO, idx, lo, tickLabel, hourLabel, magnitude, candidate, perfFigures, EAC_LOGIN_KEY, avg, sequence, raf, stateOf, LEDGER_EMPTY, ttftSum, pslot, aslot, byModel, AGG_AUTH, SAVER_LEVEL, LANE_LABEL, AGG_UNUSABLE, parseModelIds, miniBtn, auths, matched, clearKey, fileRef, readEpoch, clearCredentials, readFile, epoch, contents, sameWindow, modelIds, labels, strategyLabels, byId, osEnabled, disposed, retries, errCount
@@ -364,4 +367,3 @@
 - `vendor/channel-pack/src/openai-gateway/responses.ts` → `vendor/channel-pack/src/openai-gateway/responses.ts`: hasTools
 - `worker/auth-github.mjs` → `worker/auth-github.ts`: chunks, abort
 - `worker/gateway-node.mjs` → `worker/node-host.ts`: dayKey, hourKey, freshIpRow, statsFile, eq, HOUR_MS, KEEP_DAYS, KEEP_IPS, cutoffHour, rows, hk, dk, day, temp, hourNow, hourAgo, dayNow, hourly, days, models, rem, scan, c, seen, DASHBOARD_HTML, ENTRY_JS, impl
-

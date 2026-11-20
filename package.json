@@ -1,15 +1,15 @@
 {
-  "name": "pi-our-free-model",
+  "name": "ofm-gateway",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.2",
   "type": "module",
-  "description": "pi provider extension for the two keyless free-model lanes this repository documents: OpenCode's public free tier and Kilo AI's public gateway free pool. No login, no sign-up, no API key. TypeScript source; `npm run build` emits dist/.",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "description": "API provider LLM độc lập: chạy node dist/apps/server/main.js là có ngay endpoint OpenAI/Anthropic/Gemini/Responses-compatible. Cũng chạy được như pi extension (pi install .) và standalone service (node dist/apps/standalone/main.js).",
+  "main": "./dist/apps/extension/main.js",
+  "types": "./dist/apps/extension/main.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./dist/apps/extension/main.d.ts",
+      "import": "./dist/apps/extension/main.js"
     },
     "./package.json": "./package.json"
   },
@@ -20,20 +20,35 @@
   ],
   "pi": {
     "extensions": [
-      "./dist/index.js"
+      "./dist/apps/extension/main.js"
     ]
   },
   "scripts": {
-    "prepare": "tsc -p tsconfig.json && tsc -p tsconfig.client.json && node scripts/copy-registry.mjs",
-    "build": "tsc -p tsconfig.json && tsc -p tsconfig.client.json && node scripts/copy-registry.mjs",
+    "build": "tsc -p tsconfig.json && node scripts/copy-registry.mjs && node scripts/fix-dist-imports.mjs",
+    "build:console": "tsc -p packages/console/tsconfig.json || true",
+    "build:server": "tsc -p tsconfig.json && node scripts/copy-registry.mjs",
+    "build:standalone": "tsc -p tsconfig.json && tsc -p packages/standalone/tsconfig.json && node scripts/copy-registry.mjs && node scripts/build-standalone-ui.mjs",
+    "build:all": "npm run build && npm run build:standalone",
+    "prepare": "npm run build",
     "install": "npm run build && node scripts/install-local.mjs",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
-    "test:pi-extension": "npm run build && node src/test/run-all.mjs",
-    "verify:pi-extension-upstream": "node scripts/reverify-upstream.ts"
+    "test": "node tests/run-all.mjs",
+    "test:pi-extension": "npm run build && node tests/run-all.mjs",
+    "verify:upstream": "node scripts/reverify-upstream.ts",
+    "start:server": "node dist/apps/server/main.js",
+    "start:standalone": "node dist/apps/standalone/main.js",
+    "audit": "node scripts/audit-ports.mjs",
+    "format": "prettier --write .",
+    "lint": "tsc --noEmit && eslint .",
+    "check": "npm run build && npm run test && npm run lint",
+    "ftm": "npm run format && npm run lint"
   },
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",
     "@earendil-works/pi-coding-agent": "*"
+  },
+  "dependencies": {
+    "zod": "^3.22.0"
   },
   "devDependencies": {
     "@earendil-works/pi-ai": "^1.4.0",
@@ -41,7 +56,12 @@
     "@types/node": "^24.0.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "zod": "^3.22.0",
+    "prettier": "^3.0.0",
+    "eslint": "^8.57.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0"
   },
   "overrides": {
     "undici": "^8.12.3",

@@ -1,0 +1,29 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "module",
+    "project": "./tsconfig.json"
+  },
+  "plugins": ["@typescript-eslint"],
+  "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
+  "rules": {
+    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/no-unused-vars": "warn",
+    "@typescript-eslint/strict-boolean-expressions": "off",
+    "@typescript-eslint/no-non-null-assertion": "off",
+    "@typescript-eslint/no-unnecessary-condition": "off"
+  },
+  "ignorePatterns": [
+    "dist/",
+    "node_modules/",
+    "packages/standalone/frontend/",
+    "packages/standalone/web/",
+    "packages/vendor/",
+    "vendor/",
+    "tests/",
+    "packages/worker/*.js",
+    "scripts/reverify-upstream.ts"
+  ]
+}

@@ -31,19 +31,20 @@
  * smaller count there is not a lost feature.
  */
 export const PACK_MARKERS = [
-  'collectHarnessSystem',
-  'proseSuppressor',
-  'createBlankReasoningSuppressor',
-  'toolCalls.length === 0) continue',
-  'createChannelFetch',
-  'ChannelNetworkError',
-]
+  "collectHarnessSystem",
+  "proseSuppressor",
+  "createBlankReasoningSuppressor",
+  "toolCalls.length === 0) continue",
+  "createChannelFetch",
+  "ChannelNetworkError",
+];
 
 /** Occurrences of every marker in `text`. */
 export function countMarkers(text) {
-  const counts = new Map()
-  for (const marker of PACK_MARKERS) counts.set(marker, text.split(marker).length - 1)
-  return counts
+  const counts = new Map();
+  for (const marker of PACK_MARKERS)
+    counts.set(marker, text.split(marker).length - 1);
+  return counts;
 }
 
 /**
@@ -53,11 +54,15 @@ export function countMarkers(text) {
  *   rebuild keeps every marker — the only case where writing is allowed.
  */
 export function markerRegressions(shipped, built) {
-  const before = countMarkers(shipped)
-  const after = countMarkers(built)
-  return PACK_MARKERS
-    .filter(marker => after.get(marker) < before.get(marker))
-    .map(marker => ({ marker, before: before.get(marker), after: after.get(marker) }))
+  const before = countMarkers(shipped);
+  const after = countMarkers(built);
+  return PACK_MARKERS.filter(
+    (marker) => after.get(marker) < before.get(marker),
+  ).map((marker) => ({
+    marker,
+    before: before.get(marker),
+    after: after.get(marker),
+  }));
 }
 
 /**
@@ -67,6 +72,6 @@ export function markerRegressions(shipped, built) {
  * error: a build is not wrong just because the list needs a refresh.
  */
 export function staleMarkers(shipped) {
-  const counts = countMarkers(shipped)
-  return PACK_MARKERS.filter(marker => counts.get(marker) === 0)
+  const counts = countMarkers(shipped);
+  return PACK_MARKERS.filter((marker) => counts.get(marker) === 0);
 }

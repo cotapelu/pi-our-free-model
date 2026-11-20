@@ -33,47 +33,57 @@
  * @module pi-extension/scripts/install-local.mjs
  */
 
-import fs from 'node:fs'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const HERE = path.dirname(fileURLToPath(import.meta.url))
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 /** `pi-extension/` — the package root, which is where npm runs scripts. */
-const PKG = path.resolve(HERE, '..')
+const PKG = path.resolve(HERE, "..");
 /** The compiled output. Must exist: run `npm run build` first. */
-const SOURCE = path.join(PKG, 'dist')
+const SOURCE = path.join(PKG, "dist");
 /** The repository root — where `pi` is run, one level above the package. */
-const ROOT = path.resolve(PKG, '..')
-const TARGET = path.join(ROOT, '.pi', 'extensions', 'ofm-provider')
+const ROOT = path.resolve(PKG, "..");
+const TARGET = path.join(ROOT, ".pi", "extensions", "ofm-provider");
 
 function fail(message) {
-  console.error(`install-local: ${message}`)
-  process.exit(1)
+  console.error(`install-local: ${message}`);
+  process.exit(1);
 }
 
 if (!fs.existsSync(SOURCE)) {
-  fail(`${path.relative(process.cwd(), SOURCE)} does not exist — run \`npm run build\` first`)
+  fail(
+    `${path.relative(process.cwd(), SOURCE)} does not exist — run \`npm run build\` first`,
+  );
 }
 if (!fs.statSync(SOURCE).isDirectory()) {
-  fail(`${path.relative(process.cwd(), SOURCE)} is not a directory`)
+  fail(`${path.relative(process.cwd(), SOURCE)} is not a directory`);
 }
-const entry = path.join(SOURCE, 'index.js')
+const entry = path.join(SOURCE, "apps", "extension", "main.js");
 if (!fs.existsSync(entry)) {
-  fail(`${path.relative(process.cwd(), entry)} is missing — the build is incomplete`)
+  fail(
+    `${path.relative(process.cwd(), entry)} is missing — the build is incomplete`,
+  );
 }
 
 // Replace rather than merge: a stale catalog.js or chains.js left beside a new
 // index.js is two versions of one module, and pi would load whichever the
 // entry point imports without noticing the other.
-fs.rmSync(TARGET, { recursive: true, force: true })
-fs.mkdirSync(path.dirname(TARGET), { recursive: true })
-fs.cpSync(SOURCE, TARGET, { recursive: true })
+fs.rmSync(TARGET, { recursive: true, force: true });
+fs.mkdirSync(path.dirname(TARGET), { recursive: true });
+fs.cpSync(SOURCE, TARGET, { recursive: true });
 
-const files = fs.readdirSync(TARGET).filter((name) => name.endsWith('.js'))
-if (!fs.existsSync(path.join(TARGET, 'index.js'))) {
-  fail('the copy landed without an index.js; nothing would load')
+const files = fs.readdirSync(TARGET).filter((name) => name.endsWith(".js"));
+if (!fs.existsSync(path.join(TARGET, "apps", "extension", "main.js"))) {
+  fail("the copy landed without an entry point; nothing would load");
 }
 
-console.log(`install-local: copied ${files.length} file(s) → ${path.relative(process.cwd(), TARGET)}`)
-console.log('install-local: run `pi --approve` in the repository root to load it')
-console.log('install-local: project-local extensions need project trust; `pi --approve` grants it for that command')
+console.log(
+  `install-local: copied ${files.length} file(s) → ${path.relative(process.cwd(), TARGET)}`,
+);
+console.log(
+  "install-local: run `pi --approve` in the repository root to load it",
+);
+console.log(
+  "install-local: project-local extensions need project trust; `pi --approve` grants it for that command",
+);

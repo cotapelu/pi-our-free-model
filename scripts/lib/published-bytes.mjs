@@ -22,22 +22,22 @@
  * which is why this lives in one place.
  */
 
-const CRLF = Buffer.from('\r\n')
-const LF = Buffer.from('\n')
+const CRLF = Buffer.from("\r\n");
+const LF = Buffer.from("\n");
 
 /** @param {Buffer} body @returns {Buffer} */
 export function publishedBytes(body) {
   // A NUL byte is the cheap tell for "binary", and git stores those verbatim —
   // normalizing one would corrupt the very digest the manifest exists to pin.
-  if (body.includes(0) || !body.includes(CRLF)) return body
-  const parts = []
-  let from = 0
+  if (body.includes(0) || !body.includes(CRLF)) return body;
+  const parts = [];
+  let from = 0;
   while (true) {
-    const at = body.indexOf(CRLF, from)
-    if (at === -1) break
-    parts.push(body.subarray(from, at), LF)
-    from = at + CRLF.length
+    const at = body.indexOf(CRLF, from);
+    if (at === -1) break;
+    parts.push(body.subarray(from, at), LF);
+    from = at + CRLF.length;
   }
-  parts.push(body.subarray(from))
-  return Buffer.concat(parts)
+  parts.push(body.subarray(from));
+  return Buffer.concat(parts);
 }

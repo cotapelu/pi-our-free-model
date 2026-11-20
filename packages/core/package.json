@@ -1,0 +1,13 @@
+{
+  "name": "@ofm/core",
+  "version": "0.2.2",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./*": "./*.js",
+    "./o2a/*": "./o2a/*.js",
+    "./token-saver/*": "./token-saver/*.js",
+    "./locale/*": "./locale/*"
+  }
+}

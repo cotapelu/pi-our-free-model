@@ -1,0 +1,57 @@
+version: "3.8"
+
+services:
+  # API Provider - standalone HTTP server
+  api-provider:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: ofm-api-provider
+    ports:
+      - "18900:18900"
+    environment:
+      - OFM_DATA_DIR=/data
+      - OFM_GATEWAY_PORT=18900
+      - OFM_GATEWAY_HOST=0.0.0.0
+      - OFM_LOG_LEVEL=info
+    volumes:
+      - ofm-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:18900/health').then(r => { if (!r.ok) throw new Error('unhealthy') }).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+  # Standalone Service - console + management API
+  standalone:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: ofm-standalone
+    command:
+      ["node", "dist/apps/standalone/main.js", "--port", "18900", "--lan"]
+    ports:
+      - "18901:18900"
+    environment:
+      - OFM_DATA_DIR=/data
+      - OFM_GATEWAY_PORT=18900
+      - OFM_GATEWAY_HOST=0.0.0.0
+      - OFM_LAN_ENABLED=true
+      - OFM_LOG_LEVEL=info
+    volumes:
+      - ofm-data:/data
+    restart: unless-stopped
+    depends_on:
+      - api-provider
+
+volumes:
+  ofm-data:
+    driver: local

@@ -1,0 +1,10 @@
+{
+  "name": "@ofm/gateway",
+  "version": "0.2.2",
+  "type": "module",
+  "main": "./server.js",
+  "exports": {
+    ".": "./server.js",
+    "./*": "./*.js"
+  }
+}

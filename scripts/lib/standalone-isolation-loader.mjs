@@ -13,15 +13,17 @@
 // standalone must still never touch is the host-facing half (index.ts mounts
 // pi's extension API) and the vendored pack's own bundle.
 const forbidden = [
-  new URL('../../dist/index.js', import.meta.url).href,
-  new URL('../../dist/adapter.js', import.meta.url).href,
-  new URL('../../dist/vendor/channel-pack/pack.js', import.meta.url).href,
-]
+  new URL("../../dist/index.js", import.meta.url).href,
+  new URL("../../dist/adapter.js", import.meta.url).href,
+  new URL("../../dist/vendor/channel-pack/pack.js", import.meta.url).href,
+];
 
 /** 独立入口的进程级验证：触及插件入口或宿主模块就立即失败。 */
 export async function resolve(specifier, context, nextResolve) {
-  if (specifier.startsWith('@deepseek-ai/')) throw new Error(`standalone imported a DSH dependency: ${specifier}`)
-  const result = await nextResolve(specifier, context)
-  if (forbidden.includes(result.url)) throw new Error(`standalone imported a host-only module: ${result.url}`)
-  return result
+  if (specifier.startsWith("@deepseek-ai/"))
+    throw new Error(`standalone imported a DSH dependency: ${specifier}`);
+  const result = await nextResolve(specifier, context);
+  if (forbidden.includes(result.url))
+    throw new Error(`standalone imported a host-only module: ${result.url}`);
+  return result;
 }

@@ -10,4 +10,4 @@
 export class Agent {}
 export class Pool {}
 export class ProxyAgent {}
-export const Dispatcher = class Dispatcher {}
+export const Dispatcher = class Dispatcher {};
