@@ -164,13 +164,13 @@ quét), không phải gap thực sự. Các gap thực sự đã được xử l
 - [x] `packages/standalone/` di chuyển từ `src/packages/standalone/`
 - [x] `packages/worker/` từ `src/worker/`
 
-### C. Giai đoạn 3: Console (khó nhất) — ⏳ CẦN LÀM
+### C. Giai đoạn 3: Console (khó nhất) — ⏳ ĐANG THỰC HIỆN
 
-- [ ] Sửa `packages/console/tsconfig.json` compile `.tsx` (hiện tại lỗi JSX)
-- [ ] Thêm `index.html` + `entry.tsx`
-- [ ] Sửa 4 import sai trong `Shell.tsx`
-- [ ] Bổ sung 5 symbol thiếu (`BRAND_ICON`, `CHANNEL_PROVIDERS`, `channelTransport`, `sameChannelTransport`, `SponsorBanner`)
-- [ ] Mount vào `packages/standalone/management.ts`
+- [x] Tạo `packages/console/tsconfig.json` compile `.tsx` (ĐÃ XOÁ)
+- [x] Thêm `index.html` + `entry.tsx` (ĐÃ TẠO)
+- [x] Thêm các symbol thiếu vào `chrome.tsx` (`BRAND_ICON`, `CHANNEL_PROVIDERS`, `channelTransport`, `sameChannelTransport`, `SponsorBanner`, `StarButton`, `Tank`, `EacAuth`, `useEacLogin`, `usePool`, `poolReading`, `capacityText`) (ĐÃ XOÁ)
+- [ ] Sửa import sai trong `Shell.tsx` (còn một số import từ `chrome.tsx` cần kiểm tra)
+- [ ] Mount console vào `packages/standalone/management.ts` (CHƯA LÀM)
 
 ### D. Giai đoạn 4: Production hardening — ⏳ MỘT PHẦN HOÀN TẤT
 

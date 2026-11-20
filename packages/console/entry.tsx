@@ -1,4 +1,5 @@
 import { createRoot } from 'react-dom/client'
+import { createElement as h } from 'react'
 import { Shell } from './pages/Shell'
 import { api, setApiBase } from './api'
 
@@ -15,4 +16,4 @@ if (!container) {
 }
 
 const root = createRoot(container)
-root.render(<Shell t={(key) => key} locale={locale} />)
+root.render(h(Shell, { t: (key) => key, locale }))

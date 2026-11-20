@@ -48,7 +48,9 @@
     "@earendil-works/pi-coding-agent": "*"
   },
   "dependencies": {
-    "zod": "^3.22.0"
+    "zod": "^3.22.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@earendil-works/pi-ai": "^1.4.0",
