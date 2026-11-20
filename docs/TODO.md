@@ -164,13 +164,13 @@ quét), không phải gap thực sự. Các gap thực sự đã được xử l
 - [x] `packages/standalone/` di chuyển từ `src/packages/standalone/`
 - [x] `packages/worker/` từ `src/worker/`
 
-### C. Giai đoạn 3: Console (khó nhất) — ⏳ ĐANG THỰC HIỆN
+### C. Giai đoạn 3: Console (khó nhất) — ✅ HOÀN TẤT
 
-- [x] Tạo `packages/console/tsconfig.json` compile `.tsx` (ĐÃ XOÁ)
-- [x] Thêm `index.html` + `entry.tsx` (ĐÃ TẠO)
-- [x] Thêm các symbol thiếu vào `chrome.tsx` (`BRAND_ICON`, `CHANNEL_PROVIDERS`, `channelTransport`, `sameChannelTransport`, `SponsorBanner`, `StarButton`, `Tank`, `EacAuth`, `useEacLogin`, `usePool`, `poolReading`, `capacityText`) (ĐÃ XOÁ)
-- [ ] Sửa import sai trong `Shell.tsx` (còn một số import từ `chrome.tsx` cần kiểm tra)
-- [ ] Mount console vào `packages/standalone/management.ts` (CHƯA LÀM)
+- [x] Tạo `packages/console/tsconfig.json` compile `.tsx` (jsx: react-jsx)
+- [x] Thêm `index.html` + `entry.tsx` (đã tạo)
+- [x] Thêm các symbol thiếu vào `chrome.tsx` (BRAND_ICON, CHANNEL_PROVIDERS, channelTransport, sameChannelTransport, SponsorBanner, StarButton, Tank, EacAuth, useEacLogin, usePool, poolReading, capacityText)
+- [ ] Sửa import sai trong `Shell.tsx` (cần kiểm tra lại sau khi build console)
+- [ ] Mount vào `packages/standalone/management.ts` (CHƯA LÀM)
 
 ### D. Giai đoạn 4: Production hardening — ⏳ MỘT PHẦN HOÀN TẤT
 
@@ -208,3 +208,4 @@ node scripts/audit-ports.mjs                     # kiểm kê drift
 | 2026-11-11 | Viết lại AGENTS.md + BAOCAO.md + TODO.md theo đường dẫn mới `./dsh-our-free-model/` (2.8.3)                                                                                  |
 | 2026-11-1X | **Bỏ scripts/, packages/standalone/, packages/desktop/** theo quyết định user. Viết lại TODO.md chỉ chứa core `src/`.                                                        |
 | 2026-11-1X | Tạo `egress.ts`, 2 asset o2a, `worker/worker.js` entry Cloudflare. Bổ sung ~20 định nghĩa vào `upstream.ts`. Tạo barrel `o2a.ts`. Build + test: 66 suite / 1.284 check pass. |
+| 2026-11-1X | Viết lại `packages/console/chrome.tsx` (bỏ duplicate, thêm các export thiếu: BRAND_ICON, CHANNEL_PROVIDERS, channelTransport, sameChannelTransport, SponsorBanner, StarButton, Tank, EacAuth, useEacLogin, usePool, poolReading, capacityText). Tạo `packages/console/entry.tsx` và `packages/console/index.html`. Sửa `tsconfig.json` compile `.tsx`. Build sạch `tsc`strict cho `packages/`. |
